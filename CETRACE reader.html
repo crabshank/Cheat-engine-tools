@@ -6,9 +6,18 @@
  <h1 style="text-align: center;">CETRACE Reader (x64)</h1>
  <label for="openFile1">Load file: </label><input  type="file" id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
  <section id="instructions"></section>
+ <section id="search">
+     <label for="search">Hex: </label>
+ <input id="search"  type="text"></input>
+ <select id="types"></select>
+ </section>
  <style>
 div.trackable {
     display: contents !important;
+}
+section.register {
+    display: grid !important;
+    grid-auto-columns: max-content !important;
 }
  </style>
   <script>
@@ -282,12 +291,35 @@ const lookup_hex=[
 				}
 				return out;
 	}
-
-
 	
+function get_subarray(a, f, t) {
+    return a.slice(f, t+1);
+}
+
+function getBarSepStr(a,m,x){
+	let out='';
+	for(let i=0, len=a.length; i<len; i++){
+		if(typeof a[i]==='number'){
+			out+=a[i].toLocaleString('en-GB',
+					{
+						useGrouping: false,
+						minimumFractionDigits: m,
+						maximumFractionDigits: x
+					});
+		}else if(typeof a[i]==='string'){
+			out+='"'+a[i]+'"';
+		}else{
+			out+='"'+JSON.stringify(a[i])+'"';
+		}
+		out+=( (i==len-1)? '' : ' | ' );
+	}
+	return out;
+}
+
 function hexProc(b_ints){
 	var reg_names=["r10d","r10w","r10b","r11d","r11w","r11b","r12d","r12w","r12b","r13d","r13w","r13b","r14d","r14w","r14b","r15d","r15w","r15b","rax","eax","rbx","ebx","rcx","ecx","rdx","edx","rsi","esi","sil","rdi","edi","dil","rbp","ebp","bpl","rsp","esp","spl","r8d","r8w","r8b","r9d","r9w","r9b","r10","r11","r12","r13","r14","r15","ax","al","bx","bl","cx","cl","dx","dl","si","di","bp","sp","r8","r9"]; //sorted by length
 	var inst_HTML=document.querySelector('section#instructions');
+	var slc=document.querySelector('select#types');
 	inst_HTML.appendChild(document.createElement('br'));
 	var all_instructs=[];
 	var disp_instructs=[];
@@ -329,7 +361,7 @@ if(strt>=0){
 	var pos=strt-4;
 	while (pos<b_ints.length){
 
-		let curr={inst_len:0, instr_txt:"",instr_txt_b:[], ref_addr:"",r_reg: ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],r_reg_b: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], r_reg_nm:["RAX","RBX","RCX","RDX","RSI","RDI","RBP","RSP","R8","R9","R10","R11","R12","R13","R14","R15","RIP"], x_reg:["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"], x_reg_b:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg_nm:["xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7","xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15"],ref_addr_byte_len:0, ref_addr_bytes: "", stack_len: 0, stack:[], stack_b:[]};
+		let curr={inst_len:0, instr_txt:"",instr_txt_b:[], ref_addr:"",r_reg: ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],r_reg_b: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], r_reg_nm:["RAX","RCX","RDX","RBX","RSP","RBP","RSI","RDI","R8","R9","R10","R11","R12","R13","R14","R15","RIP"], r_reg_interp: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg:["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"], x_reg_b:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],  x_reg_interp:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg_nm:["xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7","xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15"],ref_addr_byte_len:0, ref_addr_bytes: "", stack_len: 0, stack:[], stack_b:[]};
 		
 					curr.inst_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3]]);
 		
@@ -337,10 +369,8 @@ if(strt>=0){
 		
 		pos+=4;
 	//pos is now at first byte of  instruction
-	
-		for(let i=0, len=curr.inst_len; i<len; i++){
-			char_arr.push(b_ints[pos+i]);
-		}
+
+		char_arr=get_subarray(b_ints,pos,pos+curr.inst_len-1);
 		curr.instr_txt=String.fromCharCode(...char_arr);
 		curr.instr_txt_b=char_arr;
 		console.log(curr.instr_txt);
@@ -362,6 +392,22 @@ if(strt>=0){
 			pos+=8;
 		}
 		
+		//swap around to match CE tracer output:
+		curr.r_reg=[curr.r_reg[0],curr.r_reg[3],curr.r_reg[1],curr.r_reg[2],...get_subarray(curr.r_reg,4,16)];
+		
+		curr.r_reg_b=[curr.r_reg_b[0],curr.r_reg_b[3],curr.r_reg_b[1],curr.r_reg_b[2],...get_subarray(curr.r_reg_b,4,16)];
+		
+		curr.r_reg_nm=[curr.r_reg_nm[0],curr.r_reg_nm[3],curr.r_reg_nm[1],curr.r_reg_nm[2],...get_subarray(curr.r_reg_nm,4,16)];
+
+		let b_interp=[1,2,4,8];
+		
+		for(let i=0, len_i=curr.r_reg_b.length ; i<len_i; i++){
+			for(let j=0, len_j=b_interp.length ; j<len_j; j++){
+				curr.r_reg_interp[i].push( n_byte_unit8_to_int( get_subarray(curr.r_reg_b[i], 0, b_interp[j]-1) ) );
+			}
+			curr.r_reg_interp[i].push(String.fromCharCode(...curr.r_reg_b[i]));
+		}
+		
 		pos+=160;
 		
 		//pos is now at first byte of  xmm registers
@@ -371,6 +417,27 @@ if(strt>=0){
 				curr.x_reg_b[k].unshift(b_ints[i+pos]);
 			}
 			pos+=16;
+		}
+		
+		for(let x=0, len=curr.x_reg_b.length; x<len; x++){ //bytes: 1,2,4,8,string,float2, double2
+				let data, view;
+				//float4
+				let f4=[];
+				for(let b=0; b<16; b+=4){
+					data =  get_subarray(curr.x_reg_b[x], b, b+3).reverse();
+					view = new DataView(new Uint8Array(data).buffer);
+					view.getFloat32(0,false);
+					f4.push(view.getFloat32(0)); //will be rounded later
+				}
+				curr.x_reg_interp[x].push(f4);
+				//double2
+				let d2=[];
+				for(let b=0; b<16; b+=8){
+					data = get_subarray(curr.x_reg_b[x], b, b+7).reverse();
+					view = new DataView(new Uint8Array(data).buffer);
+					d2.push(view.getFloat64(0,false));
+				}
+				curr.x_reg_interp[x].push(d2);
 		}
 
 		pos+=560;
@@ -466,7 +533,7 @@ if(strt>=0){
 				
 				
 				instr.innerHTML=(  (inst_lens_eq)?( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ):  curr.r_reg[16] )+': '+
-				(	( curr.ref_addr=="0000000000000000")?
+				(	( curr.ref_addr==="0000000000000000")?
 					'':
 					'<br>Referenced address: '  + curr.ref_addr
 				)+
@@ -479,7 +546,8 @@ if(strt>=0){
 				for(let x=0, len_x=curr.r_reg_nm.length; x<len_x; x++){
 					let r=document.createElement('SECTION');
 					r.className='register '+curr.r_reg_nm[x];
-					r.innerHTML=curr.r_reg_nm[x]+': '+curr.r_reg[x];
+					r.innerHTML=curr.r_reg_nm[x]+': '+curr.r_reg[x]+' ['+getBarSepStr(curr.r_reg_interp[x],0,0)+']';
+					r.title='hex [1 byte int | 2 byte int | 4 byte int | 8 byte int | string]';
 					registers.appendChild(r);
 				}				
 					registers.appendChild(document.createElement('br'));
@@ -487,7 +555,8 @@ if(strt>=0){
 				for(let x=0, len_x=curr.x_reg_nm.length; x<len_x; x++){
 					let r=document.createElement('SECTION');
 					r.className='register '+curr.x_reg_nm[x];
-					r.innerHTML=curr.x_reg_nm[x]+': '+curr.x_reg[x];
+					r.innerHTML=curr.x_reg_nm[x]+': '+curr.x_reg[x]+' ['+getBarSepStr(curr.x_reg_interp[x][0],0,7)+' || '+getBarSepStr(curr.x_reg_interp[x][1],0,15)+']';
+					r.title='hex [float | float | float | float || double | double]';
 					registers.appendChild(r);
 				}
 					registers.appendChild(document.createElement('hr'));
