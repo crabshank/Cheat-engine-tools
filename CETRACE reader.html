@@ -26,9 +26,14 @@ section#instructions {
     min-width: 50% !important;
 }
 section.register.tracked {
-    background: hsl(50deg 100% 50%);
-    color: hsl(336deg 100% 50%);
-    font-weight: bold;
+    background: hsl(50deg 100% 50%) !important;
+    color: hsl(336deg 100% 50%) !important;
+    font-weight: bold !important;
+}
+section.register.tracking {
+    background: hsl(78deg 100% 50%);
+	 color: hsl(336deg 100% 50%);
+	  font-weight: bold;
 }
 div.tracked {
     background: #0000ff !important;
@@ -731,6 +736,13 @@ let el=event.target;
 		}else if(el.matches('section.register')){
 			if(el.classList.contains("tracked")){
 				el.classList.remove("tracked");
+				
+				let lrg=el.getAttribute('reg_name');
+				let trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracking");
+				}
+				
 				let jpsCh=[...jps.children];
 				jpsCh[3].innerText=jpsCh[3].getAttribute('base');
 				jpsCh[4].innerText=jpsCh[4].getAttribute('base');
@@ -739,6 +751,14 @@ let el=event.target;
 				nvs.reg_hex='';
 				nvs.reg_ix=0;
 			}else{
+				let trk=[...document.querySelectorAll('section.tracked')];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracked");
+				}		
+				trk=[...document.querySelectorAll('section.tracking')];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracking");
+				}
 				let lrg=el.getAttribute('reg_name');
 				nvs.reg_hex=el.getAttribute('hex');
 				nvs.reg_el=el;
@@ -748,6 +768,10 @@ let el=event.target;
 				jpsCh[4].innerText=jpsCh[4].getAttribute('base')+' ('+lrg+')';
 				el.classList.add("tracked");
 				nvs.reg_ix=parseInt(el.getAttribute('inst_ix'));
+				 trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.add("tracking");
+				}
 			}
 		}
 	}
@@ -788,17 +812,33 @@ function navReg(back){
 	let c=false;
 	let i=1;
 	while(!c && ( (back && nvs.reg_ix-i >=0) || (!back && nvs.reg_ix+i<nvs.curr_reg.length)   )  ){
-		let ix=nvs.curr_reg.filter((r)=>{return parseInt(r.getAttribute('inst_ix'))==((back)? nvs.reg_ix-i	:	nvs.reg_ix+i);});
-		if(ix.length >0 && ix[0].getAttribute('hex')!==nvs.reg_hex){
+		let x=(back)? nvs.reg_ix-i	:	nvs.reg_ix+i;
+		let ix=nvs.curr_reg.filter((r)=>{return parseInt(r.getAttribute('inst_ix'))==x;});
+		if(ix.length >0 && ( ix[0].getAttribute('hex')!==nvs.reg_hex ||  x==0  ) ){
 			ix[0].scrollIntoView();
 			
 				let lrg=ix[0].getAttribute('reg_name');
 				nvs.reg_hex=ix[0].getAttribute('hex');
 
-				ix[0].classList.add("tracked");
-				nvs.reg_ix=nvs.reg_ix+i;
-
 				nvs.reg_el.classList.remove("tracked");
+				lrg=nvs.reg_el.getAttribute('reg_name');
+				let trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracking");
+				}
+
+
+				ix[0].classList.add("tracked");
+				lrg=ix[0].getAttribute('reg_name');
+				trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.add("tracking");
+				}
+				
+				nvs.reg_ix=x;
+
+
+				
 				nvs.reg_el=ix[0];
 				
 				ix[0].scrollIntoView();
