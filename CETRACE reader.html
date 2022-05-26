@@ -9,8 +9,10 @@
 	 <section id="instructions"></section>
 		<section id="jmps">
 		<button>Remove tracking on all instructions</button>
-		<button base="Jump to next instance">Jump to next instance</button>
+		<button style="margin-top: 3px !important;" base="Jump to next instance">Jump to next instance</button>
 		<button base="Jump to previous instance">Jump to previous instance</button>
+		<button style="margin-top: 3px !important;" base="Jump to next register change">Jump to next register change</button>
+		<button base="Jump to previous register change">Jump to previous register change</button>
 		</section>
 	 <section style="display: none !important" id="search">
 		 <label for="search">Hex: </label>
@@ -22,6 +24,11 @@
 section#instructions {
     width: 50% !important;
     min-width: 50% !important;
+}
+section.register.tracked {
+    background: hsl(50deg 100% 50%);
+    color: hsl(336deg 100% 50%);
+    font-weight: bold;
 }
 div.tracked {
     background: #0000ff !important;
@@ -391,7 +398,7 @@ function getBarSepStr(a,m,x){
 	
 function hexProc(b_ints){
 	var reg_names=["r10d","r10w","r10b","r11d","r11w","r11b","r12d","r12w","r12b","r13d","r13w","r13b","r14d","r14w","r14b","r15d","r15w","r15b","rax","eax","rbx","ebx","rcx","ecx","rdx","edx","rsi","esi","sil","rdi","edi","dil","rbp","ebp","bpl","rsp","esp","spl","r8d","r8w","r8b","r9d","r9w","r9b","r10","r11","r12","r13","r14","r15","ax","al","bx","bl","cx","cl","dx","dl","si","di","bp","sp","r8","r9"]; //sorted by length
-	var nvs={curr_inst: [], inst_ix:0, curr_reg:[], reg_ix:0 };
+	var nvs={curr_inst: [], inst_ix:0, curr_reg: [], reg_ix:0, reg_hex:'',reg_el: null };
 	inst_HTML.appendChild(document.createElement('br'));
 	var all_instructs=[];
 	var disp_instructs=[];
@@ -630,6 +637,9 @@ if(strt>=0){
 				for(let x=0, len_x=curr.r_reg_nm.length; x<len_x; x++){
 					let r=document.createElement('SECTION');
 					r.className='register '+curr.r_reg_nm[x];
+					r.setAttribute('hex',curr.r_reg[x]);
+					r.setAttribute('inst_ix',k);
+					r.setAttribute('reg_name',curr.r_reg_nm[x]);
 					r.innerHTML=curr.r_reg_nm[x]+': '+curr.r_reg[x]+' ['+getBarSepStr(curr.r_reg_interp[x],0,0)+']';
 					r.title='hex [1 byte int | 2 byte int | 4 byte int | 8 byte int | string]';
 					registers.appendChild(r);
@@ -639,6 +649,9 @@ if(strt>=0){
 				for(let x=0, len_x=curr.x_reg_nm.length; x<len_x; x++){
 					let r=document.createElement('SECTION');
 					r.className='register '+curr.x_reg_nm[x];
+					r.setAttribute('hex',curr.r_reg[x]);
+					r.setAttribute('inst_ix',k);
+					r.setAttribute('reg_name',curr.x_reg_nm[x]);
 					r.innerHTML=curr.x_reg_nm[x]+': '+curr.x_reg[x]+' ['+getBarSepStr(curr.x_reg_interp[x][0],0,7)+' || '+getBarSepStr(curr.x_reg_interp[x][1],0,15)+']';
 					r.title='hex [float | float | float | float || double | double]';
 					registers.appendChild(r);
@@ -686,9 +699,15 @@ function chgTracked(el, add){
 					}
 				}else{
 					dt[k].classList.remove("tracked");
+					let jpsCh=[...jps.children];
+					jpsCh[1].innerText=jpsCh[1].getAttribute('base');
+					jpsCh[2].innerText=jpsCh[2].getAttribute('base');
 				}
 			}else if(dt[k]===el && !f){
 				f=true;
+				let jpsCh=[...jps.children];
+				jpsCh[1].innerText=jpsCh[1].getAttribute('base')+' ('+el.title+')';
+				jpsCh[2].innerText=jpsCh[2].getAttribute('base')+' ('+el.title+')';
 				if(add){
 					if(!dt[k].classList.contains('tracked')){
 						dt[k].classList.add("tracked");
@@ -709,6 +728,27 @@ let el=event.target;
 				}else{
 					chgTracked(el, true);
 			}
+		}else if(el.matches('section.register')){
+			if(el.classList.contains("tracked")){
+				el.classList.remove("tracked");
+				let jpsCh=[...jps.children];
+				jpsCh[3].innerText=jpsCh[3].getAttribute('base');
+				jpsCh[4].innerText=jpsCh[4].getAttribute('base');
+				nvs.reg_el=null;
+				nvs.curr_reg=[];
+				nvs.reg_hex='';
+				nvs.reg_ix=0;
+			}else{
+				let lrg=el.getAttribute('reg_name');
+				nvs.reg_hex=el.getAttribute('hex');
+				nvs.reg_el=el;
+				nvs.curr_reg=[...document.querySelectorAll('section.'+lrg)];
+				let jpsCh=[...jps.children];
+				jpsCh[3].innerText=jpsCh[3].getAttribute('base')+' ('+lrg+')';
+				jpsCh[4].innerText=jpsCh[4].getAttribute('base')+' ('+lrg+')';
+				el.classList.add("tracked");
+				nvs.reg_ix=parseInt(el.getAttribute('inst_ix'));
+			}
 		}
 	}
 };
@@ -721,6 +761,9 @@ jpsCh[0].onclick=(event)=>{
 	 for(let k=0, len_k= dt.length; k<len_k; k++ ){
 		dt[k].classList.remove("tracked");
 	 }
+		let jpsCh=[...jps.children];
+		jpsCh[1].innerText=jpsCh[1].getAttribute('base');
+		jpsCh[2].innerText=jpsCh[2].getAttribute('base');
 		nvs.curr_inst=[];
 		nvs.inst_ix=0;
 };
@@ -739,6 +782,41 @@ jpsCh[2].onclick=(event)=>{
 	if(nvs.inst_ix>=0){
 		nvs.curr_inst[nvs.inst_ix].scrollIntoView();
 	}
+};
+
+function navReg(back){
+	let c=false;
+	let i=1;
+	while(!c && ( (back && nvs.reg_ix-i >=0) || (!back && nvs.reg_ix+i<nvs.curr_reg.length)   )  ){
+		let ix=nvs.curr_reg.filter((r)=>{return parseInt(r.getAttribute('inst_ix'))==((back)? nvs.reg_ix-i	:	nvs.reg_ix+i);});
+		if(ix.length >0 && ix[0].getAttribute('hex')!==nvs.reg_hex){
+			ix[0].scrollIntoView();
+			
+				let lrg=ix[0].getAttribute('reg_name');
+				nvs.reg_hex=ix[0].getAttribute('hex');
+
+				ix[0].classList.add("tracked");
+				nvs.reg_ix=nvs.reg_ix+i;
+
+				nvs.reg_el.classList.remove("tracked");
+				nvs.reg_el=ix[0];
+				
+				ix[0].scrollIntoView();
+				c=true;
+		}else{
+			i++;
+		}
+	}
+}
+
+jpsCh[3].onclick=(event)=>{
+	//let el=event.target;
+	navReg(false);
+};
+
+jpsCh[4].onclick=(event)=>{
+	//let el=event.target;
+	navReg(true);
 };
 		
 }
