@@ -781,6 +781,7 @@ jpsCh=[...jps.children];
 
 jpsCh[0].onclick=(event)=>{
 	//let el=event.target;
+	event.stopPropagation();
 	let dt=[...document.querySelectorAll('div.tracked')];
 	 for(let k=0, len_k= dt.length; k<len_k; k++ ){
 		dt[k].classList.remove("tracked");
@@ -794,6 +795,7 @@ jpsCh[0].onclick=(event)=>{
 
 jpsCh[1].onclick=(event)=>{
 	//let el=event.target;
+	event.stopPropagation();
 	nvs.inst_ix=(nvs.inst_ix==nvs.curr_inst.length)?nvs.inst_ix:nvs.inst_ix+1;
 	if(nvs.inst_ix<nvs.curr_inst.length){
 		nvs.curr_inst[nvs.inst_ix].scrollIntoView();
@@ -802,6 +804,7 @@ jpsCh[1].onclick=(event)=>{
 
 jpsCh[2].onclick=(event)=>{
 	//let el=event.target;
+	event.stopPropagation();
 	nvs.inst_ix=(nvs.inst_ix==-1)?nvs.inst_ix:nvs.inst_ix-1;
 	if(nvs.inst_ix>=0){
 		nvs.curr_inst[nvs.inst_ix].scrollIntoView();
@@ -851,11 +854,13 @@ function navReg(back){
 
 jpsCh[3].onclick=(event)=>{
 	//let el=event.target;
+	event.stopPropagation();
 	navReg(false);
 };
 
 jpsCh[4].onclick=(event)=>{
 	//let el=event.target;
+	event.stopPropagation();
 	navReg(true);
 };
 		
