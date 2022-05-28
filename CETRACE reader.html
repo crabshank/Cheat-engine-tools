@@ -308,16 +308,32 @@ const lookup_hex=[
 									"FF"
 								];
 								
-	function n_byte_unit8_to_int(a){
-				let out=a[0];
-				let bsi=0;
+function n_byte_unit8_to_int(a){
+			let out={s: a[0], u: a[0]};
+			
+			let bsi=0;
 				for(let i=1, len=a.length; i<len; i++){
 					bsi+=8;
 					let n=a[i]<<bsi;
-					out+=n;
+					out.u+=n;
 				}
-				return out;
-	}
+
+			let mx=2;
+			for(let i=0, len=(a.length*8)-1; i<len; i++){
+				mx*=2;
+			}
+			mx-=1;
+			
+			let h=Math.floor(mx/2);
+			
+			if(out.u>h){
+				out.s=-mx+out.u-1;
+			}else{
+				out.s=out.u;
+			}
+			
+			return out;
+}
 	
 function get_subarray(a, f, t) {
     return a.slice(f, t+1);
@@ -369,14 +385,22 @@ function absBoundingClientRect(el){
 
 function getBarSepStr(a,m,x){
 	let out='';
+	let opts={useGrouping: false, minimumFractionDigits: m, maximumFractionDigits: x};
 	for(let i=0, len=a.length; i<len; i++){
-		if(typeof a[i]==='number'){
-			out+=a[i].toLocaleString('en-GB',
-					{
-						useGrouping: false,
-						minimumFractionDigits: m,
-						maximumFractionDigits: x
-					});
+
+		if(typeof a[i].s!=='undefined' && typeof a[i].s!=='undefined'){
+			let q=(a[i].u==a[i].s)?true:false;
+			if(!q){
+				out+='(';
+			}
+				out+=a[i].u.toLocaleString('en-GB',opts);
+				if(!q){
+					out+=', ';
+					out+=a[i].s.toLocaleString('en-GB',opts);
+					out+=')';
+			}
+		}else if(typeof a[i]==='number'){
+			out+=a[i].toLocaleString('en-GB',opts);
 		}else if(typeof a[i]==='string'){
 			out+='"'+a[i]+'"';
 		}else{
@@ -409,7 +433,7 @@ function hexProc(b_ints){
 	var disp_instructs=[];
 	var all_trackables=[];
 	var txt_len_b=[b_ints[4],b_ints[5],b_ints[6],b_ints[7]];
-	var txt_len=n_byte_unit8_to_int(txt_len_b);
+	var txt_len=n_byte_unit8_to_int(txt_len_b).u;
 	var cnt=0;
 	// Got opcodes list length
 	let sub_instr=[];
@@ -448,7 +472,7 @@ if(strt>=0){
 
 		let curr={inst_len:0, instr_txt:"",instr_txt_b:[], ref_addr:"",r_reg: ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],r_reg_b: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], r_reg_nm:["RAX","RCX","RDX","RBX","RSP","RBP","RSI","RDI","R8","R9","R10","R11","R12","R13","R14","R15","RIP"], r_reg_interp: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg:["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"], x_reg_b:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],  x_reg_interp:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg_nm:["xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7","xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15"],ref_addr_byte_len:0, ref_addr_bytes: "", stack_len: 0, stack:[], stack_b:[],el:null, trackables:[]};
 		
-					curr.inst_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3]]);
+					curr.inst_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3]]).u;
 		
 		let char_arr=[];
 		
@@ -529,7 +553,7 @@ if(strt>=0){
 		
 		//pos is now at first byte of bytesize (8 bytes)
 		
-		curr.ref_addr_byte_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3],b_ints[pos+4],b_ints[pos+5],b_ints[pos+6],b_ints[pos+7]]);
+		curr.ref_addr_byte_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3],b_ints[pos+4],b_ints[pos+5],b_ints[pos+6],b_ints[pos+7]]).u;
 		
 		pos+=8;
 		
@@ -544,7 +568,7 @@ if(strt>=0){
 		
 		//pos is now at first byte of stack length
 		
-		curr.stack_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3],b_ints[pos+4],b_ints[pos+5],b_ints[pos+6],b_ints[pos+7]])/8;
+		curr.stack_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3],b_ints[pos+4],b_ints[pos+5],b_ints[pos+6],b_ints[pos+7]]).u/8;
 		// div by 8 as stack entries are 8 bytes long
 		pos+=8;
 		//pos is now at first byte of stack 
@@ -645,8 +669,8 @@ if(strt>=0){
 					r.setAttribute('hex',curr.r_reg[x]);
 					r.setAttribute('inst_ix',k);
 					r.setAttribute('reg_name',curr.r_reg_nm[x]);
-					r.innerHTML=curr.r_reg_nm[x]+': '+curr.r_reg[x]+' ['+getBarSepStr(curr.r_reg_interp[x],0,0)+']';
-					r.title='hex [1 byte int | 2 byte int | 4 byte int | 8 byte int | string]';
+					r.innerHTML=curr.r_reg_nm[x]+': '+curr.r_reg[x]+' [ '+getBarSepStr(curr.r_reg_interp[x],0,0)+']';
+					r.title='hex [1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed) | string]';
 					registers.appendChild(r);
 				}				
 					registers.appendChild(document.createElement('br'));
