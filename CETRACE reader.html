@@ -535,7 +535,6 @@ if(strt>=0){
 				for(let b=0; b<16; b+=4){
 					data =  get_subarray(curr.x_reg_b[x], b, b+3).reverse();
 					view = new DataView(new Uint8Array(data).buffer);
-					view.getFloat32(0,false);
 					f4.push(view.getFloat32(0)); //will be rounded later
 				}
 				curr.x_reg_interp[x].push(f4);
