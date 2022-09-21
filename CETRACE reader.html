@@ -677,7 +677,7 @@ if(strt>=0){
 				for(let x=0, len_x=curr.x_reg_nm.length; x<len_x; x++){
 					let r=document.createElement('SECTION');
 					r.className='register '+curr.x_reg_nm[x];
-					r.setAttribute('hex',curr.r_reg[x]);
+					r.setAttribute('hex',curr.x_reg[x]);
 					r.setAttribute('inst_ix',k);
 					r.setAttribute('reg_name',curr.x_reg_nm[x]);
 					r.innerHTML=curr.x_reg_nm[x]+': '+curr.x_reg[x]+' ['+getBarSepStr(curr.x_reg_interp[x][0],0,7)+' || '+getBarSepStr(curr.x_reg_interp[x][1],0,15)+']';
