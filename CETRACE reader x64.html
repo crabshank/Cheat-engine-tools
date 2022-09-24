@@ -1,0 +1,904 @@
+ <html>
+ <head>
+ </head>
+ <body>
+ <title>CETRACE Reader x64</title>
+ <h1 style="text-align: center;">CETRACE Reader x64</h1>
+ <label for="openFile1">Load file: </label><input  type="file" id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
+ <section id="rdr"></section>
+	 <section id="instructions"></section>
+		<section id="jmps">
+		<button>Remove tracking on all instructions</button>
+		<button style="margin-top: 3px !important;" base="Jump to next instance">Jump to next instance</button>
+		<button base="Jump to previous instance">Jump to previous instance</button>
+		<button style="margin-top: 3px !important;" base="Jump to next register change">Jump to next register change</button>
+		<button base="Jump to previous register change">Jump to previous register change</button>
+		</section>
+	 <section style="display: none !important" id="search">
+		 <label for="search">Hex: </label>
+	 <input id="search"  type="text"></input>
+	 <select id="types"></select>
+	 </section>
+ </section>
+ <style>
+section#instructions {
+    width: 50% !important;
+    min-width: 50% !important;
+}
+section.register.tracked {
+    background: hsl(50deg 100% 50%) !important;
+    color: hsl(336deg 100% 50%) !important;
+    font-weight: bold !important;
+}
+section.register.tracking {
+    background: hsl(78deg 100% 50%);
+	 color: hsl(336deg 100% 50%);
+	  font-weight: bold;
+}
+div.tracked {
+    background: #0000ff !important;
+    color: #ffffff !important;
+}
+div.trackable {
+    display: inline-block !important;
+}
+section.register {
+    display: grid !important;
+    grid-auto-columns: max-content !important;
+}
+ </style>
+  <script>
+  
+const lookup_hex=[
+									"00",
+									"01",
+									"02",
+									"03",
+									"04",
+									"05",
+									"06",
+									"07",
+									"08",
+									"09",
+									"0A",
+									"0B",
+									"0C",
+									"0D",
+									"0E",
+									"0F",
+									"10",
+									"11",
+									"12",
+									"13",
+									"14",
+									"15",
+									"16",
+									"17",
+									"18",
+									"19",
+									"1A",
+									"1B",
+									"1C",
+									"1D",
+									"1E",
+									"1F",
+									"20",
+									"21",
+									"22",
+									"23",
+									"24",
+									"25",
+									"26",
+									"27",
+									"28",
+									"29",
+									"2A",
+									"2B",
+									"2C",
+									"2D",
+									"2E",
+									"2F",
+									"30",
+									"31",
+									"32",
+									"33",
+									"34",
+									"35",
+									"36",
+									"37",
+									"38",
+									"39",
+									"3A",
+									"3B",
+									"3C",
+									"3D",
+									"3E",
+									"3F",
+									"40",
+									"41",
+									"42",
+									"43",
+									"44",
+									"45",
+									"46",
+									"47",
+									"48",
+									"49",
+									"4A",
+									"4B",
+									"4C",
+									"4D",
+									"4E",
+									"4F",
+									"50",
+									"51",
+									"52",
+									"53",
+									"54",
+									"55",
+									"56",
+									"57",
+									"58",
+									"59",
+									"5A",
+									"5B",
+									"5C",
+									"5D",
+									"5E",
+									"5F",
+									"60",
+									"61",
+									"62",
+									"63",
+									"64",
+									"65",
+									"66",
+									"67",
+									"68",
+									"69",
+									"6A",
+									"6B",
+									"6C",
+									"6D",
+									"6E",
+									"6F",
+									"70",
+									"71",
+									"72",
+									"73",
+									"74",
+									"75",
+									"76",
+									"77",
+									"78",
+									"79",
+									"7A",
+									"7B",
+									"7C",
+									"7D",
+									"7E",
+									"7F",
+									"80",
+									"81",
+									"82",
+									"83",
+									"84",
+									"85",
+									"86",
+									"87",
+									"88",
+									"89",
+									"8A",
+									"8B",
+									"8C",
+									"8D",
+									"8E",
+									"8F",
+									"90",
+									"91",
+									"92",
+									"93",
+									"94",
+									"95",
+									"96",
+									"97",
+									"98",
+									"99",
+									"9A",
+									"9B",
+									"9C",
+									"9D",
+									"9E",
+									"9F",
+									"A0",
+									"A1",
+									"A2",
+									"A3",
+									"A4",
+									"A5",
+									"A6",
+									"A7",
+									"A8",
+									"A9",
+									"AA",
+									"AB",
+									"AC",
+									"AD",
+									"AE",
+									"AF",
+									"B0",
+									"B1",
+									"B2",
+									"B3",
+									"B4",
+									"B5",
+									"B6",
+									"B7",
+									"B8",
+									"B9",
+									"BA",
+									"BB",
+									"BC",
+									"BD",
+									"BE",
+									"BF",
+									"C0",
+									"C1",
+									"C2",
+									"C3",
+									"C4",
+									"C5",
+									"C6",
+									"C7",
+									"C8",
+									"C9",
+									"CA",
+									"CB",
+									"CC",
+									"CD",
+									"CE",
+									"CF",
+									"D0",
+									"D1",
+									"D2",
+									"D3",
+									"D4",
+									"D5",
+									"D6",
+									"D7",
+									"D8",
+									"D9",
+									"DA",
+									"DB",
+									"DC",
+									"DD",
+									"DE",
+									"DF",
+									"E0",
+									"E1",
+									"E2",
+									"E3",
+									"E4",
+									"E5",
+									"E6",
+									"E7",
+									"E8",
+									"E9",
+									"EA",
+									"EB",
+									"EC",
+									"ED",
+									"EE",
+									"EF",
+									"F0",
+									"F1",
+									"F2",
+									"F3",
+									"F4",
+									"F5",
+									"F6",
+									"F7",
+									"F8",
+									"F9",
+									"FA",
+									"FB",
+									"FC",
+									"FD",
+									"FE",
+									"FF"
+								];
+								
+function n_byte_unit8_to_int(a){
+			let out={s: a[0], u: a[0]};
+			
+			let bsi=0;
+				for(let i=1, len=a.length; i<len; i++){
+					bsi+=8;
+					let n=a[i]<<bsi;
+					out.u+=n;
+				}
+
+			let mx=2;
+			for(let i=0, len=(a.length*8)-1; i<len; i++){
+				mx*=2;
+			}
+			mx-=1;
+			
+			let h=Math.floor(mx/2);
+			
+			if(out.u>h){
+				out.s=-mx+out.u-1;
+			}else{
+				out.s=out.u;
+			}
+			
+			return out;
+}
+	
+function get_subarray(a, f, t) {
+    return a.slice(f, t+1);
+}
+
+function absBoundingClientRect(el){
+	let st = [window?.scrollY,
+					window?.pageYOffset,
+					el?.ownerDocument?.documentElement?.scrollTop,
+					document?.documentElement?.scrollTop,
+					document?.body?.parentNode?.scrollTop,
+					document?.body?.scrollTop,
+					document?.head?.scrollTop];
+					
+		let sl = [window?.scrollX,
+						window?.pageXOffset,
+						el?.ownerDocument?.documentElement?.scrollLeft,
+						document?.documentElement?.scrollLeft,
+						document?.body?.parentNode?.scrollLeft,
+						document?.body?.scrollLeft,
+						document?.head?.scrollLeft];
+						
+				let scrollTop=0;
+				for(let k=0; k<st.length; k++){
+					if(!!st[k] && typeof  st[k] !=='undefined' && st[k]>0){
+						scrollTop=(st[k]>scrollTop)?st[k]:scrollTop;
+					}
+				}			
+
+				let scrollLeft=0;
+				for(let k=0; k<sl.length; k++){
+					if(!!sl[k] && typeof  sl[k] !=='undefined' && sl[k]>0){
+						scrollLeft=(sl[k]>scrollLeft)?sl[k]:scrollLeft;
+					}
+				}
+	
+	const rct=el.getBoundingClientRect();
+	let r={};
+
+	r.left=rct.left+scrollLeft;
+	r.right=rct.right+scrollLeft;
+	r.top=rct.top+scrollTop;
+	r.bottom=rct.bottom+scrollTop;
+	r.height=rct.height;
+	r.width=rct.width;
+	
+	return r;
+}
+
+function getBarSepStr(a,m,x){
+	let out='';
+	let opts={useGrouping: false, minimumFractionDigits: m, maximumFractionDigits: x};
+	for(let i=0, len=a.length; i<len; i++){
+
+		if(typeof a[i].s!=='undefined' && typeof a[i].s!=='undefined'){
+			let q=(a[i].u==a[i].s)?true:false;
+			if(!q){
+				out+='(';
+			}
+				out+=a[i].u.toLocaleString('en-GB',opts);
+				if(!q){
+					out+=', ';
+					out+=a[i].s.toLocaleString('en-GB',opts);
+					out+=')';
+			}
+		}else if(typeof a[i]==='number'){
+			out+=a[i].toLocaleString('en-GB',opts);
+		}else if(typeof a[i]==='string'){
+			out+='"'+a[i]+'"';
+		}else{
+			out+='"'+JSON.stringify(a[i])+'"';
+		}
+		out+=( (i==len-1)? '' : ' | ' );
+	}
+	return out;
+}
+	var inst_HTML=document.querySelector('section#instructions');
+	var slc=document.querySelector('select#types');
+	var jps=document.querySelector('section#jmps');
+	document.body.onscroll=(event)=>{
+		jps.style.setProperty('transform','translateY('+window.scrollY+'px)','important');
+	}
+	
+	let instRct=absBoundingClientRect(inst_HTML);
+
+	jps.style.setProperty('position','absolute','important');
+	jps.style.setProperty('display','flex','important');
+	jps.style.setProperty('flex-direction','column','important');
+	jps.style.setProperty('top',instRct.top+'px','important');
+	jps.style.setProperty('left',instRct.right+'px','important');
+	
+function hexProc(b_ints){
+	var reg_names=["xmm15","xmm14","xmm13","xmm12","xmm11","xmm10","ymm15","ymm14","ymm13","ymm12","ymm11","ymm10","xmm9","xmm8","xmm7","xmm6","xmm5","xmm4","xmm3","xmm2","xmm1","xmm0","ymm9","ymm8","ymm7","ymm6","ymm5","ymm4","ymm3","ymm2","ymm1","ymm0","r10d","r10w","r10b","r11d","r11w","r11b","r12d","r12w","r12b","r13d","r13w","r13b","r14d","r14w","r14b","r15d","r15w","r15b","rax","eax","rbx","ebx","rcx","ecx","rdx","edx","rsi","esi","sil","rdi","edi","dil","rbp","ebp","bpl","rsp","esp","spl","r8d","r8w","r8b","r9d","r9w","r9b","r10","r11","r12","r13","r14","r15","ax","al","bx","bl","cx","cl","dx","dl","si","di","bp","sp","r8","r9"]; //sorted by length
+	var nvs={curr_inst: [], inst_ix:0, curr_reg: [], reg_ix:0, reg_hex:'',reg_el: null };
+	inst_HTML.appendChild(document.createElement('br'));
+	var all_instructs=[];
+	var disp_instructs=[];
+	var all_trackables=[];
+	var txt_len_b=[b_ints[4],b_ints[5],b_ints[6],b_ints[7]];
+	var txt_len=n_byte_unit8_to_int(txt_len_b).u;
+	var cnt=0;
+	// Got opcodes list length
+	let sub_instr=[];
+	for(let i=8, len=8+txt_len; i<len; i++){
+		if(b_ints[i]==13 && b_ints[i+1]==10){
+			if(b_ints[i+2]==9){
+				i=i+2;
+			}else{
+				i=i+1;
+			}		
+		}else{
+			if(b_ints[i+1]==13 && b_ints[i+2]==10){
+				disp_instructs.push(String.fromCharCode(...sub_instr));
+				sub_instr=[];
+				i=i+2; //takes us to one element past the past the "0A" in "0D 0A"
+			}else{
+				sub_instr.push(b_ints[i]);
+			}
+		}
+	}
+	
+	//b_ints[8+txt_len] is one element past the "0A" in "0D 0A" at the end of the opcodes list
+	let strt=-1;
+	
+	for(let i=8+txt_len, len=b_ints.length-3; i<len; i++){
+		let c=b_ints[i];
+		if(c>0){
+			strt=i+4; // To start of instruction text
+			i=b_ints.length-4;
+		}
+	}
+	
+if(strt>=0){
+	var pos=strt-4;
+	while (pos<b_ints.length){
+
+		let curr={inst_len:0, instr_txt:"",instr_txt_b:[], ref_addr:"",r_reg: ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],r_reg_b: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], r_reg_nm:["RAX","RCX","RDX","RBX","RSP","RBP","RSI","RDI","R8","R9","R10","R11","R12","R13","R14","R15","RIP"], r_reg_interp: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg:["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"], x_reg_b:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],  x_reg_interp:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg_nm:["xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7","xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15"],ref_addr_byte_len:0, ref_addr_bytes: "", stack_len: 0, stack:[], stack_b:[],el:null, trackables:[]};
+		
+					curr.inst_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3]]).u;
+		
+		let char_arr=[];
+		
+		pos+=4;
+	//pos is now at first byte of  instruction
+
+		char_arr=get_subarray(b_ints,pos,pos+curr.inst_len-1);
+		curr.instr_txt=String.fromCharCode(...char_arr);
+		curr.instr_txt_b=char_arr;
+		console.log(curr.instr_txt);
+		pos=curr.inst_len+pos+4;
+		
+		
+		for(let i=7 ; i>=0; i--){
+			curr.ref_addr=curr.ref_addr.concat(lookup_hex[b_ints[i+pos]]);
+		}
+		
+		//pos +8 +120 is the first byte of the registers
+		pos+=128;
+		
+		for(let k=0, len=curr.r_reg.length; k<len; k++){
+			for(let i=7 ; i>=0; i--){
+				curr.r_reg[k]=curr.r_reg[k].concat(lookup_hex[b_ints[i+pos]]);
+				curr.r_reg_b[k].unshift(b_ints[i+pos]);
+			}
+			pos+=8;
+		}
+		
+		//swap around to match CE tracer output:
+		curr.r_reg=[curr.r_reg[0],curr.r_reg[3],curr.r_reg[1],curr.r_reg[2],...get_subarray(curr.r_reg,4,16)];
+		
+		curr.r_reg_b=[curr.r_reg_b[0],curr.r_reg_b[3],curr.r_reg_b[1],curr.r_reg_b[2],...get_subarray(curr.r_reg_b,4,16)];
+		
+		curr.r_reg_nm=[curr.r_reg_nm[0],curr.r_reg_nm[3],curr.r_reg_nm[1],curr.r_reg_nm[2],...get_subarray(curr.r_reg_nm,4,16)];
+
+		let b_interp=[1,2,4,8];
+		
+		for(let i=0, len_i=curr.r_reg_b.length ; i<len_i; i++){
+			for(let j=0, len_j=b_interp.length ; j<len_j; j++){
+				curr.r_reg_interp[i].push( n_byte_unit8_to_int( get_subarray(curr.r_reg_b[i], 0, b_interp[j]-1) ) );
+			}
+			curr.r_reg_interp[i].push(String.fromCharCode(...curr.r_reg_b[i]));
+		}
+		
+		pos+=160;
+		
+		//pos is now at first byte of  xmm registers
+		for(let k=0, len=curr.x_reg.length; k<len; k++){
+			for(let i=15 ; i>=0; i--){
+				curr.x_reg[k]=curr.x_reg[k].concat(lookup_hex[b_ints[i+pos]]);
+				curr.x_reg_b[k].unshift(b_ints[i+pos]);
+			}
+			pos+=16;
+		}
+		
+		for(let x=0, len=curr.x_reg_b.length; x<len; x++){ //bytes: 1,2,4,8,string,float2, double2
+				let data, view;
+				//float4
+				let f4=[];
+				for(let b=0; b<16; b+=4){
+					data =  get_subarray(curr.x_reg_b[x], b, b+3).reverse();
+					view = new DataView(new Uint8Array(data).buffer);
+					f4.push(view.getFloat32(0)); //will be rounded later
+				}
+				curr.x_reg_interp[x].push(f4);
+				//double2
+				let d2=[];
+				for(let b=0; b<16; b+=8){
+					data = get_subarray(curr.x_reg_b[x], b, b+7).reverse();
+					view = new DataView(new Uint8Array(data).buffer);
+					d2.push(view.getFloat64(0,false));
+				}
+				curr.x_reg_interp[x].push(d2);
+		}
+
+		pos+=560;
+		
+		//pos is now at first byte of bytesize (8 bytes)
+		
+		curr.ref_addr_byte_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3],b_ints[pos+4],b_ints[pos+5],b_ints[pos+6],b_ints[pos+7]]).u;
+		
+		pos+=8;
+		
+		//pos is now at first byte of ref_address bytes
+		if(curr.ref_addr_byte_len>0){
+			for(let j=curr.ref_addr_byte_len-1; j>=0; j--){
+					curr.ref_addr_bytes=curr.ref_addr_bytes.concat(lookup_hex[b_ints[j+pos]]);
+			}
+		}
+		
+		pos+=curr.ref_addr_byte_len;
+		
+		//pos is now at first byte of stack length
+		
+		curr.stack_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3],b_ints[pos+4],b_ints[pos+5],b_ints[pos+6],b_ints[pos+7]]).u/8;
+		// div by 8 as stack entries are 8 bytes long
+		pos+=8;
+		//pos is now at first byte of stack 
+		
+		for(let k=0, len=curr.stack_len; k<len; k++){
+		let stk="";
+		let stk_b=[];
+			for(let i=7; i>=0; i--){
+					stk=stk.concat(lookup_hex[b_ints[i+pos]]);
+					stk_b.unshift(b_ints[i+pos]);
+			}
+			curr.stack.push(stk);
+			curr.stack_b.push(stk_b);
+			pos+=8;
+		}			
+		//pos is now at first byte of next instruction
+		all_instructs.push(curr);
+	}
+		console.log(all_instructs);
+		
+	let instRct=absBoundingClientRect(inst_HTML);
+	jps.style.setProperty('top',instRct.top+'px','important');
+	jps.style.setProperty('left',instRct.right+'px','important');
+	
+		var inst_lens_eq=(disp_instructs.length==all_instructs.length)?true:false;
+		
+		for(let k=0, len=all_instructs.length; k<len; k++){
+		let curr=all_instructs[k];
+			let instr=document.createElement('SECTION');
+			instr.className='instruction_HTML';
+			let instruc_txt=document.createElement('SECTION');
+			instr.className='instruction_text_HTML';
+			let spl=curr.instr_txt.split(' ');
+			let inst_nm=spl[0];
+			let spl2=spl.slice(1).join(' ');
+			let args=spl2.split(',');
+			let rgs=[];
+				for(let i=0, len_i=args.length; i<len_i; i++){
+					let a=args[i].trim();
+					let a_l=a.toLocaleLowerCase();
+					for(let j=0, len_j=reg_names.length; j<len_j; j++){
+						a=args[i];
+						a_l=args[i];
+						let cr=reg_names[j];
+						let ix=a_l.indexOf(cr);
+						let ridv=rgs.some((r)=>{return r.includes(cr);});
+							if(ix>=0 && !ridv){
+								let str='';
+								for(let x=0, len_x=cr.length; x<len_x; x++){
+									str+=a[ix+x];
+								}
+								rgs.push(str);
+							}
+					}
+					
+					//for "[address]"
+					for(let x=0, len_x=args[i].length; x<len_x; x++){
+						if(args[i][x]=='[' && x<len_x-2){
+						let str='[';
+							for(let y=x+1, len_y=args[i].length; y<len_y; y++){
+								str+=args[i][y];
+								if(args[i][y]==']' ){
+									rgs.unshift(str);
+									y=args[i].length-1;
+									x=y;
+								}
+							}
+						}
+					}
+					
+					for(let x=0, len_x=rgs.length; x<len_x; x++){
+						let tix=all_trackables.findIndex((t)=>{return t[0]===rgs[x];});
+						if(tix>=0 && all_trackables[tix].length-1!=k){
+							all_trackables[tix].push(k);
+						}else{
+							all_trackables.push([rgs[x],k]);
+						}
+						args[i]=args[i].split(rgs[x]).join('<div class="trackable" ix="'+( (tix>=0)?tix :all_trackables.length-1 )+'" occ_ix="'+( (tix>=0)?all_trackables[tix].length-1 : 1 )+'">'+rgs[x]+'</div>');
+					}	
+					
+				}
+
+				
+				instr.innerHTML=(  (inst_lens_eq)?( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ):  curr.r_reg[16] )+': '+
+				(	( curr.ref_addr==="0000000000000000")?
+					'':
+					'<br>Referenced address: '  + curr.ref_addr
+				)+
+				'<br>'+inst_nm+' '+args.join(',');
+				
+				instr.appendChild(document.createElement('br'));
+				instr.appendChild(document.createElement('br'));
+
+				let registers=document.createElement('SECTION');
+				for(let x=0, len_x=curr.r_reg_nm.length; x<len_x; x++){
+					let r=document.createElement('SECTION');
+					r.className='register '+curr.r_reg_nm[x];
+					r.setAttribute('hex',curr.r_reg[x]);
+					r.setAttribute('inst_ix',k);
+					r.setAttribute('reg_name',curr.r_reg_nm[x]);
+					r.innerHTML=curr.r_reg_nm[x]+': '+curr.r_reg[x]+' [ '+getBarSepStr(curr.r_reg_interp[x],0,0)+']';
+					r.title='hex [1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed) | string]';
+					registers.appendChild(r);
+				}				
+					registers.appendChild(document.createElement('br'));
+				
+				for(let x=0, len_x=curr.x_reg_nm.length; x<len_x; x++){
+					let r=document.createElement('SECTION');
+					r.className='register '+curr.x_reg_nm[x];
+					r.setAttribute('hex',curr.x_reg[x]);
+					r.setAttribute('inst_ix',k);
+					r.setAttribute('reg_name',curr.x_reg_nm[x]);
+					r.innerHTML=curr.x_reg_nm[x]+': '+curr.x_reg[x]+' ['+getBarSepStr(curr.x_reg_interp[x][0],0,7)+' || '+getBarSepStr(curr.x_reg_interp[x][1],0,15)+']';
+					r.title='hex [float | float | float | float || double | double]';
+					registers.appendChild(r);
+				}
+					registers.appendChild(document.createElement('hr'));
+				
+				instr.appendChild(registers);
+
+			/*	let stack=document.createElement('SECTION');
+				for(let x=0, len_x=curr.stack.length; x<len_x; x++){
+					let r=document.createElement('SECTION');	
+					r.className='stack';
+					r.setAttribute=('index',x);
+					r.innerHTML=curr.stack[x];
+					stack.appendChild(r);
+				}				
+					stack.appendChild(document.createElement('br'));
+
+			instr.appendChild(stack);*/
+			
+			inst_HTML.appendChild(instr);
+			curr.el=instr;
+			all_instructs[k].trackables=[...instr.querySelectorAll('div.trackable')];
+			for(let t=0, len_t=all_instructs[k].trackables.length; t<len_t; t++){
+				let c=all_instructs[k].trackables[t];
+				c.title=c.textContent;
+			}
+			inst_HTML.appendChild(document.createElement('br'));
+		}
+		
+		console.log(all_trackables);
+		
+function chgTracked(el, add){
+	let ix=parseInt(el.getAttribute('ix'));
+	let occ_ix=parseInt(el.getAttribute('occ_ix'));
+	let f=false;
+	for(let i=occ_ix, len= all_trackables[ix].length; i<len; i++ ){
+		let dt=all_instructs[all_trackables[ix][i]].trackables;
+		 for(let k=0, len_k= dt.length; k<len_k; k++ ){	 
+			if(dt[k].textContent===el.textContent && f){
+				if(add){
+					if(!dt[k].classList.contains('tracked')){
+						dt[k].classList.add("tracked");
+						nvs.curr_inst.push(dt[k]);
+					}
+				}else{
+					dt[k].classList.remove("tracked");
+					let jpsCh=[...jps.children];
+					jpsCh[1].innerText=jpsCh[1].getAttribute('base');
+					jpsCh[2].innerText=jpsCh[2].getAttribute('base');
+				}
+			}else if(dt[k]===el && !f){
+				f=true;
+				let jpsCh=[...jps.children];
+				jpsCh[1].innerText=jpsCh[1].getAttribute('base')+' ('+el.title+')';
+				jpsCh[2].innerText=jpsCh[2].getAttribute('base')+' ('+el.title+')';
+				if(add){
+					if(!dt[k].classList.contains('tracked')){
+						dt[k].classList.add("tracked");
+						nvs.curr_inst.push(dt[k]);
+					}
+				}
+			 } 
+		 }
+	}
+}
+
+inst_HTML.onclick=(event)=>{
+let el=event.target;
+	if(typeof el.matches !=='undefined'){
+		if(el.matches('div.trackable')){
+				if(el.classList.contains("tracked")){
+					chgTracked(el, false);
+				}else{
+					chgTracked(el, true);
+			}
+		}else if(el.matches('section.register')){
+			if(el.classList.contains("tracked")){
+				el.classList.remove("tracked");
+				
+				let lrg=el.getAttribute('reg_name');
+				let trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracking");
+				}
+				
+				let jpsCh=[...jps.children];
+				jpsCh[3].innerText=jpsCh[3].getAttribute('base');
+				jpsCh[4].innerText=jpsCh[4].getAttribute('base');
+				nvs.reg_el=null;
+				nvs.curr_reg=[];
+				nvs.reg_hex='';
+				nvs.reg_ix=0;
+			}else{
+				let trk=[...document.querySelectorAll('section.tracked')];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracked");
+				}		
+				trk=[...document.querySelectorAll('section.tracking')];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracking");
+				}
+				let lrg=el.getAttribute('reg_name');
+				nvs.reg_hex=el.getAttribute('hex');
+				nvs.reg_el=el;
+				nvs.curr_reg=[...document.querySelectorAll('section.'+lrg)];
+				let jpsCh=[...jps.children];
+				jpsCh[3].innerText=jpsCh[3].getAttribute('base')+' ('+lrg+')';
+				jpsCh[4].innerText=jpsCh[4].getAttribute('base')+' ('+lrg+')';
+				el.classList.add("tracked");
+				nvs.reg_ix=parseInt(el.getAttribute('inst_ix'));
+				 trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.add("tracking");
+				}
+			}
+		}
+	}
+};
+
+jpsCh=[...jps.children];
+
+jpsCh[0].onclick=(event)=>{
+	//let el=event.target;
+	event.stopPropagation();
+	let dt=[...document.querySelectorAll('div.tracked')];
+	 for(let k=0, len_k= dt.length; k<len_k; k++ ){
+		dt[k].classList.remove("tracked");
+	 }
+		let jpsCh=[...jps.children];
+		jpsCh[1].innerText=jpsCh[1].getAttribute('base');
+		jpsCh[2].innerText=jpsCh[2].getAttribute('base');
+		nvs.curr_inst=[];
+		nvs.inst_ix=0;
+};
+
+jpsCh[1].onclick=(event)=>{
+	//let el=event.target;
+	event.stopPropagation();
+	nvs.inst_ix=(nvs.inst_ix==nvs.curr_inst.length)?nvs.inst_ix:nvs.inst_ix+1;
+	if(nvs.inst_ix<nvs.curr_inst.length){
+		nvs.curr_inst[nvs.inst_ix].scrollIntoView();
+	}
+};
+
+jpsCh[2].onclick=(event)=>{
+	//let el=event.target;
+	event.stopPropagation();
+	nvs.inst_ix=(nvs.inst_ix==-1)?nvs.inst_ix:nvs.inst_ix-1;
+	if(nvs.inst_ix>=0){
+		nvs.curr_inst[nvs.inst_ix].scrollIntoView();
+	}
+};
+
+function navReg(back){
+	let c=false;
+	let i=1;
+	while(!c && ( (back && nvs.reg_ix-i >=0) || (!back && nvs.reg_ix+i<nvs.curr_reg.length)   )  ){
+		let x=(back)? nvs.reg_ix-i	:	nvs.reg_ix+i;
+		let ix=nvs.curr_reg.filter((r)=>{return parseInt(r.getAttribute('inst_ix'))==x;});
+		if(ix.length >0 && ( ix[0].getAttribute('hex')!==nvs.reg_hex ||  x==0  ) ){
+			ix[0].scrollIntoView();
+			
+				let lrg=ix[0].getAttribute('reg_name');
+				nvs.reg_hex=ix[0].getAttribute('hex');
+
+				nvs.reg_el.classList.remove("tracked");
+				lrg=nvs.reg_el.getAttribute('reg_name');
+				let trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.remove("tracking");
+				}
+
+
+				ix[0].classList.add("tracked");
+				lrg=ix[0].getAttribute('reg_name');
+				trk=[...document.querySelectorAll('section.'+lrg)];
+				for(let k=0, len_k= trk.length; k<len_k; k++ ){	
+					trk[k].classList.add("tracking");
+				}
+				
+				nvs.reg_ix=x;
+
+
+				
+				nvs.reg_el=ix[0];
+				
+				ix[0].scrollIntoView();
+				c=true;
+		}else{
+			i++;
+		}
+	}
+}
+
+jpsCh[3].onclick=(event)=>{
+	//let el=event.target;
+	event.stopPropagation();
+	navReg(false);
+};
+
+jpsCh[4].onclick=(event)=>{
+	//let el=event.target;
+	event.stopPropagation();
+	navReg(true);
+};
+		
+}
+
+}
+ document.getElementById("openFile1").addEventListener('change',  function () {
+	let fr = new FileReader();
+	 fr.onload = function () {
+		let arrayBuffer = this.result;
+		let byteInts = new Uint8Array(arrayBuffer);
+		hexProc(byteInts);
+	}
+	fr.readAsArrayBuffer(this.files[0]);
+}); 
+ </script>
+</body>
+</html>
