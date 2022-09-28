@@ -1,4 +1,4 @@
--- Disassemblers mnemonics - crabshank
+-- Disassembler mnemonics - crabshank
 
 local function displayMnemonics()
   local visDis = getVisibleDisassembler()
