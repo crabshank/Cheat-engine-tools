@@ -1,4 +1,4 @@
-### CETRACE reader x64.html
+## CETRACE reader x64.html
 
 Load a .cetrace file, wait, and it will finish loading.
 
@@ -12,6 +12,6 @@ N.B. Files around 10MB may not load.
 
 ***
 
-### Disassembler mnemonics.lua
+## Disassembler mnemonics.lua
 
 Simply paste the file into your autorun folder, and it will put the instructions' mnemonics in the "Comments" column in the disassembler.
