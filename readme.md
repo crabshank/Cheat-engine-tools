@@ -1,1 +1,17 @@
+### CETRACE reader x64.html
 
+Load a .cetrace file, wait, and it will finish loading.
+
+Clicking on the opcode line (above RAX) in different places (check the tooltip), will highlight the current all latter instances and the same goes for the registers.
+
+The "Jump to..." buttons allow the user the jump to the next time a highlighted value changes.
+
+"Remove tracking on all instructions" un-highlights everything.
+
+N.B. Files around 10MB may not load.
+
+***
+
+### Disassembler mnemonics.lua
+
+Simply paste the file into your autorun folder, and it will put the instructions' mnemonics in the "Comments" column in the disassembler.
