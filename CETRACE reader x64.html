@@ -48,7 +48,19 @@ section.register {
 }
  </style>
   <script>
-  
+  let ttl=[...document.getElementsByTagName('h1')][0];
+ function getNoDigits(n){
+		return Math.max(1, Math.floor(Math.log10(Math.abs(n))+1) );
+}
+
+function getSigFig_dp(n,d){
+	if(isFinite(n)){
+		return Math.max(0, d+1-getNoDigits(n) );
+	}else{
+		return d;
+	}
+}
+
 const lookup_hex=[
 									"00",
 									"01",
@@ -393,13 +405,16 @@ function getBarSepStr(a,m,x){
 			if(!q){
 				out+='(';
 			}
+				opts.maximumFractionDigits=getSigFig_dp(a[i].u,x);
 				out+=a[i].u.toLocaleString('en-GB',opts);
 				if(!q){
 					out+=', ';
+					opts.maximumFractionDigits=getSigFig_dp(a[i].s,x);
 					out+=a[i].s.toLocaleString('en-GB',opts);
 					out+=')';
 			}
 		}else if(typeof a[i]==='number'){
+			opts.maximumFractionDigits=getSigFig_dp(a[i],x);
 			out+=a[i].toLocaleString('en-GB',opts);
 		}else if(typeof a[i]==='string'){
 			out+='"'+a[i]+'"';
@@ -468,8 +483,8 @@ function hexProc(b_ints){
 	
 if(strt>=0){
 	var pos=strt-4;
-	while (pos<b_ints.length){
 
+	function procInstr(){
 		let curr={inst_len:0, instr_txt:"",instr_txt_b:[], ref_addr:"",r_reg: ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],r_reg_b: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], r_reg_nm:["RAX","RCX","RDX","RBX","RSP","RBP","RSI","RDI","R8","R9","R10","R11","R12","R13","R14","R15","RIP"], r_reg_interp: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg:["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"], x_reg_b:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],  x_reg_interp:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg_nm:["xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7","xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15"],ref_addr_byte_len:0, ref_addr_bytes: "", stack_len: 0, stack:[], stack_b:[],el:null, trackables:[]};
 		
 					curr.inst_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3]]).u;
@@ -584,18 +599,8 @@ if(strt>=0){
 			pos+=8;
 		}			
 		//pos is now at first byte of next instruction
-		all_instructs.push(curr);
-	}
-		console.log(all_instructs);
-		
-	let instRct=absBoundingClientRect(inst_HTML);
-	jps.style.setProperty('top',instRct.top+'px','important');
-	jps.style.setProperty('left',instRct.right+'px','important');
-	
-		var inst_lens_eq=(disp_instructs.length==all_instructs.length)?true:false;
-		
-		for(let k=0, len=all_instructs.length; k<len; k++){
-		let curr=all_instructs[k];
+			
+			let k=all_instructs.length;
 			let instr=document.createElement('SECTION');
 			instr.className='instruction_HTML';
 			let instruc_txt=document.createElement('SECTION');
@@ -650,14 +655,19 @@ if(strt>=0){
 					
 				}
 
-				
-				instr.innerHTML=(  (inst_lens_eq)?( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ):  curr.r_reg[16] )+': '+
+						//var inst_lens_eq=(disp_instructs.length==all_instructs.length)?true:false;
+				/*instr.innerHTML=(  (inst_lens_eq)?( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ):  curr.r_reg[16] )+': '+
+				(	( curr.ref_addr==="0000000000000000")?
+					'':
+					'<br>Referenced address: '  + curr.ref_addr
+				)+
+				'<br>'+inst_nm+' '+args.join(',');*/
+				instr.innerHTML= ( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ) +': '+
 				(	( curr.ref_addr==="0000000000000000")?
 					'':
 					'<br>Referenced address: '  + curr.ref_addr
 				)+
 				'<br>'+inst_nm+' '+args.join(',');
-				
 				instr.appendChild(document.createElement('br'));
 				instr.appendChild(document.createElement('br'));
 
@@ -702,14 +712,32 @@ if(strt>=0){
 			
 			inst_HTML.appendChild(instr);
 			curr.el=instr;
-			all_instructs[k].trackables=[...instr.querySelectorAll('div.trackable')];
-			for(let t=0, len_t=all_instructs[k].trackables.length; t<len_t; t++){
-				let c=all_instructs[k].trackables[t];
+			curr.trackables=[...instr.querySelectorAll('div.trackable')];
+			for(let t=0, len_t=curr.trackables.length; t<len_t; t++){
+				let c=curr.trackables[t];
 				c.title=c.textContent;
 			}
 			inst_HTML.appendChild(document.createElement('br'));
-		}
+				
+		all_instructs.push(curr);
 		
+if(pos<b_ints.length){
+	ttl.innerText="CETRACE Reader x64 - Loading: "+	(Math.floor((pos/b_ints.length)*10000)*0.01).toLocaleString('en-GB',{useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2})+"%";
+	setTimeout(procInstr,0);
+}else{
+	ttl.innerText="CETRACE Reader x64"
+}
+	}
+	postIntr();
+procInstr();
+
+function postIntr(){
+		console.log(all_instructs);
+		
+	let instRct=absBoundingClientRect(inst_HTML);
+	jps.style.setProperty('top',instRct.top+'px','important');
+	jps.style.setProperty('left',instRct.right+'px','important');
+					
 		console.log(all_trackables);
 		
 function chgTracked(el, add){
@@ -805,9 +833,13 @@ jpsCh=[...jps.children];
 jpsCh[0].onclick=(event)=>{
 	//let el=event.target;
 	event.stopPropagation();
-	let dt=[...document.querySelectorAll('div.tracked')];
+	let dt=[...document.querySelectorAll('.tracked')];
 	 for(let k=0, len_k= dt.length; k<len_k; k++ ){
 		dt[k].classList.remove("tracked");
+	 }	
+	 dt=[...document.querySelectorAll('.tracking')];
+	 for(let k=0, len_k= dt.length; k<len_k; k++ ){
+		dt[k].classList.remove("tracking");
 	 }
 		let jpsCh=[...jps.children];
 		jpsCh[1].innerText=jpsCh[1].getAttribute('base');
@@ -887,6 +919,7 @@ jpsCh[4].onclick=(event)=>{
 	navReg(true);
 };
 		
+}
 }
 
 }
