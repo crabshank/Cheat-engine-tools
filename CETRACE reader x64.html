@@ -729,7 +729,9 @@ if(pos<b_ints.length){
 }
 	}
 	postIntr();
-procInstr();
+if(pos<b_ints.length){
+	procInstr();
+}
 
 function postIntr(){
 		console.log(all_instructs);
