@@ -8,7 +8,7 @@ The "Jump to..." buttons allow the user the jump to the next time a highlighted 
 
 "Remove tracking on all instructions" un-highlights everything.
 
-N.B. Files around 10MB and up may not load.
+N.B. MAy take a while to finish processing.
 
 ***
 
