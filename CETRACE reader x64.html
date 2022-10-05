@@ -400,7 +400,7 @@ function getBarSepStr(a,m,x){
 	let opts={useGrouping: false, minimumFractionDigits: m, maximumFractionDigits: x};
 	for(let i=0, len=a.length; i<len; i++){
 
-		if(typeof a[i].s!=='undefined' && typeof a[i].s!=='undefined'){
+		if(typeof a[i]!=='undefined' && typeof a[i].s!=='undefined'){
 			let q=(a[i].u==a[i].s)?true:false;
 			if(!q){
 				out+='(';
