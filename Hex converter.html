@@ -409,6 +409,7 @@ let all_hex=[];
 var hx_arr=[];
 var hx_arr_int=[];
 var hx_arr_cnt=0;
+anlys_i_HTML='';
 
 //let hx_print=`<section style="display: flex;flex-flow: row;"><div title="Offset"></div><div></div><div></div></section>`;
 function base_cnd(event){
@@ -474,7 +475,7 @@ function procPrint(){
 		let t1='[ "'+brds['chr']+'" | '+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
-		anlys_i.innerHTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" style="display: flex;flex-flow: row;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[float || double]">'+t2+'</div></section>';
+		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" style="display: flex;flex-flow: row;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[float || double]">'+t2+'</div></section>';
 		all_hex.push(brds);
 		hx_arr_cnt+=1;
 		if(hx_arr_cnt<len){
@@ -482,6 +483,7 @@ function procPrint(){
 			setTimeout(procPrint,0);
 		}else{
 			hx_arr_cnt=0;
+			anlys_i.innerHTML=anlys_i_HTML;
 			ttl.innerText="Hex converter";
 		}
 }
@@ -497,6 +499,7 @@ hx.oninput=(event)=>{
 	let rhx=[];
 	hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
 	anlys_i.innerHTML='';
+	anlys_i_HTML='';
 	if(hx_arr_int.length>0){
 		procPrint();
 	}
