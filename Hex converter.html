@@ -22,6 +22,7 @@ section#anly_info > section {
 #anly_info div:nth-child(1) {
     min-width: 5.5ch;
     text-align: right;
+    font-weight: bolder;
 }
 #anly_info section:hover{
     background-color: hsl(46deg 90% 28%);
@@ -397,8 +398,9 @@ const lookup_hex={
 										'FE':254,
 										'FF':255
 									};
-									
-  let ttl=[...document.getElementsByTagName('h1')][0];
+					
+let indnt=8;					
+let ttl=[...document.getElementsByTagName('h1')][0];
 let hx=document.getElementById('hex');
 let anlys=document.getElementById('anly');
 let sbse=document.getElementById('bse');
@@ -472,10 +474,19 @@ function procPrint(){
 		
 		let s=brds['gOff']-hxBse; 
 		let f=((s>=0)?'+':'')+(s).toString(16).toLocaleUpperCase();
+		let f2=indnt;
+		let sa=Math.abs(s);
+
+		if(sa%4===0){
+			f2-=4;
+		}
+		if(sa%2===0){
+			f2-=4;
+		}
 		let t1='[ "'+brds['chr']+'" | '+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
-		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" style="display: flex;flex-flow: row;min-width: -webkit-fill-available;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[float || double]">'+t2+'</div></section>';
+		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" style="display: flex;flex-flow: row;min-width: -webkit-fill-available;margin-left:'+f2+'em"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[float || double]">'+t2+'</div></section>';
 		all_hex.push(brds);
 		hx_arr_cnt+=1;
 		if(hx_arr_cnt<len){
@@ -520,8 +531,20 @@ sbse.onclick=(event)=>{
 	hxBse=parseInt(sbse.getAttribute('baseByte'));
 	let f=[...document.getElementsByClassName('hex_offs')];
 	for(let i=0, len=f.length; i<len; i++){
-		let s=parseInt(f[i].parentElement.getAttribute('abs_hex'))-hxBse;
+		let sp=f[i].parentElement;
+		let s=parseInt(sp.getAttribute('abs_hex'))-hxBse;
 		let t=((s>=0)?'+':'')+(s).toString(16).toLocaleUpperCase();
+		let f2=indnt;
+		let sa=Math.abs(s);
+
+		if(sa%4===0){
+			f2-=4;
+		}
+		if(sa%2===0){
+			f2-=4;
+		}
+		sp.style.marginLeft=f2+'em';
+		
 		f[i].innerText=t;
 	}
 }
