@@ -1,0 +1,535 @@
+<html>
+
+<head>
+<meta charset="UTF-8">
+<style>
+select, button{
+	background-color: buttonface !important;
+}	
+button, option{
+	color: black !important;
+}
+#anly_info div {
+    margin-right: 0.5ch;
+}
+section#anly_info > section {
+    margin-bottom: 0.4ch;
+}
+#anly_info div:nth-child(2) {
+    width: 2.9ch;
+    padding-left: 0.6ch;
+}
+#anly_info div:nth-child(1) {
+    min-width: 5.5ch;
+    text-align: right;
+}
+#anly_info section:hover{
+    background-color: hsl(46deg 90% 28%);
+}
+body, textarea,section {
+    background-color: hsl(0 0% 8% / 1);
+    color: white;
+}
+</style>
+</head>
+	
+<body>
+<h1 style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex converter</h1>
+<textarea id="hex" style="width: 37.5%; height: 92%;"></textarea>
+<section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
+	<section id="anly_btns">
+		<button id="bse" baseByte="0">Set as base</button>
+		<button id="jmb">Jump to base</button>
+	</section>
+	<section id="anly_info">
+	</section>
+</section>
+
+<script>
+function get_subarray(a, f, t) {
+    return a.slice(f, t+1);
+}
+
+ function getNoDigits(n){
+		return Math.max(1, Math.floor(Math.log10(Math.abs(n))+1) );
+}
+
+function getSigFig_dp(n,d){
+	if(isFinite(n)){
+		return Math.max(0, d+1-getNoDigits(n) );
+	}else{
+		return d;
+	}
+}
+
+function getBarSepStr(a,m,x){
+	if(typeof a!=='undefined'){
+		let out='';
+		let ot='';
+		let opts={useGrouping: false, minimumFractionDigits: m, maximumFractionDigits: x};
+		for(let i=0, len=a.length; i<len; i++){
+
+			if(typeof a[i]!=='undefined' && typeof a[i].s!=='undefined'){
+				let q=(a[i].u==a[i].s)?true:false;
+				if(!q){
+					out+='(';
+				}
+					opts.maximumFractionDigits=getSigFig_dp(a[i].u,x);
+					out+=a[i].u.toLocaleString('en-GB',opts);
+					if(!q){
+						out+=', ';
+						opts.maximumFractionDigits=getSigFig_dp(a[i].s,x);
+						out+=a[i].s.toLocaleString('en-GB',opts);
+						out+=')';
+				}
+			}else if(typeof a[i]==='number'){
+				let d=getNoDigits(a[i]);
+				if(d>=x){
+					ot=a[i].toExponential(x);
+				}else{
+						opts.maximumFractionDigits=Math.max(0, x+1-d );
+						ot=a[i].toLocaleString('en-GB',opts);
+				}
+				out+=ot;
+			}else if(typeof a[i]==='string'){
+				ot=a[i];
+				out+='"'+ot+'"';
+			}else{
+				ot=JSON.stringify(a[i]);
+				if(typeof ot==='undefined'|| ot==='undefined'){
+					out+='❌';
+				}else{
+					out+='"'+ot+'"';
+				}
+			}
+			out+=( (i==len-1)? '' : ' | ' );
+		}
+		return out;
+	}else{
+		return '❌';
+	}
+}
+
+function n_byte_unit8_to_int(a){
+			let out={s: a[0], u: a[0]};
+			
+			let bsi=0;
+				for(let i=1, len=a.length; i<len; i++){
+					bsi+=8;
+					let n=a[i]<<bsi;
+					out.u+=n;
+				}
+
+			let mx=2;
+			for(let i=0, len=(a.length*8)-1; i<len; i++){
+				mx*=2;
+			}
+			mx-=1;
+			
+			let h=Math.floor(mx/2);
+			
+			if(out.u>h){
+				out.s=-mx+out.u-1;
+			}else{
+				out.s=out.u;
+			}
+			
+			return out;
+}
+
+const lookup_hex={
+										'00':0,
+										'01':1,
+										'02':2,
+										'03':3,
+										'04':4,
+										'05':5,
+										'06':6,
+										'07':7,
+										'08':8,
+										'09':9,
+										'0A':10,
+										'0B':11,
+										'0C':12,
+										'0D':13,
+										'0E':14,
+										'0F':15,
+										'10':16,
+										'11':17,
+										'12':18,
+										'13':19,
+										'14':20,
+										'15':21,
+										'16':22,
+										'17':23,
+										'18':24,
+										'19':25,
+										'1A':26,
+										'1B':27,
+										'1C':28,
+										'1D':29,
+										'1E':30,
+										'1F':31,
+										'20':32,
+										'21':33,
+										'22':34,
+										'23':35,
+										'24':36,
+										'25':37,
+										'26':38,
+										'27':39,
+										'28':40,
+										'29':41,
+										'2A':42,
+										'2B':43,
+										'2C':44,
+										'2D':45,
+										'2E':46,
+										'2F':47,
+										'30':48,
+										'31':49,
+										'32':50,
+										'33':51,
+										'34':52,
+										'35':53,
+										'36':54,
+										'37':55,
+										'38':56,
+										'39':57,
+										'3A':58,
+										'3B':59,
+										'3C':60,
+										'3D':61,
+										'3E':62,
+										'3F':63,
+										'40':64,
+										'41':65,
+										'42':66,
+										'43':67,
+										'44':68,
+										'45':69,
+										'46':70,
+										'47':71,
+										'48':72,
+										'49':73,
+										'4A':74,
+										'4B':75,
+										'4C':76,
+										'4D':77,
+										'4E':78,
+										'4F':79,
+										'50':80,
+										'51':81,
+										'52':82,
+										'53':83,
+										'54':84,
+										'55':85,
+										'56':86,
+										'57':87,
+										'58':88,
+										'59':89,
+										'5A':90,
+										'5B':91,
+										'5C':92,
+										'5D':93,
+										'5E':94,
+										'5F':95,
+										'60':96,
+										'61':97,
+										'62':98,
+										'63':99,
+										'64':100,
+										'65':101,
+										'66':102,
+										'67':103,
+										'68':104,
+										'69':105,
+										'6A':106,
+										'6B':107,
+										'6C':108,
+										'6D':109,
+										'6E':110,
+										'6F':111,
+										'70':112,
+										'71':113,
+										'72':114,
+										'73':115,
+										'74':116,
+										'75':117,
+										'76':118,
+										'77':119,
+										'78':120,
+										'79':121,
+										'7A':122,
+										'7B':123,
+										'7C':124,
+										'7D':125,
+										'7E':126,
+										'7F':127,
+										'80':128,
+										'81':129,
+										'82':130,
+										'83':131,
+										'84':132,
+										'85':133,
+										'86':134,
+										'87':135,
+										'88':136,
+										'89':137,
+										'8A':138,
+										'8B':139,
+										'8C':140,
+										'8D':141,
+										'8E':142,
+										'8F':143,
+										'90':144,
+										'91':145,
+										'92':146,
+										'93':147,
+										'94':148,
+										'95':149,
+										'96':150,
+										'97':151,
+										'98':152,
+										'99':153,
+										'9A':154,
+										'9B':155,
+										'9C':156,
+										'9D':157,
+										'9E':158,
+										'9F':159,
+										'A0':160,
+										'A1':161,
+										'A2':162,
+										'A3':163,
+										'A4':164,
+										'A5':165,
+										'A6':166,
+										'A7':167,
+										'A8':168,
+										'A9':169,
+										'AA':170,
+										'AB':171,
+										'AC':172,
+										'AD':173,
+										'AE':174,
+										'AF':175,
+										'B0':176,
+										'B1':177,
+										'B2':178,
+										'B3':179,
+										'B4':180,
+										'B5':181,
+										'B6':182,
+										'B7':183,
+										'B8':184,
+										'B9':185,
+										'BA':186,
+										'BB':187,
+										'BC':188,
+										'BD':189,
+										'BE':190,
+										'BF':191,
+										'C0':192,
+										'C1':193,
+										'C2':194,
+										'C3':195,
+										'C4':196,
+										'C5':197,
+										'C6':198,
+										'C7':199,
+										'C8':200,
+										'C9':201,
+										'CA':202,
+										'CB':203,
+										'CC':204,
+										'CD':205,
+										'CE':206,
+										'CF':207,
+										'D0':208,
+										'D1':209,
+										'D2':210,
+										'D3':211,
+										'D4':212,
+										'D5':213,
+										'D6':214,
+										'D7':215,
+										'D8':216,
+										'D9':217,
+										'DA':218,
+										'DB':219,
+										'DC':220,
+										'DD':221,
+										'DE':222,
+										'DF':223,
+										'E0':224,
+										'E1':225,
+										'E2':226,
+										'E3':227,
+										'E4':228,
+										'E5':229,
+										'E6':230,
+										'E7':231,
+										'E8':232,
+										'E9':233,
+										'EA':234,
+										'EB':235,
+										'EC':236,
+										'ED':237,
+										'EE':238,
+										'EF':239,
+										'F0':240,
+										'F1':241,
+										'F2':242,
+										'F3':243,
+										'F4':244,
+										'F5':245,
+										'F6':246,
+										'F7':247,
+										'F8':248,
+										'F9':249,
+										'FA':250,
+										'FB':251,
+										'FC':252,
+										'FD':253,
+										'FE':254,
+										'FF':255
+									};
+									
+  let ttl=[...document.getElementsByTagName('h1')][0];
+let hx=document.getElementById('hex');
+let anlys=document.getElementById('anly');
+let sbse=document.getElementById('bse');
+let jmbs=document.getElementById('jmb');
+let anlys_i=document.getElementById('anly_info');
+let hxBse=0;
+let all_hex=[];
+var hx_arr=[];
+var hx_arr_int=[];
+var hx_arr_cnt=0;
+
+//let hx_print=`<section style="display: flex;flex-flow: row;"><div title="Offset"></div><div></div><div></div></section>`;
+function base_cnd(event){
+	let k=(event.target.tagName==='SECTION')?event.target:event.target.parentElement;
+	let i=parseInt(k.getAttribute('abs_hex'));
+	sbse.setAttribute('baseByte',i);
+	sbse.innerText='Set byte #'+(i+1)+' ('+k.firstChild.nextSibling.innerText+') as base';
+	sbse.scrollIntoView();
+}
+
+
+function procPrint(){
+	let len=hx_arr_int.length;
+	let i=hx_arr_cnt;
+			let brds={chr:'',gOff:i, one_byte:[], two_byte:[], four_byte:[], eight_byte:[],flts:[],interps:[]};
+		let df=hx_arr_int.length-i;
+		
+		if(df>=8){
+			a=[hx_arr_int[i],hx_arr_int[i+1],hx_arr_int[i+2],hx_arr_int[i+3],hx_arr_int[i+4],hx_arr_int[i+5],hx_arr_int[i+6],hx_arr_int[i+7]];
+			rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+			brds['eight_byte'].push(rhx);
+			brds['eight_byte'].push(a);
+			let data =  a.reverse();
+			let view = new DataView(new Uint8Array(data).buffer);
+			brds['flts'].unshift([view.getFloat64(0)]); //will be rounded later
+			brds['interps'].unshift(n_byte_unit8_to_int(a));
+		}else{
+			brds['interps'].unshift(undefined);
+		}
+		if(df>=4){
+			a=[hx_arr_int[i],hx_arr_int[i+1],hx_arr_int[i+2],hx_arr_int[i+3]];
+			rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+			brds['four_byte'].push(rhx);
+			brds['four_byte'].push(a);
+			let data =  a.reverse();
+			let view = new DataView(new Uint8Array(data).buffer);
+			brds['flts'].unshift([view.getFloat32(0)]); //will be rounded later
+			brds['interps'].unshift(n_byte_unit8_to_int(a));
+		}else{
+			brds['interps'].unshift(undefined);
+		}
+		if(df>=2){
+			a=[hx_arr_int[i],hx_arr_int[i+1]];
+			rhx=[hx_arr[i+1],hx_arr[i]];		
+			brds['two_byte'].push(rhx);
+			brds['two_byte'].push(a);
+			brds['interps'].unshift(n_byte_unit8_to_int(a));
+		}else{
+			brds['interps'].unshift(undefined);
+		}
+		a=[hx_arr_int[i]];
+		rhx=[hx_arr[i]];		
+		brds['one_byte'].push(rhx);
+		brds['one_byte'].push(a);
+		brds['one_byte'].push(n_byte_unit8_to_int(a));
+		brds['interps'].unshift(n_byte_unit8_to_int(a));
+		brds['chr']=String.fromCharCode(a[0]);
+		
+		all_hex.push(brds);
+		
+		let s=brds['gOff']-hxBse; 
+		let f=((s>=0)?'+':'')+((Math.abs(s)<10 && s!==0)?'0':'' )+(s).toString(16).toLocaleUpperCase();
+		let t1='[ "'+brds['chr']+'" | '+getBarSepStr(brds['interps'],0,0)+']';
+		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
+		
+		anlys_i.innerHTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" style="display: flex;flex-flow: row;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[float || double]">'+t2+'</div></section>';
+		all_hex.push(brds);
+		hx_arr_cnt+=1;
+		if(hx_arr_cnt<len){
+			ttl.innerText="Hex converter - Loading: "+	(Math.floor((i/len)*10000)*0.01).toLocaleString('en-GB',{useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2})+"%";
+			setTimeout(procPrint,0);
+		}else{
+			hx_arr_cnt=0;
+			ttl.innerText="Hex converter";
+		}
+}
+
+hx.oninput=(event)=>{
+
+	all_hex=[];
+	hx_arr=hx.value.toLocaleUpperCase().split(' ').map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
+	hx_arr_int=[];
+	hx_arr_cnt=0;
+	
+	let a=[];
+	let rhx=[];
+	hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
+	anlys_i.innerHTML='';
+	if(hx_arr_int.length>0){
+		procPrint();
+	}
+
+	console.log(all_hex);
+}
+
+document.onselectionchange=(event)=>{
+    let start = hx.selectionStart;
+    let finish = hx.selectionEnd;
+	let ix=Math.floor(start/3);
+	let el=ix*3;
+	sbse.setAttribute('baseByte',ix);
+	sbse.innerText='Set byte #'+(ix+1)+' ('+hx.value.substring(el, el+2)+') as base';
+}
+
+sbse.onclick=(event)=>{
+	hxBse=parseInt(sbse.getAttribute('baseByte'));
+	let f=[...document.getElementsByClassName('hex_offs')];
+	for(let i=0, len=f.length; i<len; i++){
+		let s=parseInt(f[i].parentElement.getAttribute('abs_hex'))-hxBse;
+		let t=((s>=0)?'+':'')+(s).toString(16).toLocaleUpperCase();
+		f[i].innerText=t;
+	}
+}
+jmbs.onclick=(event)=>{
+	let f=[...document.getElementsByClassName('hex_offs')];
+	let ix=f.findIndex((h)=>{return h.innerText==='+0';});
+	if(ix>=0){
+		f[ix].parentElement.scrollIntoView();
+	}
+
+}
+</script>
+
+</body>
+
+</html>
