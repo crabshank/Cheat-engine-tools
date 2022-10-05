@@ -416,6 +416,8 @@ function getBarSepStr(a,m,x){
 						out+=a[i].s.toLocaleString('en-GB',opts);
 						out+=')';
 				}
+			}else if(isNaN(a[i])){
+				out+='❌';
 			}else if(typeof a[i]==='number'){
 				let d=getNoDigits(a[i]);
 				if(d>=x){
@@ -443,6 +445,7 @@ function getBarSepStr(a,m,x){
 		return '❌';
 	}
 }
+
 	var inst_HTML=document.querySelector('section#instructions');
 	var slc=document.querySelector('select#types');
 	var jps=document.querySelector('section#jmps');
