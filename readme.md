@@ -22,4 +22,8 @@ N.B. place your own comments before the "〈" character.
 
 Paste space-separated byte hex into the text area and wait for the processing to end. This is designed to make spotting struct values easier.
 
-N.B. Click on a byte in the textarea or double click on the line for an address to prime the button "Set byte #..." to make this the base.
+N.B.
+
+*Click on a byte in the textarea or double click on the line for an address to prime the button "Set byte #..." to make this the base.
+
+*Click on a line to highlight it (not just on hover).
