@@ -475,7 +475,7 @@ function procPrint(){
 		let t1='[ "'+brds['chr']+'" | '+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
-		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" style="display: flex;flex-flow: row;width: max-content;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[float || double]">'+t2+'</div></section>';
+		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" style="display: flex;flex-flow: row;min-width: -webkit-fill-available;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content; font-weight: bold;" title="[float || double]">'+t2+'</div></section>';
 		all_hex.push(brds);
 		hx_arr_cnt+=1;
 		if(hx_arr_cnt<len){
