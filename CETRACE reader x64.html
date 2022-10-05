@@ -397,34 +397,51 @@ function absBoundingClientRect(el){
 }
 
 function getBarSepStr(a,m,x){
-	let out='';
-	let opts={useGrouping: false, minimumFractionDigits: m, maximumFractionDigits: x};
-	for(let i=0, len=a.length; i<len; i++){
+	if(typeof a!=='undefined'){
+		let out='';
+		let ot='';
+		let opts={useGrouping: false, minimumFractionDigits: m, maximumFractionDigits: x};
+		for(let i=0, len=a.length; i<len; i++){
 
-		if(typeof a[i]!=='undefined' && typeof a[i].s!=='undefined'){
-			let q=(a[i].u==a[i].s)?true:false;
-			if(!q){
-				out+='(';
-			}
-				opts.maximumFractionDigits=getSigFig_dp(a[i].u,x);
-				out+=a[i].u.toLocaleString('en-GB',opts);
+			if(typeof a[i]!=='undefined' && typeof a[i].s!=='undefined'){
+				let q=(a[i].u==a[i].s)?true:false;
 				if(!q){
-					out+=', ';
-					opts.maximumFractionDigits=getSigFig_dp(a[i].s,x);
-					out+=a[i].s.toLocaleString('en-GB',opts);
-					out+=')';
+					out+='(';
+				}
+					opts.maximumFractionDigits=getSigFig_dp(a[i].u,x);
+					out+=a[i].u.toLocaleString('en-GB',opts);
+					if(!q){
+						out+=', ';
+						opts.maximumFractionDigits=getSigFig_dp(a[i].s,x);
+						out+=a[i].s.toLocaleString('en-GB',opts);
+						out+=')';
+				}
+			}else if(typeof a[i]==='number'){
+				let d=getNoDigits(a[i]);
+				if(d>=x){
+					ot=a[i].toExponential(x);
+				}else{
+						opts.maximumFractionDigits=Math.max(0, x+1-d );
+						ot=a[i].toLocaleString('en-GB',opts);
+				}
+				out+=ot;
+			}else if(typeof a[i]==='string'){
+				ot=a[i];
+				out+='"'+ot+'"';
+			}else{
+				ot=JSON.stringify(a[i]);
+				if(typeof ot==='undefined'|| ot==='undefined'){
+					out+='❌';
+				}else{
+					out+='"'+ot+'"';
+				}
 			}
-		}else if(typeof a[i]==='number'){
-			opts.maximumFractionDigits=getSigFig_dp(a[i],x);
-			out+=a[i].toLocaleString('en-GB',opts);
-		}else if(typeof a[i]==='string'){
-			out+='"'+a[i]+'"';
-		}else{
-			out+='"'+JSON.stringify(a[i])+'"';
+			out+=( (i==len-1)? '' : ' | ' );
 		}
-		out+=( (i==len-1)? '' : ' | ' );
+		return out;
+	}else{
+		return '❌';
 	}
-	return out;
 }
 	var inst_HTML=document.querySelector('section#instructions');
 	var slc=document.querySelector('select#types');
