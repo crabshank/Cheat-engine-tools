@@ -471,7 +471,7 @@ function procPrint(){
 		all_hex.push(brds);
 		
 		let s=brds['gOff']-hxBse; 
-		let f=((s>=0)?'+':'')+((Math.abs(s)<10 && s!==0)?'0':'' )+(s).toString(16).toLocaleUpperCase();
+		let f=((s>=0)?'+':'')+(s).toString(16).toLocaleUpperCase();
 		let t1='[ "'+brds['chr']+'" | '+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
