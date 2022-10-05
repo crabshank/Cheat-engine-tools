@@ -15,3 +15,9 @@ N.B. MAy take a while to finish processing.
 ## Disassembler mnemonics.lua
 
 Simply paste the file into your autorun folder, and it will put the instructions' mnemonics in the "Comments" column in the disassembler.
+
+N.B. place your own comments before the "〈" character.
+
+## Hex Converter
+
+Paste space-separated byte hex into the text area and wait for the processing to end. This is designed to make spotting struct values easier.
