@@ -24,6 +24,6 @@ Paste space-separated byte hex into the text area and wait for the processing to
 
 N.B.
 
-*Click on a byte in the textarea or double click on the line for an address to prime the button "Set byte #..." to make this the base.
+* Click on a byte in the textarea or double click on the line for an address to prime the button "Set byte #..." to make this the base.
 
-*Click on a line to highlight it (not just on hover).
+* Click on a line to highlight it (not just on hover).
