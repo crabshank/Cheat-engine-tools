@@ -695,7 +695,7 @@ if(strt>=0){
 						}else{
 							all_trackables.push([rgs[x],k]);
 						}
-						args[i]=args[i].split(rgs[x]).join('<div class="trackable" ix="'+( (tix>=0)?tix :all_trackables.length-1 )+'" occ_ix="'+( (tix>=0)?all_trackables[tix].length-1 : 1 )+'">'+rgs[x]+'</div>');
+						args[i]=args[i].split(rgs[x]).join('<div class="trackable" ix="'+( (tix>=0)?tix :all_trackables.length-1 )+'">'+rgs[x]+'</div>');
 					}	
 					
 				}
@@ -764,7 +764,6 @@ if(strt>=0){
 		
 function chgTracked(el, add){
 	let ix=parseInt(el.getAttribute('ix'));
-	//let occ_ix=parseInt(el.getAttribute('occ_ix'));
 	let f=false;
 	for(let i=1, len= all_trackables[ix].length; i<len; i++ ){
 		let dt=all_instructs[all_trackables[ix][i]].trackables.filter((t)=>{return t.textContent===all_trackables[ix][0];});
@@ -789,34 +788,6 @@ function chgTracked(el, add){
 						jpsCh[2].innerText=jpsCh[2].getAttribute('base');	
 					}
 				}
-		 
-		 
-			/*if(dt[k].textContent===el.textContent && f){
-				if(add){
-					if(!dt[k].classList.contains('tracked')){
-						dt[k].classList.add("tracked");
-						nvs.curr_inst.push(dt[k]);
-					}
-				}else{
-					dt[k].classList.remove("tracked");
-					
-				}
-			}else if(dt[k]===el && !f){
-				f=true;
-				let jpsCh=[...jps.children];
-				jpsCh[1].innerText=jpsCh[1].getAttribute('base')+' ('+el.title+')';
-				jpsCh[2].innerText=jpsCh[2].getAttribute('base')+' ('+el.title+')';
-				if(add){
-					if(!dt[k].classList.contains('tracked')){
-						dt[k].classList.add("tracked");
-						nvs.curr_inst.push(dt[k]);
-					}
-				}else{
-					if(dt[k].classList.contains('tracked')){
-						dt[k].classList.remove("tracked");
-					}
-				}
-			 }*/
 		 }
 	}
 }
