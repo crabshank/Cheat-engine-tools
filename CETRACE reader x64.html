@@ -416,6 +416,9 @@ function getBarSepStr(a,m,x){
 						out+=a[i].s.toLocaleString('en-GB',opts);
 						out+=')';
 				}
+			}else if(typeof a[i]==='string'){
+				ot=a[i];
+				out+='"'+ot+'"';
 			}else if(isNaN(a[i])){
 				out+='❌';
 			}else if(typeof a[i]==='number'){
@@ -427,9 +430,6 @@ function getBarSepStr(a,m,x){
 						ot=a[i].toLocaleString('en-GB',opts);
 				}
 				out+=ot;
-			}else if(typeof a[i]==='string'){
-				ot=a[i];
-				out+='"'+ot+'"';
 			}else{
 				ot=JSON.stringify(a[i]);
 				if(typeof ot==='undefined'|| ot==='undefined'){
