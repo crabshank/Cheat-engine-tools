@@ -7,7 +7,7 @@
  <h1 style="text-align: center;">CETRACE Reader x64</h1>
  <label for="openFile1">Load file: </label><input  type="file" id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
  <section id="rdr"></section>
-	 <section id="instructions"></section>
+ <section id="instructions"></section>
 		<section id="jmps">
 		<button>Remove tracking on all instructions</button>
 		<button style="margin-top: 3px !important;" base="Jump to next instance">Jump to next instance</button>
@@ -49,16 +49,12 @@ section.register {
 }
  </style>
   <script>
-  let ttl=[...document.getElementsByTagName('h1')][0];
- function getNoDigits(n){
-		return Math.max(1, Math.floor(Math.log10(Math.abs(n))+1) );
-}
-
-function getSigFig_dp(n,d){
-	if(isFinite(n)){
-		return Math.max(0, d+1-getNoDigits(n) );
-	}else{
-		return d;
+  
+ function elRemover(el){
+	if(typeof el!=='undefined' && !!el){
+	if(typeof el.parentNode!=='undefined' && !!el.parentNode){
+		el.parentNode.removeChild(el);
+	}
 	}
 }
 
@@ -396,6 +392,18 @@ function absBoundingClientRect(el){
 	return r;
 }
 
+ function getNoDigits(n){
+		return Math.max(1, Math.floor(Math.log10(Math.abs(n))+1) );
+}
+
+function getSigFig_dp(n,d){
+	if(isFinite(n)){
+		return Math.max(0, d+1-getNoDigits(n) );
+	}else{
+		return d;
+	}
+}
+
 function getBarSepStr(a,m,x){
 	if(typeof a!=='undefined'){
 		let out='';
@@ -446,6 +454,7 @@ function getBarSepStr(a,m,x){
 	}
 }
 
+	var rdr_HTML=document.querySelector('section#rdr');
 	var inst_HTML=document.querySelector('section#instructions');
 	var slc=document.querySelector('select#types');
 	var jps=document.querySelector('section#jmps');
@@ -460,11 +469,14 @@ function getBarSepStr(a,m,x){
 	jps.style.setProperty('flex-direction','column','important');
 	jps.style.setProperty('top',instRct.top+'px','important');
 	jps.style.setProperty('left',instRct.right+'px','important');
+	elRemover(inst_HTML);
+	 inst_HTML=document.createElement('section');
+	inst_HTML.id="instructions";
 	
 function hexProc(b_ints){
 	var reg_names=["xmm15","xmm14","xmm13","xmm12","xmm11","xmm10","ymm15","ymm14","ymm13","ymm12","ymm11","ymm10","xmm9","xmm8","xmm7","xmm6","xmm5","xmm4","xmm3","xmm2","xmm1","xmm0","ymm9","ymm8","ymm7","ymm6","ymm5","ymm4","ymm3","ymm2","ymm1","ymm0","r10d","r10w","r10b","r11d","r11w","r11b","r12d","r12w","r12b","r13d","r13w","r13b","r14d","r14w","r14b","r15d","r15w","r15b","rax","eax","rbx","ebx","rcx","ecx","rdx","edx","rsi","esi","sil","rdi","edi","dil","rbp","ebp","bpl","rsp","esp","spl","r8d","r8w","r8b","r9d","r9w","r9b","r10","r11","r12","r13","r14","r15","ax","al","bx","bl","cx","cl","dx","dl","si","di","bp","sp","r8","r9"]; //sorted by length
 	var nvs={curr_inst: [], inst_ix:0, curr_reg: [], reg_ix:0, reg_hex:'',reg_el: null };
-	var appendHTML='<br>';
+	inst_HTML.appendChild(document.createElement('br'));
 	var all_instructs=[];
 	var disp_instructs=[];
 	var all_trackables=[];
@@ -504,8 +516,8 @@ function hexProc(b_ints){
 	
 if(strt>=0){
 	var pos=strt-4;
+	while (pos<b_ints.length){
 
-	function procInstr(){
 		let curr={inst_len:0, instr_txt:"",instr_txt_b:[], ref_addr:"",r_reg: ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"],r_reg_b: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], r_reg_nm:["RAX","RCX","RDX","RBX","RSP","RBP","RSI","RDI","R8","R9","R10","R11","R12","R13","R14","R15","RIP"], r_reg_interp: [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg:["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"], x_reg_b:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]],  x_reg_interp:[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]], x_reg_nm:["xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7","xmm8","xmm9","xmm10","xmm11","xmm12","xmm13","xmm14","xmm15"],ref_addr_byte_len:0, ref_addr_bytes: "", stack_len: 0, stack:[], stack_b:[],el:null, trackables:[]};
 		
 					curr.inst_len=n_byte_unit8_to_int([b_ints[pos],b_ints[pos+1],b_ints[pos+2],b_ints[pos+3]]).u;
@@ -620,8 +632,20 @@ if(strt>=0){
 			pos+=8;
 		}			
 		//pos is now at first byte of next instruction
-			
-			let k=all_instructs.length;
+		all_instructs.push(curr);
+		
+	}
+	rdr_HTML.insertAdjacentElement('afterend',inst_HTML);
+		console.log(all_instructs);
+		
+	let instRct=absBoundingClientRect(inst_HTML);
+	jps.style.setProperty('top',instRct.top+'px','important');
+	jps.style.setProperty('left',instRct.right+'px','important');
+	
+		var inst_lens_eq=(disp_instructs.length==all_instructs.length)?true:false;
+		
+		for(let k=0, len=all_instructs.length; k<len; k++){
+		let curr=all_instructs[k];
 			let instr=document.createElement('SECTION');
 			instr.className='instruction_HTML';
 			let instruc_txt=document.createElement('SECTION');
@@ -676,19 +700,14 @@ if(strt>=0){
 					
 				}
 
-						//var inst_lens_eq=(disp_instructs.length==all_instructs.length)?true:false;
-				/*instr.innerHTML=(  (inst_lens_eq)?( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ):  curr.r_reg[16] )+': '+
-				(	( curr.ref_addr==="0000000000000000")?
-					'':
-					'<br>Referenced address: '  + curr.ref_addr
-				)+
-				'<br>'+inst_nm+' '+args.join(',');*/
-				instr.innerHTML= ( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ) +': '+
+				
+				instr.innerHTML=(  (inst_lens_eq)?( disp_instructs[k].split(' -')[0]+' ('+curr.r_reg[16]+')'  ):  curr.r_reg[16] )+': '+
 				(	( curr.ref_addr==="0000000000000000")?
 					'':
 					'<br>Referenced address: '  + curr.ref_addr
 				)+
 				'<br>'+inst_nm+' '+args.join(',');
+				
 				instr.appendChild(document.createElement('br'));
 				instr.appendChild(document.createElement('br'));
 
@@ -731,48 +750,48 @@ if(strt>=0){
 
 			instr.appendChild(stack);*/
 			
-			//inst_HTML.appendChild(instr);
-			appendHTML+=instr.outerHTML;
+			inst_HTML.appendChild(instr);
 			curr.el=instr;
-			curr.trackables=[...instr.querySelectorAll('div.trackable')];
-			for(let t=0, len_t=curr.trackables.length; t<len_t; t++){
-				let c=curr.trackables[t];
+			all_instructs[k].trackables=[...instr.querySelectorAll('div.trackable')];
+			for(let t=0, len_t=all_instructs[k].trackables.length; t<len_t; t++){
+				let c=all_instructs[k].trackables[t];
 				c.title=c.textContent;
 			}
-			appendHTML+='<br>';
-				
-		all_instructs.push(curr);
-		
-if(pos<b_ints.length){
-	ttl.innerText="CETRACE Reader x64 - Loading: "+	(Math.floor((pos/b_ints.length)*10000)*0.01).toLocaleString('en-GB',{useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2})+"%";
-	setTimeout(procInstr,0);
-}else{
-	inst_HTML.outerHTML+=appendHTML;
-	ttl.innerText="CETRACE Reader x64"
-}
-	}
-	postIntr();
-if(pos<b_ints.length){
-	procInstr();
-}
+			inst_HTML.appendChild(document.createElement('br'));
+		}
 
-function postIntr(){
-		console.log(all_instructs);
-		
-	let instRct=absBoundingClientRect(inst_HTML);
-	jps.style.setProperty('top',instRct.top+'px','important');
-	jps.style.setProperty('left',instRct.right+'px','important');
-					
 		console.log(all_trackables);
 		
 function chgTracked(el, add){
 	let ix=parseInt(el.getAttribute('ix'));
-	let occ_ix=parseInt(el.getAttribute('occ_ix'));
+	//let occ_ix=parseInt(el.getAttribute('occ_ix'));
 	let f=false;
-	for(let i=occ_ix, len= all_trackables[ix].length; i<len; i++ ){
-		let dt=all_instructs[all_trackables[ix][i]].trackables;
-		 for(let k=0, len_k= dt.length; k<len_k; k++ ){	 
-			if(dt[k].textContent===el.textContent && f){
+	for(let i=1, len= all_trackables[ix].length; i<len; i++ ){
+		let dt=all_instructs[all_trackables[ix][i]].trackables.filter((t)=>{return t.textContent===all_trackables[ix][0];});
+		 for(let k=0, len_k= dt.length; k<len_k; k++ ){
+			if(add){
+					if(!dt[k].classList.contains('tracked')){
+						let jpsCh=[...jps.children];
+						jpsCh[1].innerText=jpsCh[1].getAttribute('base')+' ('+el.title+')';
+						jpsCh[2].innerText=jpsCh[2].getAttribute('base')+' ('+el.title+')';
+						dt[k].classList.add("tracked");
+						nvs.curr_inst.push(dt[k]);
+						if(dt[k]===el){
+							nvs.inst_ix=Math.max(-1,nvs.curr_inst.length-1);
+						}
+					}
+				}else{
+					if(dt[k].classList.contains('tracked')){
+						dt[k].classList.remove("tracked");
+						nvs.curr_inst=[];
+						let jpsCh=[...jps.children];
+						jpsCh[1].innerText=jpsCh[1].getAttribute('base');
+						jpsCh[2].innerText=jpsCh[2].getAttribute('base');	
+					}
+				}
+		 
+		 
+			/*if(dt[k].textContent===el.textContent && f){
 				if(add){
 					if(!dt[k].classList.contains('tracked')){
 						dt[k].classList.add("tracked");
@@ -780,9 +799,7 @@ function chgTracked(el, add){
 					}
 				}else{
 					dt[k].classList.remove("tracked");
-					let jpsCh=[...jps.children];
-					jpsCh[1].innerText=jpsCh[1].getAttribute('base');
-					jpsCh[2].innerText=jpsCh[2].getAttribute('base');
+					
 				}
 			}else if(dt[k]===el && !f){
 				f=true;
@@ -794,8 +811,12 @@ function chgTracked(el, add){
 						dt[k].classList.add("tracked");
 						nvs.curr_inst.push(dt[k]);
 					}
+				}else{
+					if(dt[k].classList.contains('tracked')){
+						dt[k].classList.remove("tracked");
+					}
 				}
-			 } 
+			 }*/
 		 }
 	}
 }
@@ -858,13 +879,9 @@ jpsCh=[...jps.children];
 jpsCh[0].onclick=(event)=>{
 	//let el=event.target;
 	event.stopPropagation();
-	let dt=[...document.querySelectorAll('.tracked')];
+	let dt=[...document.querySelectorAll('div.tracked')];
 	 for(let k=0, len_k= dt.length; k<len_k; k++ ){
 		dt[k].classList.remove("tracked");
-	 }	
-	 dt=[...document.querySelectorAll('.tracking')];
-	 for(let k=0, len_k= dt.length; k<len_k; k++ ){
-		dt[k].classList.remove("tracking");
 	 }
 		let jpsCh=[...jps.children];
 		jpsCh[1].innerText=jpsCh[1].getAttribute('base');
@@ -876,7 +893,7 @@ jpsCh[0].onclick=(event)=>{
 jpsCh[1].onclick=(event)=>{
 	//let el=event.target;
 	event.stopPropagation();
-	nvs.inst_ix=(nvs.inst_ix==nvs.curr_inst.length)?nvs.inst_ix:nvs.inst_ix+1;
+	nvs.inst_ix=(nvs.inst_ix==nvs.curr_inst.length-1)?nvs.inst_ix:nvs.inst_ix+1;
 	if(nvs.inst_ix<nvs.curr_inst.length){
 		nvs.curr_inst[nvs.inst_ix].scrollIntoView();
 	}
@@ -885,7 +902,7 @@ jpsCh[1].onclick=(event)=>{
 jpsCh[2].onclick=(event)=>{
 	//let el=event.target;
 	event.stopPropagation();
-	nvs.inst_ix=(nvs.inst_ix==-1)?nvs.inst_ix:nvs.inst_ix-1;
+	nvs.inst_ix=(nvs.inst_ix==0)?nvs.inst_ix:nvs.inst_ix-1;
 	if(nvs.inst_ix>=0){
 		nvs.curr_inst[nvs.inst_ix].scrollIntoView();
 	}
@@ -945,10 +962,10 @@ jpsCh[4].onclick=(event)=>{
 };
 		
 }
-}
 
 }
- document.getElementById("openFile1").addEventListener('change',  function () {
+ 
+document.getElementById("openFile1").addEventListener('change',  function () {
 	let fr = new FileReader();
 	 fr.onload = function () {
 		let arrayBuffer = this.result;
