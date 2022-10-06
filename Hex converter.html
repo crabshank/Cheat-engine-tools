@@ -465,9 +465,12 @@ function procPrint(){
 			rhx=[hx_arr[i+1],hx_arr[i]];		
 			brds['two_byte'].push(rhx);
 			brds['two_byte'].push(a);
-			brds['interps'].unshift(n_byte_unit8_to_int(a));
+			let tb=n_byte_unit8_to_int(a);
+			brds['interps'].unshift(tb);
+			brds['chr']=String.fromCharCode(tb.u);
 		}else{
 			brds['interps'].unshift(undefined);
+			brds['chr']='';
 		}
 		a=[hx_arr_int[i]];
 		rhx=[hx_arr[i]];		
@@ -475,14 +478,13 @@ function procPrint(){
 		brds['one_byte'].push(a);
 		brds['one_byte'].push(n_byte_unit8_to_int(a));
 		brds['interps'].unshift(n_byte_unit8_to_int(a));
-		brds['chr']=String.fromCharCode(a[0]);
 		
 		all_hex.push(brds);
 		
 		let s=brds['gOff']-hxBse; 
 		let f=((s>=0)?'+':'')+(s).toString(16).toLocaleUpperCase();
 
-		let t1='[ "'+brds['chr']+'" | '+getBarSepStr(brds['interps'],0,0)+']';
+		let t1='[ '+((brds['chr']==='')?'❌':`"${brds['chr']}"`)+' | '+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
 		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: -webkit-fill-available;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
