@@ -3,25 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <style>
-select, button{
+button{
 	background-color: buttonface !important;
 }	
-button, option{
+button{
 	color: black !important;
 }
-#anly_info div {
-    margin-right: 0.5ch;
-}
+
 section#anly_info > section {
+	margin-right: 2.73ch;
     margin-bottom: 2.73ch;
 }
-#anly_info div:nth-child(2) {
-    width: 2.9ch;
-    padding-left: 0.6ch;
-}
-#anly_info div:nth-child(1) {
-    min-width: 5.5ch;
-    font-weight: bolder;
+section#anly_info > section * {
+	text-align: center;
 }
 #anly_info section:hover, section#anly_info > section.tracked{
     background-color: hsl(46deg 90% 28%);
@@ -35,13 +29,14 @@ body, textarea,section {
 	
 <body>
 <h1 style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex converter</h1>
-<textarea id="hex" style="width: 37.5%; height: 92%;"></textarea>
+<textarea id="hex" style="width:37.5%; max-width: 37.5%; height: 92%;"></textarea>
 <section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
 	<section id="anly_btns">
 		<button id="bse" baseByte="0">Set as base</button>
 		<button id="jmb">Jump to base</button>
 	</section>
-	<section id="anly_info">
+	<section id="anly_info" style="display: grid;
+  grid-template-columns: max-content max-content;">
 	</section>
 </section>
 
@@ -492,7 +487,7 @@ function procPrint(){
 		let t1='[ '+((brds['chr']==='')?'❌':`"${brds['chr']}"`)+' | '+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
-		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: -webkit-fill-available;"><div hod="'+f+'" class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+fd+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
+		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: fit-content;"><div style="font-weight: bolder;" hod="'+f+'" class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+fd+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
 		all_hex.push(brds);
 		hx_arr_cnt+=1;
 		if(hx_arr_cnt<len){
