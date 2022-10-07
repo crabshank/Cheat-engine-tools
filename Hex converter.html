@@ -481,13 +481,18 @@ function procPrint(){
 		
 		all_hex.push(brds);
 		
-		let s=brds['gOff']-hxBse; 
-		let f=((s>=0)?'+':'')+(s).toString(16).toLocaleUpperCase();
-
+		let s=brds['gOff']-hxBse;
+		let sd=s;
+		let f=(s).toString(16).toLocaleUpperCase();
+		if(s>=0){
+			sd='+'+sd;
+			f='+'+f;
+		}
+		let fd=(s>-10 && s<10)?f:(f+'	{'+sd+'}');
 		let t1='[ '+((brds['chr']==='')?'❌':`"${brds['chr']}"`)+' | '+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
-		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: -webkit-fill-available;"><div class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+f+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
+		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: -webkit-fill-available;"><div hod="'+f+'" class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+fd+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
 		all_hex.push(brds);
 		hx_arr_cnt+=1;
 		if(hx_arr_cnt<len){
@@ -534,17 +539,24 @@ sbse.onclick=(event)=>{
 	for(let i=0, len=f.length; i<len; i++){
 		let sp=f[i].parentElement;
 		let s=parseInt(sp.getAttribute('abs_hex'))-hxBse;
-		let t=((s>=0)?'+':'')+(s).toString(16).toLocaleUpperCase();
+		let sd=s;
+		let fd=(s).toString(16).toLocaleUpperCase();
+		if(s>=0){
+			sd='+'+sd;
+			fd='+'+fd;
+		}
+		f[i].setAttribute('hod',fd);
+		fd=(s>-10 && s<10)?fd:(fd+'	{'+sd+'}');
 		let k=[...document.querySelectorAll('section#anly_info > section.tracked')];
-		k.forEach((s)=>{
-			s.classList.remove('tracked');
+		k.forEach((ks)=>{
+			ks.classList.remove('tracked');
 		});
-		f[i].innerText=t;
+		f[i].innerText=fd;
 	}
 }
 jmbs.onclick=(event)=>{
 	let f=[...document.getElementsByClassName('hex_offs')];
-	let ix=f.findIndex((h)=>{return h.innerText==='+0';});
+	let ix=f.findIndex((h)=>{return h.getAttribute('hod')==='+0';});
 	if(ix>=0){
 		f[ix].parentElement.scrollIntoView();
 	}
