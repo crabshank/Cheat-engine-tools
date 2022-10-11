@@ -28,6 +28,7 @@ body, textarea,section {
 </head>
 	
 <body>
+<title>Hex converter</title>
 <h1 style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex converter</h1>
 <textarea id="hex" style="width:37.5%; max-width: 37.5%; height: 92%;"></textarea>
 <section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
@@ -106,16 +107,13 @@ function getBarSepStr(a,m,x){
 	}
 }
 
-function n_byte_unit8_to_int(a){
-			let out={s: a[0], u: a[0]};
-			
-			let bsi=0;
-				for(let i=1, len=a.length; i<len; i++){
-					bsi+=8;
-					let n=a[i]<<bsi;
-					out.u+=n;
-				}
+function n_byte_unit8_to_int(a,u_only){
+			let us=Number("0x"+a.join(''));
+			let out=(u_only===true)?{u:us}:{s: us, u:us};
 
+		if(u_only===true){
+			return out;
+		}else{
 			let mx=2;
 			for(let i=0, len=(a.length*8)-1; i<len; i++){
 				mx*=2;
@@ -131,6 +129,7 @@ function n_byte_unit8_to_int(a){
 			}
 			
 			return out;
+		}
 }
 
 const lookup_hex={
@@ -427,51 +426,74 @@ function hl_sct(event){
 function procPrint(){
 	let len=hx_arr_int.length;
 	let i=hx_arr_cnt;
-			let brds={chr:'',gOff:i, one_byte:[], two_byte:[], four_byte:[], eight_byte:[],flts:[],interps:[]};
-		let df=hx_arr_int.length-i;
+	let df=hx_arr_int.length-i;
+	let b;
+	let brds={chr:'',gOff:i, one_byte:[], two_byte:[], four_byte:[], eight_byte:[],flts:[],interps:[], chrs:[]};
 		
 		if(df>=8){
-			a=[hx_arr_int[i],hx_arr_int[i+1],hx_arr_int[i+2],hx_arr_int[i+3],hx_arr_int[i+4],hx_arr_int[i+5],hx_arr_int[i+6],hx_arr_int[i+7]];
+			a=[hx_arr_int[i+7],hx_arr_int[i+6],hx_arr_int[i+5],hx_arr_int[i+4],hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
 			rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
 			brds['eight_byte'].push(rhx);
 			brds['eight_byte'].push(a);
-			let data =  a.reverse();
+			b=n_byte_unit8_to_int(rhx);
+			let data =  a;
 			let view = new DataView(new Uint8Array(data).buffer);
 			brds['flts'].unshift([view.getFloat64(0)]); //will be rounded later
-			brds['interps'].unshift(n_byte_unit8_to_int(a));
+			brds['interps'].unshift(b);
 		}else{
 			brds['interps'].unshift(undefined);
 		}
 		if(df>=4){
-			a=[hx_arr_int[i],hx_arr_int[i+1],hx_arr_int[i+2],hx_arr_int[i+3]];
+			a=[hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
 			rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
 			brds['four_byte'].push(rhx);
 			brds['four_byte'].push(a);
-			let data =  a.reverse();
+			let data =  a;
 			let view = new DataView(new Uint8Array(data).buffer);
 			brds['flts'].unshift([view.getFloat32(0)]); //will be rounded later
-			brds['interps'].unshift(n_byte_unit8_to_int(a));
+			b=n_byte_unit8_to_int(rhx);
+			brds['interps'].unshift(b);
+			brds['chrs'].push(String.fromCharCode(b.u));
 		}else{
 			brds['interps'].unshift(undefined);
+			brds['chrs'].push('');
+		}
+		if(df>=3){
+			rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+			b=n_byte_unit8_to_int(rhx,true);
+			brds['chrs'].push(String.fromCharCode(b.u));
+		}else{
+			brds['chrs'].push('');
 		}
 		if(df>=2){
-			a=[hx_arr_int[i],hx_arr_int[i+1]];
-			rhx=[hx_arr[i+1],hx_arr[i]];		
+			a=[hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
+			rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
 			brds['two_byte'].push(rhx);
 			brds['two_byte'].push(a);
-			let tb=n_byte_unit8_to_int(a);
-			brds['interps'].unshift(tb);
-			brds['chr']=String.fromCharCode(tb.u);
+			b=n_byte_unit8_to_int(rhx);
+			brds['interps'].unshift(b);
+			brds['chrs'].push(String.fromCharCode(b.u));
 		}else{
 			brds['interps'].unshift(undefined);
-			brds['chr']='';
+			brds['chrs'].push('');
 		}
 		a=[hx_arr_int[i]];
-		rhx=[hx_arr[i]];		
+		rhx=[hx_arr[i]];
 		brds['one_byte'].push(rhx);
 		brds['one_byte'].push(a);
-		brds['one_byte'].push(n_byte_unit8_to_int(a));
-		brds['interps'].unshift(n_byte_unit8_to_int(a));
+		b=n_byte_unit8_to_int(rhx);
+		brds['chrs'].push(String.fromCharCode(b.u));
+		brds['one_byte'].push(b);
+		brds['interps'].unshift(b);
+		
+			let codePoint = [hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]].reduce((acc, cur) => {
+			cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
+			}, 0);
+			try{
+				brds['chrs'].unshift(String.fromCodePoint(codePoint));
+			}catch(e){
+				brds['chrs'].unshift(undefined);
+			}
 		
 		all_hex.push(brds);
 		
@@ -483,10 +505,23 @@ function procPrint(){
 			f='+'+f;
 		}
 		let fd=(s>-10 && s<10)?f:(f+'	{'+sd+'}');
-		let t1='[ '+((brds['chr']==='')?'❌':`"${brds['chr']}"`)+' | '+getBarSepStr(brds['interps'],0,0)+']';
+		let tc='[';
+		let c='';
+		for (let i=4; i>=0; i--){
+			c=((brds['chrs'][i]==='')?'❌':`"${brds['chrs'][i]}"`);
+			tc=(c==='' || c==='"undefined"')?tc+'❌':tc+c;
+			if(i>0){
+				if(i<=4){
+					tc+=' | ';
+				}
+			}else{
+				tc+=']'
+			}
+		}
+		let t1='['+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
-		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: fit-content;"><div style="font-weight: bolder;" hod="'+f+'" class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+fd+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[char | 1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
+		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: fit-content;"><div style="font-weight: bolder;" hod="'+f+'" class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+fd+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[1 byte char | 2 byte char | 3 byte char | 4 byte char | 4 byte surrogate pair char ]">'+tc+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
 		all_hex.push(brds);
 		hx_arr_cnt+=1;
 		if(hx_arr_cnt<len){
