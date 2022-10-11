@@ -20,6 +20,9 @@ section#anly_info > section * {
 #anly_info section:hover, section#anly_info > section.tracked{
     background-color: hsl(46deg 90% 28%);
 }
+section#anly_info > section div {
+    width: max-content;
+}
 body, textarea,section {
     background-color: hsl(0 0% 8% / 1);
     color: white;
@@ -30,6 +33,7 @@ body, textarea,section {
 <body>
 <title>Hex converter</title>
 <h1 style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex converter</h1>
+<section id="scrlr"></section>
 <textarea id="hex" style="width:37.5%; max-width: 37.5%; height: 92%;"></textarea>
 <section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
 	<section id="anly_btns">
@@ -398,6 +402,7 @@ let anlys=document.getElementById('anly');
 let sbse=document.getElementById('bse');
 let jmbs=document.getElementById('jmb');
 let anlys_i=document.getElementById('anly_info');
+let scls=document.getElementById('scrlr');
 let hxBse=0;
 let all_hex=[];
 var hx_arr=[];
@@ -421,6 +426,10 @@ function hl_sct(event){
 	}else{
 		t.classList.add('tracked');
 	}
+}
+
+function scrl_pos(){
+	let dvs=[...document.querySelectorAll('section#anly_info > section div')].map((d)=>{return ;});
 }
 
 function procPrint(){
@@ -466,8 +475,8 @@ function procPrint(){
 			brds['chrs'].push('');
 		}
 		if(df>=2){
-			a=[hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
-			rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+			a=[hx_arr_int[i+1],hx_arr_int[i]];
+			rhx=[hx_arr[i+1],hx_arr[i]];
 			brds['two_byte'].push(rhx);
 			brds['two_byte'].push(a);
 			b=n_byte_unit8_to_int(rhx);
@@ -531,6 +540,7 @@ function procPrint(){
 			hx_arr_cnt=0;
 			anlys_i.innerHTML=anlys_i_HTML;
 			ttl.innerText="Hex converter";
+			scrl_pos();
 		}
 }
 
