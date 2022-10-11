@@ -317,16 +317,17 @@ const lookup_hex=[
 									"FF"
 								];
 								
-function n_byte_unit8_to_int(a){
-			let out={s: a[0], u: a[0]};
-			
-			let bsi=0;
-				for(let i=1, len=a.length; i<len; i++){
-					bsi+=8;
-					let n=a[i]<<bsi;
-					out.u+=n;
-				}
+function n_byte_unit8_to_int(a,u_only){
+			for(let i=a.length ; i>=0; i--){
+				a[i]=lookup_hex[a[i]];
+			}
+			a=a.reverse();
+			let us=Number("0x"+a.join(''));
+			let out=(u_only===true)?{u:us}:{s: us, u:us};
 
+		if(u_only===true){
+			return out;
+		}else{
 			let mx=2;
 			for(let i=0, len=(a.length*8)-1; i<len; i++){
 				mx*=2;
@@ -342,6 +343,7 @@ function n_byte_unit8_to_int(a){
 			}
 			
 			return out;
+		}
 }
 	
 function get_subarray(a, f, t) {
