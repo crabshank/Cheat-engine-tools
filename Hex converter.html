@@ -1225,6 +1225,7 @@ hx.oninput=(event)=>{
 	scls.hl.innerHTML='';
 	base_hx=null;
 	base_hxi='';
+	fnd=[];
 	all_hex=[];
 	hx_arr=hx.value.toLocaleUpperCase().split(' ').map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
 	hx_arr_int=[];
