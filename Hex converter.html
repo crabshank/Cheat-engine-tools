@@ -622,7 +622,8 @@ function auto_hl(event){
 					}
 					if(
 						(!(ckb[1].checked==true && n.includes('e')) ) &&
-						n!==null
+						n!==null &&
+						n!=='❌'
 						){
 						if(ix1===0){ //between
 							if(nf>=vsf[0] && nf<=vsf[1] && (  !(ckb[0].checked==true && nf===0) )){
@@ -634,12 +635,12 @@ function auto_hl(event){
 							}
 						}else if(ix1===2 && (  !(ckb[0].checked==true && (n==='0' || n==='-0')) ) ){ //all
 							fnd.push(s[i]);
-						}else if(ix1===3){ // >
-							if(nf>vsf[0] && (  !(ckb[0].checked==true && nf===0) )){
+						}else if(ix1===3){ // >=
+							if(nf>=vsf[0] && (  !(ckb[0].checked==true && nf===0) )){
 								fnd.push(s[i]);
 							}
-						}else if(ix1===4){ // <
-							if(nf<vsf[0] && (  !(ckb[0].checked==true && nf===0) )){
+						}else if(ix1===4){ // <=
+							if(nf<=vsf[0] && (  !(ckb[0].checked==true && nf===0) )){
 								fnd.push(s[i]);
 							}
 						}else{ //=/=
@@ -670,11 +671,11 @@ function auto_hl(event){
 					}else if(ix1===2){ //all
 						fnd.push(s[i]);
 					}else if(ix1===3){ // >
-						if(n>vsi[0]){
+						if(n>=vsi[0]){
 							fnd.push(s[i]);
 						}
 					}else if(ix1===4){ // <
-						if(n<vsi[0]){
+						if(n<=vsi[0]){
 							fnd.push(s[i]);
 						}
 					}	else{ // =/=
@@ -1041,8 +1042,8 @@ function hl_sct(event){
 	<option>Between</option>
 	<option>Exactly</option>
 	<option>All</option>
-	<option>Greater than</option>
-	<option>Less than</option>
+	<option>Greater than or equal to</option>
+	<option>Less than or equal to</option>
 	<option>Not equal to</option>
 </select>
 <div class="num" contenteditable="true" style="display:none;"></div>
