@@ -470,7 +470,6 @@ const lookup_hex={
 										'FF':255
 									};
 
-let firstClk=false;
 let base_hx=null;	
 let base_hxi='';	
 let indnt=8;					
@@ -586,6 +585,7 @@ function addr_nm_chg(event){
 function base_AOB_chg(event){
 	base_hxi=event.target.innerText;
 	chgr(event);
+	scr_left();
 }
 
 function addr_type_len(sl,el,base){
@@ -618,7 +618,7 @@ function addr_type_len(sl,el,base){
 					let d='';
 					d=(da[si]!=='❌' && da[si]!==null)?' (default = '+da[si]+')':d;
 					vl.innerText=vl.innerText.split(/\s*\(default \=/g)[0]+d;
-				}
+				}	
 			}
 		}else{
 			el.style.display='block';
@@ -871,10 +871,7 @@ function hl_sct(event){
 			sb[i][0].onclick=(event)=>{pnb_click(event)};
 			sb[i][1].onclick=(event)=>{pnb_click(event)};
 		}
-		if(!firstClk){
-			firstClk=true;
-			document.body.scrollLeft=document.body.scrollWidth;	
-		}
+		scr_left();
 	}
 }
 
@@ -1007,13 +1004,20 @@ function procPrint(){
 hx.onclick=(event)=>{
 	document.body.scrollLeft=0;
 }
-scls.outer.onclick=(event)=>{
-	document.body.scrollLeft=document.body.clientWidth;
+
+var scr_left=()=>{
+	let scls_hl_R=absBoundingClientRect(scls.hl);
+	document.body.scrollLeft=scls_hl_R.right-document.body.offsetWidth;
 }
+
+scls.outer.onclick=(event)=>{
+	scr_left();
+}
+
+
 	
 hx.oninput=(event)=>{
 	scls.hl.innerHTML='';
-	firstClk=false;
 	base_hx=null;
 	base_hxi='';
 	all_hex=[];
@@ -1073,7 +1077,6 @@ sbse.onclick=(event)=>{
 		f[i].innerText=fd;
 	}
 	scls.hl.innerHTML='';
-	firstClk=false;
 }
 jmbs.onclick=(event)=>{
 	let f=[...document.getElementsByClassName('hex_offs')];
