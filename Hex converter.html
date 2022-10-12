@@ -1208,7 +1208,7 @@ hx.onclick=(event)=>{
 
 var scr_left=()=>{
 	let scls_hl_R=absBoundingClientRect(scls.hl);
-	document.body.scrollLeft=scls_hl_R.right-document.body.offsetWidth;
+	document.body.scrollLeft=scls_hl_R.right-window.screen.availWidth;
 }
 
 scls.outer.onclick=(event)=>{
