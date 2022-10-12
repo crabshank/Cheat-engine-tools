@@ -805,9 +805,9 @@ function gen_ct(event){
       <AssemblerScript>[ENABLE]
 	  `;
 if(t[1]===''){
-	ct+=`aobscan(nmb,${t[2].trim()})`;
+	ct+=`aobscan(${nmb},${t[2].trim()})`;
 }else{
-	ct+=`aobscanmodule(nmb,${t[1]},${t[2].trim()}) // should be unique`;
+	ct+=`aobscanmodule(${nmb},${t[1]},${t[2].trim()}) // should be unique`;
 }
 
 
