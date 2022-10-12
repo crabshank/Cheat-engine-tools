@@ -3,13 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <style>
-button{
+button,select{
 	background-color: buttonface !important;
 }	
-button{
+button,option{
 	color: black !important;
 }
-
+button.offst_pnb{
+    min-height: 2ch;
+    text-align: center;
+    vertical-align: middle;
+	min-width: 4.4ch;
+}
 section#anly_info > section {
 	margin-right: 2.73ch;
     margin-bottom: 2.73ch;
@@ -23,9 +28,21 @@ section#anly_info > section * {
 section#anly_info > section div {
     width: max-content;
 }
-body, textarea,section {
+body {
     background-color: hsl(0 0% 8% / 1);
     color: white;
+}
+label div[contenteditable="true"] {
+    min-width: 30ch;
+    border: 1px outset #dadada;
+    margin-left: 0.5ch;
+    padding: 0.4ch;
+}
+label {
+    white-space: nowrap;
+}
+#scrlr_hl div {
+    width: max-content;
 }
 </style>
 </head>
@@ -33,7 +50,13 @@ body, textarea,section {
 <body>
 <title>Hex converter</title>
 <h1 style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex converter</h1>
-<section id="scrlr"></section>
+<section id="scrlr" style="top: 0; left:0; position: absolute; z-index: 1;background: hsl(0 0% 8% / 1);max-height: 97.2vh;overflow-y: overlay;">
+		<section id="scrlr_CE">
+			
+		</section>
+		<div id="scrlr_ttl" style="margin-bottom: 0.6ch;font-weight: bold;"></div>
+			<section id="scrlr_hl"></section>
+</section>
 <textarea id="hex" style="width:37.5%; max-width: 37.5%; height: 92%;"></textarea>
 <section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
 	<section id="anly_btns">
@@ -45,6 +68,14 @@ body, textarea,section {
 </section>
 
 <script>
+function elRemover(el){
+	if(typeof el!=='undefined' && !!el){
+	if(typeof el.parentNode!=='undefined' && !!el.parentNode){
+		el.parentNode.removeChild(el);
+	}
+	}
+}
+
 function get_subarray(a, f, t) {
     return a.slice(f, t+1);
 }
@@ -59,6 +90,50 @@ function getSigFig_dp(n,d){
 	}else{
 		return d;
 	}
+}
+
+function absBoundingClientRect(el){
+	let st = [window?.scrollY,
+					window?.pageYOffset,
+					el?.ownerDocument?.documentElement?.scrollTop,
+					document?.documentElement?.scrollTop,
+					document?.body?.parentNode?.scrollTop,
+					document?.body?.scrollTop,
+					document?.head?.scrollTop];
+					
+		let sl = [window?.scrollX,
+						window?.pageXOffset,
+						el?.ownerDocument?.documentElement?.scrollLeft,
+						document?.documentElement?.scrollLeft,
+						document?.body?.parentNode?.scrollLeft,
+						document?.body?.scrollLeft,
+						document?.head?.scrollLeft];
+						
+				let scrollTop=0;
+				for(let k=0; k<st.length; k++){
+					if(!!st[k] && typeof  st[k] !=='undefined' && st[k]>0){
+						scrollTop=(st[k]>scrollTop)?st[k]:scrollTop;
+					}
+				}			
+
+				let scrollLeft=0;
+				for(let k=0; k<sl.length; k++){
+					if(!!sl[k] && typeof  sl[k] !=='undefined' && sl[k]>0){
+						scrollLeft=(sl[k]>scrollLeft)?sl[k]:scrollLeft;
+					}
+				}
+	
+	const rct=el.getBoundingClientRect();
+	let r={};
+
+	r.left=rct.left+scrollLeft;
+	r.right=rct.right+scrollLeft;
+	r.top=rct.top+scrollTop;
+	r.bottom=rct.bottom+scrollTop;
+	r.height=rct.height;
+	r.width=rct.width;
+	
+	return r;
 }
 
 function getBarSepStr(a,m,x){
@@ -394,7 +469,10 @@ const lookup_hex={
 										'FE':254,
 										'FF':255
 									};
-					
+
+let firstClk=false;
+let base_hx=null;	
+let base_hxi='';	
 let indnt=8;					
 let ttl=[...document.getElementsByTagName('h1')][0];
 let hx=document.getElementById('hex');
@@ -402,7 +480,16 @@ let anlys=document.getElementById('anly');
 let sbse=document.getElementById('bse');
 let jmbs=document.getElementById('jmb');
 let anlys_i=document.getElementById('anly_info');
-let scls=document.getElementById('scrlr');
+let scls={	outer:document.getElementById('scrlr'), 
+					hl:document.getElementById('scrlr_hl'),
+					ttl:document.getElementById('scrlr_ttl'),
+					ce:document.getElementById('scrlr_CE')
+				};
+let base_nm='base';
+document.body.onscroll=(event)=>{
+	scls.outer.style.top=document.body.scrollTop+'px';
+};
+
 let hxBse=0;
 let all_hex=[];
 var hx_arr=[];
@@ -415,21 +502,391 @@ function base_cnd(event){
 	let k=(event.target.tagName==='SECTION')?event.target:event.target.parentElement;
 	let i=parseInt(k.getAttribute('abs_hex'));
 	sbse.setAttribute('baseByte',i);
-	sbse.innerText='Set byte #'+(i+1)+' ('+k.firstChild.nextSibling.innerText+') as base';
+	sbse.innerText='Set byte #'+(i+1)+' ('+k.firstElementChild.nextElementSibling.innerText+') as base';
 	sbse.scrollIntoView();
+}
+
+function scr_goto(event){
+	let i=event.target.parentElement.parentElement.getAttribute('deco');
+	let s=[...document.querySelectorAll('#anly_info .hex_offs[deco="'+i+'"]')];
+	if(typeof s!=='undefined'){
+		s[0].scrollIntoView();
+	}
+}
+function scr_del(event){
+	let i=event.target.parentElement.parentElement.getAttribute('deco');
+	let s=[...document.querySelectorAll('#anly_info .hex_offs[deco="'+i+'"]')];
+	if(typeof s!=='undefined'){
+		s[0].click();
+	}
+}
+
+function pnb_click(event){
+	let b=[...document.querySelectorAll('#scrlr_hl section')];
+	let j, jp;
+	if(event.target.getAttribute('deco')!==null){
+		j=event.target.getAttribute('deco');
+		jp=parseInt(j);
+		let bs=(jp<0)?parseInt(b[0].getAttribute('deco')):parseInt(b.at(-1).getAttribute('deco'));
+		let t=[...document.querySelectorAll('section#anly_info > section > div:nth-child(1)[deco="'+(bs+jp)+'"]')][0];
+		if(typeof t!=='undefined'){
+			t.parentElement.click();
+		}
+	}
+	
+}
+
+function sortByArrCols(arr, colsArr, dir){
+    arr.sort(sortFunction);
+		function sortFunction(a, b) {
+			for(let i = 0; i < arr.length; i++){
+					if(a[colsArr[i]]>b[colsArr[i]]){
+						return dir[i]*-1;
+					}else if(a[colsArr[i]]<b[colsArr[i]]){
+						return dir[i]*1;
+					}else if(i==arr.length-1){
+					return 0;
+				}
+			} 
+	}
+}
+function addr_nm_bse(event){
+	let a=[...document.querySelectorAll('div.offset_addr_nm')];
+	let et=event.target.innerText.split(/\s*\(default \=/g)[0];
+	for(let i=0, len=a.length; i<len; i++){
+		if(a[i].getAttribute('chg')=='false'){
+			if(base_nm===''){
+				a[i].innerText=et+a[i].innerText;
+			}else{
+				a[i].innerText=a[i].innerText.split(base_nm).join(et);
+			}
+		}
+	}
+	base_nm=et;
+}
+function chgr(event){
+	event.target.setAttribute('chg','true');
+}
+
+function selectText(element) {
+        let selection = window.getSelection();        
+        let range = document.createRange();
+        range.selectNodeContents(element);
+        selection.removeAllRanges();
+        selection.addRange(range);
+}
+
+function sel_AOB(event){
+	selectText(event.target);
+}
+
+function addr_nm_chg(event){
+	chgr(event);
+}
+function base_AOB_chg(event){
+	base_hxi=event.target.innerText;
+	chgr(event);
+}
+
+function addr_type_len(sl,el,base){
+		let si=sl.selectedIndex;
+		
+		if(si<14){
+			el.style.display='none';
+			let vl=sl.previousElementSibling;
+			if(vl.getAttribute('chg')=='false' || base===true){
+				let vs=[...el.parentElement.parentElement.children].slice(2);
+
+				if(si>11){ //float 12-13
+					let vsFlt=vs[1].innerText.split('||').map((t)=>{return t.split(/\[|\]/g).join('').split(/\s+/g).filter((t1)=>{return t1!==''})});
+					let d='';
+					if(si===12){
+						d=(vsFlt[0]!=='❌')?' (default = '+vsFlt[0]+')':d;
+					}else{
+						d=(vsFlt[1]!=='❌')?' (default = '+vsFlt[1]+')':d;
+					}
+					vl.innerText=vl.innerText.split(/\s*\(default \=/g)[0]+d;
+				}else{
+					let vsInt=vs[0].innerText.split('|').map((t)=>{return t.split(/\[|\]/g).join('').split(/\(|\)|\,|\s+/g).filter((t1)=>{return t1!=='' })});
+					let da=[];
+					for(let i=0, len=vsInt.length; i<len; i++){
+						da.push(vsInt[i][0]);
+						da.push(vsInt[i][	(	(vsInt[i].length===2)?1:0	)	]);
+						da.push(null);
+					}
+					
+					let d='';
+					d=(da[si]!=='❌' && da[si]!==null)?' (default = '+da[si]+')':d;
+					vl.innerText=vl.innerText.split(/\s*\(default \=/g)[0]+d;
+				}
+			}
+		}else{
+			el.style.display='block';
+		}
+}
+
+function gen_ct(event){
+	
+	let t=[...event.target.parentElement.querySelectorAll('label div[contenteditable="true"]')].map((d)=>{return d.innerText;});
+	let nmba=[...event.target.parentElement.querySelectorAll('.offset_addr_nm_base')];
+	let nmb='base';
+	if(nmba.length>0){
+		nmb=nmba[0].innerText;
+	}
+	let ct=`<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"${t[0]}"</Description>
+      <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+	  `;
+if(t[1]===''){
+	ct+=`aobscan(nmb,${t[2].trim()})`;
+}else{
+	ct+=`aobscanmodule(nmb,${t[1]},${t[2].trim()}) // should be unique`;
+}
+
+
+ct+=`  // should be unique
+registersymbol(base)
+
+[DISABLE]
+
+</AssemblerScript>
+	  <CheatEntries>
+	  `;
+	  let i=1;
+	  let v=[...scls.hl.children];
+	  for(let k=0, len=v.length; k<len; k++){
+		  let dsc=[...v[k].querySelectorAll('.offset_addr_nm')][0];
+		  let sgn=dsc.nextElementSibling;
+		  let len=parseInt(sgn.nextElementSibling.value);
+		  let si=sgn.selectedIndex;
+		  let co=sgn[si];
+		  let cov=co.value;
+		  let sgn_us=(cov.endsWith(' signed'))?1:0;
+		  let sgn_hx=(cov.endsWith(' hex'))?1:0;
+		  let typ=cov.split(' ');
+		  let ts;
+		  if(typ.length>1){
+			  ts=get_subarray(typ, 0,typ.length-2 ).join('');
+		  }else{
+			  ts=typ[0];
+		  }
+		  ct+=`<CheatEntry>
+			  <ID>${i}</ID>
+			  <Description>"${dsc.innerText}"</Description>
+			  `;
+		  if(si<14){
+			  ct+=`<ShowAsHex>${sgn_hx}</ShowAsHex>
+			  <ShowAsSigned>${sgn_us}</ShowAsSigned>
+			  <VariableType>${ts}</VariableType>
+			  `;
+		  }else if(si<17){ //strings
+				let unc=(cov.endsWith(' (Unicode)'))?1:0;
+				let cdp=(cov.endsWith(' (Codepage)'))?1:0;
+			   ct+=`<VariableType>String</VariableType>
+          <Length>${len}</Length>
+          <Unicode>${unc}</Unicode>
+          <CodePage>${cdp}</CodePage>
+          <ZeroTerminate>1</ZeroTerminate>
+		  `;
+		  }else{ //AOB
+			 ct+=`<ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Array of byte</VariableType>
+          <ByteLength>${len}</ByteLength>
+		  `;
+		  }
+		  let addr=nmb+dsc.parentElement.parentElement.getAttribute('hod');
+		  ct+=`<Address>${addr}</Address>
+			</CheatEntry>
+			`;
+		i++;
+	  }
+	  ct+=`</CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>`;
+console.log(ct);
+}
+
+function addr_type_sel(event){
+	let t=event.target;
+	let si=event.target.selectedIndex;
+	if(t.classList.contains('addr_type_bse')){
+		addr_type_len(t,t.nextElementSibling,true);
+		let slcs=[...scls.outer.querySelectorAll('select.addr_type')];
+		slcs.forEach((sc)=>{
+			if(sc.getAttribute('chg')=='false'){
+				sc.selectedIndex=si;
+			}
+			addr_type_len(sc,sc.nextElementSibling);
+		});
+	}else{
+		addr_type_len(t,t.nextElementSibling);
+	}
 }
 
 function hl_sct(event){
 	let t=event.currentTarget;
+	let s=[...document.querySelectorAll('#scrlr_hl section')];
 	if(t.classList.contains('tracked')){
 		t.classList.remove('tracked');
+		let hx=t.firstElementChild.getAttribute('hod');
+		
+		let ix=s.findIndex((c)=>{return c.getAttribute('hod')==hx;});
+		if(ix>=0){
+			elRemover(s[ix]);
+		}
 	}else{
 		t.classList.add('tracked');
+		let tf=t.firstElementChild;
+		let hx=tf.getAttribute('hod');
+		let dc=parseInt(tf.getAttribute('deco'));
+		let srt=s.map((d,index)=>{return [parseInt(d.getAttribute('deco')),d];});
+		srt.push([dc,null]);
+		 sortByArrCols(srt,[0],[-1]);
+		 let isb=[tf.nextElementSibling,tf.nextElementSibling.nextElementSibling,tf.nextElementSibling.nextElementSibling.nextElementSibling,tf.nextElementSibling.nextElementSibling.nextElementSibling.nextElementSibling];
+		let sc=`<section deco=${dc} hod="${hx}" style="margin-bottom: 1.5ch;">
+						<div style="display: flex;">
+						<div style="margin-right: 0.37ch;">${tf.innerText}</div>
+						<div class='offst_pn' style="display: flex;flex-direction: row;">
+							<button class='offst_pnb'></button><button class='offst_pnb'></button>
+						</div>
+							<div style="margin-left: 0.6ch;">${isb[0].innerText}</div>
+							<div contenteditable="true" ${(hx==='+0')?'class="offset_addr_nm offset_addr_nm_base" oninput="addr_nm_bse(event);"':'class="offset_addr_nm" oninput="addr_nm_chg(event);" chg="false"'} style="margin-left: 0.6ch;${(hx==='+0')?'border: 2px solid hsl(60deg 74% 53%);"':'border: 2px solid #ff6b00;"'}>${base_nm}${(hx==='+0')?'':hx}</div>
+							<select oninput="addr_type_sel(event);" chg="false" class="${(hx==='+0')?'addr_type addr_type_bse':'addr_type'}">
+								<option>Byte unsigned</option>
+								<option>Byte signed</option>
+								<option>Byte hex</option>
+								<option>2 Bytes unsigned</option>
+								<option>2 Bytes signed</option>
+								<option>2 Bytes hex</option>
+								<option>4 Bytes unsigned</option>
+								<option>4 Bytes signed</option>
+								<option>4 Bytes hex</option>
+								<option>8 Bytes unsigned</option>
+								<option>8 Bytes signed</option>
+								<option>8 Bytes hex</option>
+								<option>Float</option>
+								<option>Double</option>
+								<option>String</option>
+								<option>String (Unicode)</option>
+								<option>String (Codepage)</option>
+								<option>Array of byte (hex)</option>
+							</select>
+							<input display type="number" style="display:none;width: 9.6ch;" title="length" min="1" value="1" step="1" class="${(hx==='+0')?'addr_len addr_len_bse':'addr_len'}"></input>
+							<button onclick="scr_goto(event);" style="margin-left: 0.44ch;">Go to</button>
+							<button onclick="scr_del(event);" style="margin-left: 0.25ch;">Delete</button>
+						</div>
+						<div style="${isb[1].style.cssText}">${isb[1].innerText}</div>
+						<div style="${isb[2].style.cssText}">${isb[2].innerText}</div>
+						<div style="${isb[3].style.cssText}">${isb[3].innerText}</div>
+						</section>`;
+		let ix=srt.findIndex((a)=>{return a[0]===dc;});
+		let lc,lc2;
+		if(srt.length===1 || ix<=0){
+			lc=scls.hl;
+			lc2='afterbegin';
+		}else{
+			lc=srt[ix-1][1];
+			lc2='afterend';
+		}
+		lc.insertAdjacentHTML(lc2,sc);
+		let slcs1=[...scls.outer.querySelectorAll('select.addr_type_bse')];
+		slcs1.forEach((slc)=>{
+			if(slc.getAttribute('chg')=='false'){
+				slc.selectedIndex=12;
+				addr_type_len(slc,slc.nextElementSibling,true);
+			}
+		});
+		let slcs=[...scls.outer.querySelectorAll('select.addr_type')];
+		slcs.forEach((slc)=>{
+			if(slc.getAttribute('chg')=='false'){
+				slc.selectedIndex=((typeof slcs1[0]!=='undefined')?slcs1[0].selectedIndex:12)
+				addr_type_len(slc,slc.nextElementSibling);
+			}
+		});
+		let sbd=[...scls.hl.querySelectorAll('.offst_pn')];
+		let sb=sbd.map((d)=>{return [...d.children];});
+		
+		function sub_btns(up,sbd,i){
+			if(up===true){
+				let x1=parseInt(sbd[i+1].parentElement.parentElement.getAttribute('deco'));
+				let x=parseInt(sbd[i].parentElement.parentElement.getAttribute('deco'));
+				s=x-x1;
+				let sd=s;
+				let f=(s).toString(16).toLocaleUpperCase();
+				if(s>=0){
+				sd='+'+sd;
+				f='+'+f;
+				}
+				let fd=(s>-10 && s<10)?f:(f+'	{'+sd+'}');
+				sb[i][0].setAttribute('deco',s);
+				sb[i][0].innerText='↑'+fd;
+			}else{
+				let x1=parseInt(sbd[i-1].parentElement.parentElement.getAttribute('deco'));
+				let x=parseInt(sbd[i].parentElement.parentElement.getAttribute('deco'));
+				s=x-x1;
+				let sd=s;
+				let f=(s).toString(16).toLocaleUpperCase();
+				if(s>=0){
+				sd='+'+sd;
+				f='+'+f;
+				}
+				let fd=(s>-10 && s<10)?f:(f+'	{'+sd+'}');
+				sb[i][1].setAttribute('deco',s);
+				sb[i][1].innerText='↓'+fd;
+			}
+		}
+		scls.ttl.innerText="Highlighted: ";
+		scls.outer.style.border='2px outset hsl(46deg 90% 28%)';
+		scls.ce.innerHTML=`<label style="display: flex;">
+  Address group name: <div contenteditable="true" type="text"></div>
+</label>
+<label style="display: flex;">
+  Module (executable) name: <div title="Leave empty to use 'aobscan(…)' instead of 'aobscanmodule(…)'" contenteditable="true" type="text"></div>
+</label>
+<label style="display: flex;">
+  Array of bytes (from base address): <div contenteditable="true" oninput="base_AOB_chg(event);" ondblclick="sel_AOB(event);" chg="false" id="base_AOB">${(base_hx===null || base_hxi!=='')?base_hxi:base_hx+'…'}</div>
+</label>
+<button onclick="gen_ct(event);" style="margin-top: 0.7ch;margin-bottom: 0.7ch;">Generate Cheat Table</button>`;
+
+		for (let i=0, len=sbd.length; i<len; i++ ){
+			if(!(i===0 && len===1)){
+				 if(i===0 && len>1){
+					sub_btns(true,sbd,i);
+				}else if(i===len-1){
+					sub_btns(false,sbd,i);
+				}else{
+					sub_btns(true,sbd,i);
+					sub_btns(false,sbd,i);
+				}
+			}
+			sb[i][0].onclick=(event)=>{pnb_click(event)};
+			sb[i][1].onclick=(event)=>{pnb_click(event)};
+		}
+		if(!firstClk){
+			firstClk=true;
+			document.body.scrollLeft=document.body.scrollWidth;	
+		}
 	}
 }
 
-function scrl_pos(){
-	let dvs=[...document.querySelectorAll('section#anly_info > section div')].map((d)=>{return ;});
+function scrl_pos(y){
+	if(typeof y==='undefined' || y===false){
+		let dvs=[...document.querySelectorAll('section#anly_info > section div')].map((d)=>{return d.clientWidth;});
+		let mx=Math.max(...dvs);
+		let anlys_i_R=absBoundingClientRect(anlys_i);
+		scls.outer.style.top=anlys_i_R.top+'px';
+		scls.outer.style.left=(anlys_i_R.left+mx+5)+'px';
+	}
+	
 }
 
 function procPrint(){
@@ -510,6 +967,9 @@ function procPrint(){
 		let sd=s;
 		let f=(s).toString(16).toLocaleUpperCase();
 		if(s>=0){
+			if(s===0){
+				base_hx=brds['one_byte'][0];
+			}
 			sd='+'+sd;
 			f='+'+f;
 		}
@@ -530,7 +990,7 @@ function procPrint(){
 		let t1='['+getBarSepStr(brds['interps'],0,0)+']';
 		let t2='['+getBarSepStr(brds['flts'][0],0,7)+' || '+getBarSepStr(brds['flts'][1],0,15)+']';
 		
-		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: fit-content;"><div style="font-weight: bolder;" hod="'+f+'" class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+fd+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[1 byte char | 2 byte char | 3 byte char | 4 byte char | 4 byte surrogate pair char ]">'+tc+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
+		anlys_i_HTML+='<section title="Double click to prime button for making this the base" abs_hex="'+i+'" ondblclick="base_cnd(event);" onclick="hl_sct(event);" style="display: flex;flex-flow: column;min-width: fit-content;"><div style="font-weight: bolder;" deco="'+s+'" hod="'+f+'" class="hex_offs" title="Offset" ondblclick="base_cnd(event);">'+fd+'</div><div ondblclick="base_cnd(event);">'+brds['one_byte'][0]+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[1 byte char | 2 byte char | 3 byte char | 4 byte char | 4 byte surrogate pair char ]">'+tc+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(170deg 100% 50%);" title="[1 byte int (unsigned, signed) | 2 byte int (unsigned, signed) | 4 byte int (unsigned, signed) | 8 byte int (unsigned, signed)]">'+t1+'</div><div ondblclick="base_cnd(event);" style="min-width: max-content;font-weight: bold;color: hsl(94deg 100% 50%);" title="[float || double]">'+t2+'</div></section>';
 		all_hex.push(brds);
 		hx_arr_cnt+=1;
 		if(hx_arr_cnt<len){
@@ -544,8 +1004,18 @@ function procPrint(){
 		}
 }
 
+hx.onclick=(event)=>{
+	document.body.scrollLeft=0;
+}
+scls.outer.onclick=(event)=>{
+	document.body.scrollLeft=document.body.clientWidth;
+}
+	
 hx.oninput=(event)=>{
-
+	scls.hl.innerHTML='';
+	firstClk=false;
+	base_hx=null;
+	base_hxi='';
 	all_hex=[];
 	hx_arr=hx.value.toLocaleUpperCase().split(' ').map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
 	hx_arr_int=[];
@@ -581,10 +1051,20 @@ sbse.onclick=(event)=>{
 		let sd=s;
 		let fd=(s).toString(16).toLocaleUpperCase();
 		if(s>=0){
+			if(s===0){
+				base_hx=f[i].nextElementSibling.innerText;
+				let p=[...scls.ce.querySelectorAll('#base_AOB')];
+				if(p.length>0){
+					p[0].innerText=base_hx+'…';
+					base_hxi='';
+				}
+			}
 			sd='+'+sd;
 			fd='+'+fd;
 		}
+		
 		f[i].setAttribute('hod',fd);
+		f[i].setAttribute('deco',s);
 		fd=(s>-10 && s<10)?fd:(fd+'	{'+sd+'}');
 		let k=[...document.querySelectorAll('section#anly_info > section.tracked')];
 		k.forEach((ks)=>{
@@ -592,6 +1072,8 @@ sbse.onclick=(event)=>{
 		});
 		f[i].innerText=fd;
 	}
+	scls.hl.innerHTML='';
+	firstClk=false;
 }
 jmbs.onclick=(event)=>{
 	let f=[...document.getElementsByClassName('hex_offs')];
