@@ -28,9 +28,6 @@ section#anly_info > section * {
 section#anly_info > section.tracked{
     background-color: hsl(46deg 90% 28%);
 }
-section#anly_info > section.sec_tracked{
-	    background-color: hsl(232deg 90% 28%);
-}
 section#anly_info > section div {
     width: max-content;
 }
@@ -505,6 +502,7 @@ let all_hex=[];
 var hx_arr=[];
 var hx_arr_int=[];
 var hx_arr_cnt=0;
+var fnd=[];
 anlys_i_HTML='';
 
 //let hx_print=`<section style="display: flex;flex-flow: row;"><div title="Offset"></div><div></div><div></div></section>`;
@@ -584,11 +582,22 @@ function chgr(event){
 	event.target.setAttribute('chg','true');
 }
 
+function auto_hl_2(){
+	let len=fnd.length;
+	if(fnd.length>0){
+		ttl.innerText="Hex converter - Highlighting ("+len+' remaining)';
+		fnd[0].click();
+		fnd=fnd.slice(1);
+		setTimeout(auto_hl_2,0);
+	}else{
+		ttl.innerText="Hex converter";
+	}
+}
+
 function auto_hl(event){
 	let t=event.target;
 	let els=[...t.parentElement.children];
 	let ckb=[els[6].firstElementChild,els[7].firstElementChild]
-	let fnd=[];
 	let s=[...document.querySelectorAll('#anly_info > section')];
 	let ix0=els[1].selectedIndex;
 	let ix1=els[2].selectedIndex;
@@ -604,7 +613,6 @@ function auto_hl(event){
 					['flt_txt',1]
 				]; //for non-characters!
 	for(let i=0, len=all_hex.length;i<len;i++){
-		s[i].classList.remove('sec_tracked');
 		if(ix0==10){ //Character
 				if(all_hex[i]['chrs'].includes(els[3].innerText)){
 					fnd.push(s[i]);
@@ -689,11 +697,7 @@ function auto_hl(event){
 		}
 	}
 	console.log(fnd);
-		for(let k=0, len=fnd.length;k<len;k++){
-			if(!fnd[k].classList.contains('tracked')){
-				fnd[k].classList.add('sec_tracked');
-			}	
-		}
+auto_hl_2();
 }
 
 function auto_hl_slc(event,num){
@@ -896,9 +900,6 @@ function addr_type_sel(event){
 function hl_sct(event){
 	let t=event.currentTarget;
 	let s=[...document.querySelectorAll('#scrlr_hl section')];
-	if(t.classList.contains('sec_tracked')){
-		t.classList.remove('sec_tracked');
-	}
 	
 	if(t.classList.contains('tracked')){
 		t.classList.remove('tracked');
@@ -1011,6 +1012,27 @@ function hl_sct(event){
 				sb[i][1].innerText='↓'+fd;
 			}
 		}
+		
+
+		for (let i=0, len=sbd.length; i<len; i++ ){
+			if(!(i===0 && len===1)){
+				 if(i===0 && len>1){
+					sub_btns(true,sbd,i);
+				}else if(i===len-1){
+					sub_btns(false,sbd,i);
+				}else{
+					sub_btns(true,sbd,i);
+					sub_btns(false,sbd,i);
+				}
+			}
+			sb[i][0].onclick=(event)=>{pnb_click(event)};
+			sb[i][1].onclick=(event)=>{pnb_click(event)};
+		}
+		scr_left();
+	}
+}
+
+function scrl_pos(){
 		scls.ttl.innerText="Highlighted: ";
 		scls.outer.style.border='2px outset hsl(46deg 90% 28%)';
 		scls.ce.innerHTML=`<label style="display: flex;">
@@ -1062,25 +1084,6 @@ hls.selectedIndex=8;
 let hls1=document.getElementById('auto_hl_slc1');
 hls1.selectedIndex=2;
 
-		for (let i=0, len=sbd.length; i<len; i++ ){
-			if(!(i===0 && len===1)){
-				 if(i===0 && len>1){
-					sub_btns(true,sbd,i);
-				}else if(i===len-1){
-					sub_btns(false,sbd,i);
-				}else{
-					sub_btns(true,sbd,i);
-					sub_btns(false,sbd,i);
-				}
-			}
-			sb[i][0].onclick=(event)=>{pnb_click(event)};
-			sb[i][1].onclick=(event)=>{pnb_click(event)};
-		}
-		scr_left();
-	}
-}
-
-function scrl_pos(y){
 		let dvs=[...document.querySelectorAll('section#anly_info > section div')].map((d)=>{return d.clientWidth;});
 		let mx=Math.max(...dvs);
 		let anlys_i_R=absBoundingClientRect(anlys_i);
