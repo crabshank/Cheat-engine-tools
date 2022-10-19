@@ -22,10 +22,17 @@ section#anly_info > section {
 section#anly_info > section * {
 	text-align: left;
 }
-#anly_info section:hover{
+#anly_info section:hover, #hex span:hover{
     background-color:hsl(129deg 55% 16%);
 }
-section#anly_info > section.tracked{
+#hex span:hover{
+	cursor:none;
+}
+#hex span.prospective{
+    background-color:hsl(208deg 68% 34%);
+	cursor:none;
+}
+section#anly_info > section.tracked, #hex span.base_span{
     background-color: hsl(46deg 90% 28%);
 }
 section#anly_info > section div {
@@ -52,6 +59,12 @@ label {
 #scrlr_hl div {
     width: max-content;
 }
+#hex span{
+    margin: 0ch 0.83ch 0ch 0ch;
+    white-space: nowrap;
+    padding: 0ch 0.27ch 0ch 0ch;
+    border: 0;
+}
 </style>
 </head>
 	
@@ -65,7 +78,7 @@ label {
 		<div id="scrlr_ttl" style="margin-bottom: 0.6ch;font-weight: bold;"></div>
 			<section id="scrlr_hl" style="max-width: max-content;"></section>
 </section>
-<textarea id="hex" style="width:37.5%; max-width: 37.5%; height: 92%;"></textarea>
+<div contenteditable id="hex" style="width:37.5%;max-width: 37.5%;min-height: 92%;display: inline-flex;border: 1px solid #886a0773;flex-flow: wrap;place-content: flex-start;"></div>
 <section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
 	<section id="anly_btns">
 		<button id="bse" baseByte="0">Set as base</button>
@@ -612,11 +625,55 @@ function auto_hl(event){
 					['flt_txt',0],
 					['flt_txt',1]
 				]; //for non-characters!
+	let csv_lst=[];
+	let csv_lst_f=[];
+	let csv_lst_i=[];
+	
+	if(ix1==6){
+			if(ix0==10){ //Character
+					let lst=[...els[3].innerText];
+					let lst2=[];
+					let crl='';
+					for(let j=0, len_j=lst.length; j<len_j; j++){
+						let c=lst[j];
+						if(c===','){
+							if ( j===0 || (j>0 && lst[j-1]==='\\' )   ){
+								crl+=c;
+							}else{
+								lst2.push(crl);
+								crl='';
+							}
+						}else{
+							crl+=c;
+						}
+
+						if(j===len_j-1 && crl!==''){
+							lst2.push(crl);
+						}
+				} 
+				csv_lst=lst2.map((st)=>{return st.split('\\,').join(',');}); 
+			}else if(ix0>=8){ //float or double
+				csv_lst=els[3].innerText.innerText.match(/(-?[0-9]+\.?[0-9]*((e|E){1}(\+|\-){1}[0-9]+)?)/g);
+				csv_lst_f=csv_lst.map((c)=>{return parseFloat(v);});
+			}else{
+				csv_lst=els[3].innerText.innerText.match(/\-?[0-9]+/g);
+				csv_lst_i=csv_lst.map((c)=>{return parseInt(v);});
+			}
+	}
+	
 	for(let i=0, len=all_hex.length;i<len;i++){
 		if(ix0==10){ //Character
+			if(ix1===1){
 				if(all_hex[i]['chrs'].includes(els[3].innerText)){
 					fnd.push(s[i]);
 				}
+			}else{ // in list
+				for(let j=0, len_j=csv_lst.length; j<len_j; j++){
+					if(all_hex[i]['chrs'].includes(csv_lst[j])){
+						fnd.push(s[i]);
+					}
+				}
+			}
 		}else{ //numeric
 			let vs=[els[3].innerText,els[4].innerText];
 			let b=m[ix0];
@@ -651,9 +708,17 @@ function auto_hl(event){
 							if(nf<=vsf[0] && (  !(ckb[0].checked==true && nf===0) )){
 								fnd.push(s[i]);
 							}
-						}else{ //=/=
+						}else if (ix1===5){ //=/=
 							if(vs[0]!==n && (  !(ckb[0].checked==true && (n==='0' || n==='-0') ) )){
 								fnd.push(s[i]);
+							}
+						}else{ // in list
+							for(let j=0, len_j=csv_lst.length; j<len_j; j++){
+								let psf=csv_lst_f[j];
+								if( ( (csv_lst[j]==='0' || psf===0 || psf=== (-0) ) && (n==='0' || n==='-0') )  || csv_lst[j]===n ){
+									fnd.push(s[i]);
+									j=len_j-1;
+								}
 							}
 						}
 				}
@@ -686,11 +751,19 @@ function auto_hl(event){
 						if(n<=vsi[0]){
 							fnd.push(s[i]);
 						}
-					}	else{ // =/=
+					}else if (ix1===5){ //=/=
 						if(n!==vsi[0]){
 							fnd.push(s[i]);
 						}
-					}	
+					}else{
+						for(let j=0, len_j=csv_lst.length; j<len_j; j++){
+							let psi=csv_lst_i[j];
+							if( psi===n ){
+								fnd.push(s[i]);
+								j=len_j-1;
+							}
+						}
+					}
 				}
 			}
 			
@@ -702,34 +775,46 @@ auto_hl_2();
 
 function auto_hl_slc(event,num){
 	let t=event.target;
-	let si=t.selectedIndex;
 	let els=[...t.parentElement.children];
-	if(els[1].selectedIndex===10){
-			els[2].selectedIndex=1;
-			els[3].style.display='inline-block';
-			els[4].style.display='none';
+	let si=els[1].selectedIndex;
+	let si2=els[2].selectedIndex;
+
+	els[6].style.display='inline-block'; // non-zero float
+	els[7].style.display='inline-block'; // non-exp float
+	
+
+	
+	if(si2>0){ // not between
+		els[4].style.display='none';
 	}else{
-		if(num===0){
-			if(si===8 || si===9){
-				els[7].style.display='inline-block';
-			}else{
-				els[7].style.display='none';
-			}
-		}else{
-			if(si>0){
-				els[4].style.display='none';
-				if(si===2){
-					els[3].style.display='none';
-				}else{
-					els[3].style.display='inline-block';
-				}
-			}else{
-				els[4].style.display='inline-block';
-				els[3].style.display='inline-block';
-			}
-			
+		els[4].style.display='inline-block'; //2nd input
+	}
+	
+	if(si2===2){ //all
+		els[3].style.display='none';
+	}else{
+		els[3].style.display='inline-block'; //1st input
+	}
+	
+	if(si2===6){ // in list
+		els[6].style.display='none'; // non-zero float
+		els[7].style.display='none'; // non-exp float
+	}else{
+		els[6].style.display='inline-block'; // non-zero float
+		els[7].style.display='inline-block'; // non-exp float
+	}
+	
+	if(si<8){ // int
+		els[6].style.display='none';
+		els[7].style.display='none';
+	}else if(si===10){ // character
+		els[6].style.display='none';
+		els[7].style.display='none';
+		if(si2!==1 && si2!==6){
+			els[2].selectedIndex=1;
 		}
 	}
+
 }
 
 function selectText(element) {
@@ -1074,6 +1159,7 @@ function scrl_pos(){
 	<option>Greater than or equal to</option>
 	<option>Less than or equal to</option>
 	<option>Not equal to</option>
+	<option>In list (CSV)</option>
 </select>
 <div class="num" contenteditable="true" style="display:none;"></div>
 <div class="num" contenteditable="true" style="display:none;"></div><br>
@@ -1217,13 +1303,13 @@ hx.onclick=(event)=>{
 	document.body.scrollLeft=0;
 }
 
-var scr_left=()=>{
+var scr_left=(left)=>{
 	let scls_hl_R=absBoundingClientRect(scls.hl);
-	document.body.scrollLeft=scls_hl_R.right-window.screen.availWidth;
+	document.body.scrollLeft=(left)?scls_hl_R.left:scls_hl_R.right-window.screen.availWidth;
 }
 
 scls.outer.onclick=(event)=>{
-	scr_left();
+	scr_left(true);
 }
 
 
@@ -1234,10 +1320,15 @@ hx.oninput=(event)=>{
 	base_hxi='';
 	fnd=[];
 	all_hex=[];
-	hx_arr=hx.value.toLocaleUpperCase().split(' ').map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
+	hx_arr=hx.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g).map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
+	hx.innerHTML='';
+		hx.innerHTML+='<span class="base_span" ix="1">'+hx_arr[0]+' </span>';
+	for(let i=1, len=hx_arr.length; i<len; i++){
+			hx.innerHTML+='<span  ix="'+(i+1)+'">'+hx_arr[i]+' </span>';
+	}
 	hx_arr_int=[];
 	hx_arr_cnt=0;
-	
+		
 	let a=[];
 	let rhx=[];
 	hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
@@ -1250,21 +1341,40 @@ hx.oninput=(event)=>{
 	console.log(all_hex);
 }
 
-document.onselectionchange=(event)=>{
-    let start = hx.selectionStart;
-    let finish = hx.selectionEnd;
-	let ix=Math.floor(start/3);
-	let el=ix*3;
-	sbse.setAttribute('baseByte',ix);
-	sbse.innerText='Set byte #'+(ix+1)+' ('+hx.value.substring(el, el+2)+') as base';
+hx.onpointerdown=(event)=>{
+    let t=event.target;
+	if(t.tagName==='SPAN' && t.parentElement===hx){
+		let bsps=[...document.querySelectorAll('#hex span')];
+		for(let i=0, len=bsps.length; i<len; i++){
+			let b=bsps[i];
+			if(b === t){
+				b.classList.add('prospective');
+			}else if(b.classList.contains('prospective')){
+				b.classList.remove('prospective');
+			}
+		}
+		let tix=parseInt(t.getAttribute('ix'));
+		sbse.setAttribute('baseByte',tix);
+		sbse.innerText='Set byte #'+(tix)+' ('+(t.innerText.split(/\s+/)[0])+') as base';
+	}
 }
 
 sbse.onclick=(event)=>{
-	hxBse=parseInt(sbse.getAttribute('baseByte'));
+	hxBse_raw=sbse.getAttribute('baseByte');
+	hxBse=parseInt(hxBse_raw);
+	let bsps=[...document.querySelectorAll('#hex span')];
+	for(let i=0, len=bsps.length; i<len; i++){
+		let b=bsps[i];
+		if(b.getAttribute('ix') === hxBse_raw){
+			b.classList.add('base_span');
+		}else if(b.classList.contains('base_span')){
+			b.classList.remove('base_span');
+		}
+	}
 	let f=[...document.getElementsByClassName('hex_offs')];
 	for(let i=0, len=f.length; i<len; i++){
 		let sp=f[i].parentElement;
-		let s=parseInt(sp.getAttribute('abs_hex'))-hxBse;
+		let s=parseInt(sp.getAttribute('abs_hex'))-hxBse+1;
 		let sd=s;
 		let fd=(s).toString(16).toLocaleUpperCase();
 		if(s>=0){
