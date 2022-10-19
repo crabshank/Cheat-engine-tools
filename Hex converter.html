@@ -89,6 +89,8 @@ label {
 </section>
 
 <script>
+var pastd=[];
+
 function elRemover(el){
 	if(typeof el!=='undefined' && !!el){
 	if(typeof el.parentNode!=='undefined' && !!el.parentNode){
@@ -606,6 +608,17 @@ function auto_hl_2(){
 		ttl.innerText="Hex converter";
 	}
 }
+function un_hl(event){
+	fnd=[];
+	let scts=[...document.querySelectorAll('#scrlr_hl section')];
+	for(let k=scts.length-1; k>=0; k--){
+		let i=scts[k].getAttribute('deco');
+		let s=[...document.querySelectorAll('#anly_info .hex_offs[deco="'+i+'"]')];
+		if(typeof s!=='undefined'){
+			s[0].click();
+		}
+	}
+}
 
 function auto_hl(event){
 	let t=event.target;
@@ -653,11 +666,11 @@ function auto_hl(event){
 				} 
 				csv_lst=lst2.map((st)=>{return st.split('\\,').join(',');}); 
 			}else if(ix0>=8){ //float or double
-				csv_lst=els[3].innerText.innerText.match(/(-?[0-9]+\.?[0-9]*((e|E){1}(\+|\-){1}[0-9]+)?)/g);
-				csv_lst_f=csv_lst.map((c)=>{return parseFloat(v);});
+				csv_lst=els[3].innerText.match(/(-?[0-9]+\.?[0-9]*((e|E){1}(\+|\-){1}[0-9]+)?)/g);
+				csv_lst_f=csv_lst.map((c)=>{return parseFloat(c);});
 			}else{
-				csv_lst=els[3].innerText.innerText.match(/\-?[0-9]+/g);
-				csv_lst_i=csv_lst.map((c)=>{return parseInt(v);});
+				csv_lst=els[3].innerText.match(/\-?[0-9]+/g);
+				csv_lst_i=csv_lst.map((c)=>{return parseInt(c);});
 			}
 	}
 	
@@ -1170,6 +1183,7 @@ function scrl_pos(){
 <input type="checkbox"></input>
 </label>
 <button onclick="auto_hl(event);">Auto-highlight</button>
+<button onclick="un_hl(event);">Un-highlight all</button>
 </section>`;
 
 let hls=document.getElementById('auto_hl_slc0');
@@ -1409,6 +1423,58 @@ jmbs.onclick=(event)=>{
 	}
 
 }
+
+function isEditableDiv(d){
+	return (d.nodeName==='DIV' && d.contentEditable==='true')?true:false;
+}
+
+if (typeof observer === "undefined") {
+	const observer = new MutationObserver((mutations) => {
+		if(pastd.length>0){
+			let fnd_els=[];
+				
+			for(let i=0, len=mutations.length; i<len;i++){
+					if(pastd.length>0){
+						let t=mutations[i].target;
+						if(pastd.includes(t)){
+							pastd=pastd.filter((p)=>{return p!==t;});
+							fnd_els.push(t);
+						}/*else{
+							let d=[...t.addedNodes];
+							let dvs=d.filter((n)=>{return isEditableDiv(n); } ); if(dvs.length>0){
+									for(let k=0, len_k=dvs.length; k<len_k;k++){
+										fnd_els.push(dvs[k]);
+									}
+							}
+						}*/
+				}else{
+					i=len-1;
+				}
+			}			
+			
+			for(let k=0, len_k=fnd_els.length; k<len_k;k++){
+					let f=fnd_els[k];
+					f.innerHTML=f.innerText;
+			}
+		}
+	});
+		observer.observe(document, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeOldValue: true,
+			characterData: true,
+			characterDataOldValue: true
+		});
+}
+
+window.addEventListener("paste", function(e) {
+	let t=e.target;
+	if(isEditableDiv(t) && t.id!=='hex'){
+		pastd.push(t);
+	}
+});
+
 </script>
 
 </body>
