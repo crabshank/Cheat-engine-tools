@@ -783,6 +783,7 @@ function auto_hl(event){
 		}
 	}
 	console.log(fnd);
+	document.body.scrollTop=0;
 auto_hl_2();
 }
 
@@ -1336,10 +1337,12 @@ hx.oninput=(event)=>{
 	all_hex=[];
 	hx_arr=hx.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g).map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
 	hx.innerHTML='';
-		hx.innerHTML+='<span class="base_span" ix="1">'+hx_arr[0]+' </span>';
+	let hxtm='';
+		hxtm+='<span class="base_span" ix="1">'+hx_arr[0]+' </span>';
 	for(let i=1, len=hx_arr.length; i<len; i++){
-			hx.innerHTML+='<span  ix="'+(i+1)+'">'+hx_arr[i]+' </span>';
+			hxtm+='<span  ix="'+(i+1)+'">'+hx_arr[i]+' </span>';
 	}
+	hx.innerHTML=hxtm;
 	hx_arr_int=[];
 	hx_arr_cnt=0;
 		
