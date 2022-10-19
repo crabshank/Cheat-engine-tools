@@ -1489,11 +1489,11 @@ sbse.onclick=(event)=>{
 		if(s>=0){
 			if(s===0){
 				base_hx=f[i].nextElementSibling.innerText;
-				let p=[...scls.ce.querySelectorAll('#base_AOB')];
-				if(p.length>0){
-					p[0].innerText=base_hx+'…';
-					base_hxi='';
-				}
+				let p=[...scls.ce.querySelectorAll('#base_AOB')][0];
+					if(p.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g)[0]!==base_hx){
+						p.innerText=base_hx+'…';
+						base_hxi='';
+					}
 			}
 			sd='+'+sd;
 			fd='+'+fd;
