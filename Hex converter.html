@@ -1335,27 +1335,30 @@ hx.oninput=(event)=>{
 	base_hxi='';
 	fnd=[];
 	all_hex=[];
-	hx_arr=hx.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g).map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
+	hx_arr=hx.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
 	hx.innerHTML='';
-	let hxtm='';
-		hxtm+='<span class="base_span" ix="1">'+hx_arr[0]+' </span>';
-	for(let i=1, len=hx_arr.length; i<len; i++){
-			hxtm+='<span  ix="'+(i+1)+'">'+hx_arr[i]+' </span>';
-	}
-	hx.innerHTML=hxtm;
-	hx_arr_int=[];
-	hx_arr_cnt=0;
-		
-	let a=[];
-	let rhx=[];
-	hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
-	anlys_i.innerHTML='';
-	anlys_i_HTML='';
-	if(hx_arr_int.length>0){
-		procPrint();
-	}
+	if(hx_arr!== null && hx_arr.length>0){
+		hx_arr=hx_arr.map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
+		let hxtm='';
+			hxtm+='<span class="base_span" ix="1">'+hx_arr[0]+' </span>';
+		for(let i=1, len=hx_arr.length; i<len; i++){
+				hxtm+='<span  ix="'+(i+1)+'">'+hx_arr[i]+' </span>';
+		}
+		hx.innerHTML=hxtm;
 
-	console.log(all_hex);
+		hx_arr_int=[];
+		hx_arr_cnt=0;
+			
+		let a=[];
+		let rhx=[];
+		hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
+		anlys_i.innerHTML='';
+		anlys_i_HTML='';
+		if(hx_arr_int.length>0){
+			procPrint();
+		}
+		console.log(all_hex);
+	}
 }
 
 hx.onpointerdown=(event)=>{
