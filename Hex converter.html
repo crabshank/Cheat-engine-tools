@@ -598,17 +598,23 @@ hsrch.oninput=(e)=>{
 		}
 		
 		if(fnd_AOB.length>0){
-			
-			clk_hx({target: s[fnd_AOB[0][0]] })
+					let aobd=[...scls.ce.querySelectorAll('#base_AOB')][0];
+					aobd.innerText='';
+					let at='';
+			clk_hx({target: s[fnd_AOB[0][0]] });
 			for(let i=0, len=fnd_AOB.length; i<len;i++){
 				let sc=fnd_AOB[i][0];
 				let sc1=fnd_AOB[i][1];
 				let k=sc;
 				while(k<=sc1){
 					s[k].classList.add('AOB_found');
+					if(i===0){
+						at+=s[k].innerText.trim()+((k===sc1)?'':' ');
+					}
 					k++;
 				}
 			}
+			aobd.innerText=at;
 		}
 		
 	}
