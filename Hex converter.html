@@ -32,6 +32,10 @@ section#anly_info > section * {
     background-color:hsl(208deg 68% 34%);
 	cursor:none;
 }
+ #hex span.AOB_found{
+   background-color: hsl(259deg 42% 35%);
+	cursor:none;
+}
 section#anly_info > section.tracked, #hex span.base_span{
     background-color: hsl(46deg 90% 28%);
 }
@@ -78,7 +82,12 @@ label {
 		<div id="scrlr_ttl" style="margin-bottom: 0.6ch;font-weight: bold;"></div>
 			<section id="scrlr_hl" style="max-width: max-content;"></section>
 </section>
-<div contenteditable id="hex" style="width:37.5%;max-width: 37.5%;min-height: 92%;display: inline-flex;border: 1px solid #886a0773;flex-flow: wrap;place-content: flex-start;"></div>
+
+<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 37.5%;width: 37.5%;min-height: 92%;">
+	<div contenteditable id="hex_search_AOB" style="border: 1px solid #886a0773;min-width: -webkit-fill-available;color: buttonface;">Search for AOB</div>
+	<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 1px solid #886a0773;flex-flow: wrap;place-content: flex-start; height: 87vh;"></div>
+</section>
+
 <section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
 	<section id="anly_btns">
 		<button id="bse" baseByte="0">Set as base</button>
@@ -497,6 +506,7 @@ let base_hx=null;
 let base_hxi='';	
 let indnt=8;					
 let ttl=[...document.getElementsByTagName('h1')][0];
+let hsrch=document.getElementById('hex_search_AOB');
 let hx=document.getElementById('hex');
 let anlys=document.getElementById('anly');
 let sbse=document.getElementById('bse');
@@ -507,6 +517,7 @@ let scls={	outer:document.getElementById('scrlr'),
 					ttl:document.getElementById('scrlr_ttl'),
 					ce:document.getElementById('scrlr_CE')
 				};
+				
 let base_nm='base';
 document.body.onscroll=(event)=>{
 	scls.outer.style.top=document.body.scrollTop+'px';
@@ -519,6 +530,91 @@ var hx_arr_int=[];
 var hx_arr_cnt=0;
 var fnd=[];
 anlys_i_HTML='';
+
+hsrch.onfocus=(e)=>{
+	let t=e.target;
+	if(t.innerText==='Search for AOB'){
+		t.innerText='';
+		t.style.color='white';
+	}
+}
+
+hsrch.onblur=(e)=>{
+	let t=e.target;
+	if(t.innerText===''){
+		t.innerText='Search for AOB';
+		t.style.color='buttonface';
+	}
+}
+
+function clk_hx(event){
+	    let t=event.target;
+	if(t.tagName==='SPAN' && t.parentElement===hx){
+		let bsps=[...document.querySelectorAll('#hex span')];
+		for(let i=0, len=bsps.length; i<len; i++){
+			let b=bsps[i];
+			if(b === t){
+				b.classList.add('prospective');
+			}else if(b.classList.contains('prospective')){
+				b.classList.remove('prospective');
+			}
+		}
+		let tix=parseInt(t.getAttribute('ix'));
+		sbse.setAttribute('baseByte',tix);
+		sbse.innerText='Set byte #'+(tix)+' ('+(t.innerText.split(/\s+/)[0])+') as base';
+	}
+}
+
+hsrch.oninput=(e)=>{
+	let t=e.target;
+	if(t.innerText!==''){
+		//t.style.color='white';
+		let b=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
+		let s=[...document.querySelectorAll('#hex span')];
+		
+		for(let i=0, len=s.length; i<len;i++){
+			let sc=s[i];
+			if(sc.classList.contains('AOB_found')){
+				sc.classList.remove('AOB_found');
+			}
+		}
+		
+		let si=0; let s_end=s.length-1;
+		let bi=0; let b_end=b.length-1;
+		let fnd_AOB=[];
+		
+		while(si<=s_end){
+			if(b[bi]===s[si].innerText.trim()){
+				if(bi===b_end){
+					bi=0;
+					fnd_AOB.push([ si-b_end , si ]);
+				}else{
+					bi++;
+				}
+			}else{
+				bi=0;
+			}
+			si++
+		}
+		
+		if(fnd_AOB.length>0){
+			
+			clk_hx({target: s[fnd_AOB[0][0]] })
+			for(let i=0, len=fnd_AOB.length; i<len;i++){
+				let sc=fnd_AOB[i][0];
+				let sc1=fnd_AOB[i][1];
+				let k=sc;
+				while(k<=sc1){
+					s[k].classList.add('AOB_found');
+					k++;
+				}
+			}
+		}
+		
+	}
+}
+
+
 
 //let hx_print=`<section style="display: flex;flex-flow: row;"><div title="Offset"></div><div></div><div></div></section>`;
 function base_cnd(event){
@@ -1361,22 +1457,9 @@ hx.oninput=(event)=>{
 	}
 }
 
+
 hx.onpointerdown=(event)=>{
-    let t=event.target;
-	if(t.tagName==='SPAN' && t.parentElement===hx){
-		let bsps=[...document.querySelectorAll('#hex span')];
-		for(let i=0, len=bsps.length; i<len; i++){
-			let b=bsps[i];
-			if(b === t){
-				b.classList.add('prospective');
-			}else if(b.classList.contains('prospective')){
-				b.classList.remove('prospective');
-			}
-		}
-		let tix=parseInt(t.getAttribute('ix'));
-		sbse.setAttribute('baseByte',tix);
-		sbse.innerText='Set byte #'+(tix)+' ('+(t.innerText.split(/\s+/)[0])+') as base';
-	}
+	clk_hx(event);
 }
 
 sbse.onclick=(event)=>{
@@ -1476,7 +1559,7 @@ if (typeof observer === "undefined") {
 
 window.addEventListener("paste", function(e) {
 	let t=e.target;
-	if(isEditableDiv(t) && t.id!=='hex'){
+	if(isEditableDiv(t) && t.id!=='hex' && t.id!=='hex_search_AOB'){
 		pastd.push(t);
 	}
 });
