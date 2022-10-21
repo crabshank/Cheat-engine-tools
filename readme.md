@@ -9,7 +9,7 @@ The "Jump to..." buttons allow the user the jump to the next time a highlighted 
 "Remove tracking on all instructions" un-highlights everything.
 
 N.B. traces with thousands of steps will use a lot of memory.
-¬
+
 ***
 
 ## Disassembler mnemonics
