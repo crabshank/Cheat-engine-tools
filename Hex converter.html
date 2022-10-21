@@ -100,6 +100,20 @@ label {
 <script>
 var pastd=[];
 
+function selDivEditable(el){
+	let range = document.createRange();
+    let sel = window.getSelection();
+    let sp=[...el.childNodes];
+    let spe=(sp.length>0)?sp.at(-1):el;
+  let spc=Math.max(spe?.innerText?.length-1 || 1,1);
+  el.focus();
+   range.setStart(spe,spc);
+    range.collapse(true);
+    
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
 function elRemover(el){
 	if(typeof el!=='undefined' && !!el){
 	if(typeof el.parentNode!=='undefined' && !!el.parentNode){
@@ -570,6 +584,7 @@ hsrch.oninput=(e)=>{
 	if(t.innerText!==''){
 		//t.style.color='white';
 		let b=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
+		
 		let s=[...document.querySelectorAll('#hex span')];
 		
 		for(let i=0, len=s.length; i<len;i++){
@@ -1243,14 +1258,11 @@ function hl_sct(event){
 function scrl_pos(){
 		scls.ttl.innerText="Highlighted: ";
 		scls.outer.style.border='2px outset hsl(46deg 90% 28%)';
-		scls.ce.innerHTML=`<label style="display: flex;">
-  Address group name: <div contenteditable="true"></div>
+		scls.ce.innerHTML=`<label style="display: flex;">Address group name: <div contenteditable="true"></div>
 </label>
-<label style="display: flex;">
-  Module (executable) name: <div title="Leave empty to use 'aobscan(…)' instead of 'aobscanmodule(…)'" contenteditable="true"></div>
+<label style="display: flex;">Module (executable) name: <div title="Leave empty to use 'aobscan(…)' instead of 'aobscanmodule(…)'" contenteditable="true"></div>
 </label>
-<label style="display: flex;">
-  Array of bytes (from base address): <div contenteditable="true" oninput="base_AOB_chg(event);" ondblclick="sel_AOB(event);" chg="false" id="base_AOB">${(base_hx===null || base_hxi!=='')?base_hxi:base_hx+'…'}</div>
+<label style="display: flex;">Array of bytes (from base address): <div contenteditable="true" oninput="base_AOB_chg(event);" ondblclick="sel_AOB(event);" chg="false" id="base_AOB">${(base_hx===null || base_hxi!=='')?base_hxi:base_hx+'…'}</div>
 </label>
 <button onclick="gen_ct(event);" style="margin-top: 0.7ch;margin-bottom: 0.7ch;">Generate Cheat Table</button>
 <section id="srch">
@@ -1461,6 +1473,8 @@ hx.oninput=(event)=>{
 		}
 		console.log(all_hex);
 	}
+
+    selDivEditable(hx);
 }
 
 
@@ -1549,7 +1563,11 @@ if (typeof observer === "undefined") {
 			
 			for(let k=0, len_k=fnd_els.length; k<len_k;k++){
 					let f=fnd_els[k];
-					f.innerHTML=f.innerText;
+				
+					if(!['hex','hex_search_AOB','base_AOB'].includes(f.id)){
+						f.innerHTML=f.innerText;
+					}else if(['base_AOB','hex_search_AOB'].includes(f.id)){	f.innerHTML=f.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g).join(' ');
+					}
 			}
 		}
 	});
@@ -1565,7 +1583,7 @@ if (typeof observer === "undefined") {
 
 window.addEventListener("paste", function(e) {
 	let t=e.target;
-	if(isEditableDiv(t) && t.id!=='hex' && t.id!=='hex_search_AOB'){
+	if( isEditableDiv(t) ){
 		pastd.push(t);
 	}
 });
