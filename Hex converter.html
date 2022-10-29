@@ -101,17 +101,19 @@ label {
 var pastd=[];
 
 function selDivEditable(el){
-	let range = document.createRange();
-    let sel = window.getSelection();
-    let sp=[...el.childNodes];
-    let spe=(sp.length>0)?sp.at(-1):el;
-  let spc=Math.max(spe?.innerText?.length-1 || 1,1);
-  el.focus();
-   range.setStart(spe,spc);
-    range.collapse(true);
-    
-    sel.removeAllRanges();
-    sel.addRange(range);
+	try{
+			let range = document.createRange();
+			let sel = window.getSelection();
+			let sp=[...el.childNodes];
+			let spe=(sp.length>0)?sp.at(-1):el;
+		  let spc=Math.max(spe?.nodeValue?.length || 1,1);
+		  el.focus();
+		   range.setStart(spe,spc);
+			range.collapse(true);
+			
+			sel.removeAllRanges();
+			sel.addRange(range);
+	}catch(e){;}
 }
 
 function elRemover(el){
@@ -584,7 +586,7 @@ hsrch.oninput=(e)=>{
 	if(t.innerText!==''){
 		//t.style.color='white';
 		let b=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
-		
+		t.innerText=b.join(' ');
 		let s=[...document.querySelectorAll('#hex span')];
 		
 		for(let i=0, len=s.length; i<len;i++){
@@ -633,6 +635,7 @@ hsrch.oninput=(e)=>{
 		}
 		
 	}
+	 selDivEditable(t);
 }
 
 
