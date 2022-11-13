@@ -1347,6 +1347,14 @@ function procPrint(){
 			b=n_byte_unit8_to_int(rhx);
 			brds['interps'].unshift(b);
 			brds['chrs'].push(String.fromCharCode(b.u));
+				let codePoint = [hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]].reduce((acc, cur) => {
+				cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
+				}, 0);
+				try{
+					brds['chrs'].unshift(String.fromCodePoint(codePoint));
+				}catch(e){
+					brds['chrs'].unshift(undefined);
+				}
 		}else{
 			brds['interps'].unshift(undefined);
 			brds['chrs'].push('');
@@ -1378,16 +1386,7 @@ function procPrint(){
 		brds['chrs'].push(String.fromCharCode(b.u));
 		brds['one_byte'].push(b);
 		brds['interps'].unshift(b);
-		
-			let codePoint = [hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]].reduce((acc, cur) => {
-			cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
-			}, 0);
-			try{
-				brds['chrs'].unshift(String.fromCodePoint(codePoint));
-			}catch(e){
-				brds['chrs'].unshift(undefined);
-			}
-		
+				
 		let s=brds['gOff']-hxBse;
 		let sd=s;
 		let f=(s).toString(16).toLocaleUpperCase();
