@@ -62,10 +62,10 @@
 			</section>
 		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%;">
 		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;">
-			<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;height: 86.549vh;margin-top: 0.451%;"></div>
+			<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
 	</section>
 	<section id="hex_sct2"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;min-height: 92%;">
-			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;height: 87vh;padding-left: 0.111em;"></div>
+			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;min-height: 87vh;padding-left: 0.111em;"></div>
 	</section>
 </section>
 
@@ -737,10 +737,12 @@ function makeSpans(leaveHex){
 			if(leaveHex!==true){
 						elems.hex.innerHTML=hxtm;
 						elems.hex.style.height = 'inherit';
-						elems.hex.style.height = (dv.scrollHeight+4)+"px";
+						elems.hex.style.height = (elems.hex.scrollHeight+4)+"px";
 						hexSpans=[...elems.hex.getElementsByTagName('SPAN')];
 			}		
 			elems.hex2.innerHTML=hxtm2;
+			elems.hex2.style.height = 'inherit';
+			elems.hex2.style.height = (elems.hex2.scrollHeight+4)+"px";
 			hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];
 			for(let i=0, len=hexSpans2.length; i<len; i++){
 					hexSpans2[i].style.minHeight=hexSpans[i].clientHeight+'px';
