@@ -18,7 +18,17 @@ Simply paste the file into your autorun folder, and it will put the instructions
 
 N.B. place your own comments before the "〈" character.
 
-## Hex Converter
+## Hex viewer
+
+Paste space-separated byte hex into the text area and it shows the data converted to a type of your choosing.
+
+N.B.
+
+* This is much faster than "Hex converter".
+
+* Hovering over the (converted) bytes highlights them.
+
+## Hex converter
 
 Paste space-separated byte hex into the text area and wait for the processing to end. This is designed to make spotting struct values easier.
 
