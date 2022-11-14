@@ -85,7 +85,7 @@ label {
 
 <section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 37.5%;width: 37.5%;min-height: 92%;">
 	<div contenteditable id="hex_search_AOB" style="border: 1px solid #886a0773;min-width: -webkit-fill-available;color: buttonface;">Search for AOB</div>
-	<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 1px solid #886a0773;flex-flow: wrap;place-content: flex-start; height: 87vh;"></div>
+	<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 1px solid #886a0773;flex-flow: wrap;place-content: flex-start; min-height: 87vh;"></div>
 </section>
 
 <section id="anly" style="width: 61.96%;height: 92%;float: right;transform: translateX(0.54%);">
@@ -1443,8 +1443,6 @@ scls.outer.onclick=(event)=>{
 	scr_left(true);
 }
 
-
-	
 hx.oninput=(event)=>{
 	scls.hl.innerHTML='';
 	base_hx=null;
@@ -1461,6 +1459,8 @@ hx.oninput=(event)=>{
 				hxtm+='<span  ix="'+(i+1)+'">'+hx_arr[i]+' </span>';
 		}
 		hx.innerHTML=hxtm;
+		hx.style.height = 'inherit';
+		hx.style.height = (hx.scrollHeight+4)+"px";
 
 		hx_arr_int=[];
 		hx_arr_cnt=0;
