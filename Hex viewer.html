@@ -736,6 +736,8 @@ function makeSpans(leaveHex){
 			}
 			if(leaveHex!==true){
 						elems.hex.innerHTML=hxtm;
+						elems.hex.style.height = 'inherit';
+						elems.hex.style.height = (dv.scrollHeight+4)+"px";
 						hexSpans=[...elems.hex.getElementsByTagName('SPAN')];
 			}		
 			elems.hex2.innerHTML=hxtm2;
