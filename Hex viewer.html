@@ -753,6 +753,8 @@ function makeSpans(leaveHex){
 					hexSpans2[i].style.minHeight=hexSpans[i].clientHeight+'px';
 					hexSpans2[i].style.minWidth=hexSpans[i].clientWidth+'px';
 			}
+	}else{
+		elems.hex2.innerHTML='';
 	}
 }
 
@@ -801,6 +803,8 @@ elems.hex.oninput=(event)=>{
 	t.innerHTML='';
 	hx_interps=Array.from(Array(19), () => []);
 	hx_interps_be=Array.from(Array(19), () => []);
+	hovSpans=[];
+	hovSpans2=[];
 	makeSpans();
 	selDivEditable(t);
 }
