@@ -1,0 +1,829 @@
+<html>
+
+<head>
+	<style>
+	input[type="checkbox"] {
+		background: buttonface;
+		margin-bottom: 2px;
+		margin-left: 3px;
+		vertical-align: bottom;
+		margin-right: 0.2ch;
+	}
+	#hex span, #hex2 span {
+		margin: 0ch 0.83ch 0ch 0ch;
+		white-space: nowrap;
+		border-width: 1px;
+		border-color: rgb(128 128 128);
+		border-style: dotted;
+		text-align: center;
+		place-self: center;
+		height: max-content;
+		padding: 0.24ch 0.24ch 0.24ch 0.24ch;
+	}
+	#hex span.isHovered, #hex2 span.isHovered {
+		background-color:hsl(129deg 55% 16%);
+	}
+	</style>
+</head>
+	
+<body>
+	<title>Hex viewer</title>
+	<h1 style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex viewer</h1>
+				<select  id="type_view" style="width: max-content;">
+				<optgroup label="Char (Unicode)">
+					<option>1 byte char</option>
+					<option>2 byte char</option>
+					<option>3 byte char</option>
+					<option>4 byte char</option>
+					<option>4 byte surrogate pair char</option>
+				</optgroup>
+				<optgroup label="Int">
+					<option>1 byte int (unsigned, signed)</option>
+					<option>1 byte signed int</option>
+					<option>1 byte unsigned int</option>
+					<option>2 byte int (unsigned, signed)</option>
+					<option>2 byte signed int</option>
+					<option>2 byte unsigned int</option>
+					<option>4 byte int (unsigned, signed)</option>
+					<option>4 byte signed int</option>
+					<option>4 byte unsigned int</option>
+					<option>8 byte int (unsigned, signed)</option>
+					<option>8 byte signed int</option>
+					<option>8 byte unsigned int</option>
+				</optgroup>
+				<optgroup label="Float">
+					<option>Float</option>
+					<option>Double</option>
+				</optgroup>
+			</select>
+			<section id='be_box' style="display: contents; visibility: visible;	">
+				<input type="checkbox" id="big_end"></input>
+				<label for="big_end">Big endian</label>
+			</section>
+		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%;">
+		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;">
+			<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;height: 86.549vh;margin-top: 0.451%;"></div>
+	</section>
+	<section id="hex_sct2"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;min-height: 92%;">
+			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;height: 87vh;padding-left: 0.111em;"></div>
+	</section>
+</section>
+
+<script>
+const lookup_hex={
+										'00':0,
+										'01':1,
+										'02':2,
+										'03':3,
+										'04':4,
+										'05':5,
+										'06':6,
+										'07':7,
+										'08':8,
+										'09':9,
+										'0A':10,
+										'0B':11,
+										'0C':12,
+										'0D':13,
+										'0E':14,
+										'0F':15,
+										'10':16,
+										'11':17,
+										'12':18,
+										'13':19,
+										'14':20,
+										'15':21,
+										'16':22,
+										'17':23,
+										'18':24,
+										'19':25,
+										'1A':26,
+										'1B':27,
+										'1C':28,
+										'1D':29,
+										'1E':30,
+										'1F':31,
+										'20':32,
+										'21':33,
+										'22':34,
+										'23':35,
+										'24':36,
+										'25':37,
+										'26':38,
+										'27':39,
+										'28':40,
+										'29':41,
+										'2A':42,
+										'2B':43,
+										'2C':44,
+										'2D':45,
+										'2E':46,
+										'2F':47,
+										'30':48,
+										'31':49,
+										'32':50,
+										'33':51,
+										'34':52,
+										'35':53,
+										'36':54,
+										'37':55,
+										'38':56,
+										'39':57,
+										'3A':58,
+										'3B':59,
+										'3C':60,
+										'3D':61,
+										'3E':62,
+										'3F':63,
+										'40':64,
+										'41':65,
+										'42':66,
+										'43':67,
+										'44':68,
+										'45':69,
+										'46':70,
+										'47':71,
+										'48':72,
+										'49':73,
+										'4A':74,
+										'4B':75,
+										'4C':76,
+										'4D':77,
+										'4E':78,
+										'4F':79,
+										'50':80,
+										'51':81,
+										'52':82,
+										'53':83,
+										'54':84,
+										'55':85,
+										'56':86,
+										'57':87,
+										'58':88,
+										'59':89,
+										'5A':90,
+										'5B':91,
+										'5C':92,
+										'5D':93,
+										'5E':94,
+										'5F':95,
+										'60':96,
+										'61':97,
+										'62':98,
+										'63':99,
+										'64':100,
+										'65':101,
+										'66':102,
+										'67':103,
+										'68':104,
+										'69':105,
+										'6A':106,
+										'6B':107,
+										'6C':108,
+										'6D':109,
+										'6E':110,
+										'6F':111,
+										'70':112,
+										'71':113,
+										'72':114,
+										'73':115,
+										'74':116,
+										'75':117,
+										'76':118,
+										'77':119,
+										'78':120,
+										'79':121,
+										'7A':122,
+										'7B':123,
+										'7C':124,
+										'7D':125,
+										'7E':126,
+										'7F':127,
+										'80':128,
+										'81':129,
+										'82':130,
+										'83':131,
+										'84':132,
+										'85':133,
+										'86':134,
+										'87':135,
+										'88':136,
+										'89':137,
+										'8A':138,
+										'8B':139,
+										'8C':140,
+										'8D':141,
+										'8E':142,
+										'8F':143,
+										'90':144,
+										'91':145,
+										'92':146,
+										'93':147,
+										'94':148,
+										'95':149,
+										'96':150,
+										'97':151,
+										'98':152,
+										'99':153,
+										'9A':154,
+										'9B':155,
+										'9C':156,
+										'9D':157,
+										'9E':158,
+										'9F':159,
+										'A0':160,
+										'A1':161,
+										'A2':162,
+										'A3':163,
+										'A4':164,
+										'A5':165,
+										'A6':166,
+										'A7':167,
+										'A8':168,
+										'A9':169,
+										'AA':170,
+										'AB':171,
+										'AC':172,
+										'AD':173,
+										'AE':174,
+										'AF':175,
+										'B0':176,
+										'B1':177,
+										'B2':178,
+										'B3':179,
+										'B4':180,
+										'B5':181,
+										'B6':182,
+										'B7':183,
+										'B8':184,
+										'B9':185,
+										'BA':186,
+										'BB':187,
+										'BC':188,
+										'BD':189,
+										'BE':190,
+										'BF':191,
+										'C0':192,
+										'C1':193,
+										'C2':194,
+										'C3':195,
+										'C4':196,
+										'C5':197,
+										'C6':198,
+										'C7':199,
+										'C8':200,
+										'C9':201,
+										'CA':202,
+										'CB':203,
+										'CC':204,
+										'CD':205,
+										'CE':206,
+										'CF':207,
+										'D0':208,
+										'D1':209,
+										'D2':210,
+										'D3':211,
+										'D4':212,
+										'D5':213,
+										'D6':214,
+										'D7':215,
+										'D8':216,
+										'D9':217,
+										'DA':218,
+										'DB':219,
+										'DC':220,
+										'DD':221,
+										'DE':222,
+										'DF':223,
+										'E0':224,
+										'E1':225,
+										'E2':226,
+										'E3':227,
+										'E4':228,
+										'E5':229,
+										'E6':230,
+										'E7':231,
+										'E8':232,
+										'E9':233,
+										'EA':234,
+										'EB':235,
+										'EC':236,
+										'ED':237,
+										'EE':238,
+										'EF':239,
+										'F0':240,
+										'F1':241,
+										'F2':242,
+										'F3':243,
+										'F4':244,
+										'F5':245,
+										'F6':246,
+										'F7':247,
+										'F8':248,
+										'F9':249,
+										'FA':250,
+										'FB':251,
+										'FC':252,
+										'FD':253,
+										'FE':254,
+										'FF':255
+									};
+
+function selDivEditable(el){
+	try{
+			let range = document.createRange();
+			let sel = window.getSelection();
+			let sp=[...el.childNodes];
+			let spe=(sp.length>0)?sp.at(-1):el;
+		  let spc=Math.max(spe?.nodeValue?.length || 1,1);
+		  el.focus();
+		   range.setStart(spe,spc);
+			range.collapse(true);
+			
+			sel.removeAllRanges();
+			sel.addRange(range);
+	}catch(e){;}
+}
+
+function n_byte_unit8_to_int(a,u_only){
+			let us=Number("0x"+a.join(''));
+			let out={s: us, u:us};
+
+		if(u_only===true){
+			return out;
+		}else{
+			let mx=2;
+			for(let i=0, len=(a.length*8)-1; i<len; i++){
+				mx*=2;
+			}
+			mx-=1;
+			
+			let h=Math.floor(mx/2);
+			
+			if(out.u>h){
+				out.s=-mx+out.u-1;
+			}else{
+				out.s=out.u;
+			}
+			
+			return out;
+		}
+}
+
+ function getNoDigits(n){
+		return Math.max(1, Math.floor(Math.log10(Math.abs(n))+1) );
+}
+
+var elems={};
+var hx_arr=[];
+var hx_arr_int=[];
+var hovSpans=[];
+var hovSpans2=[];
+var hexSpans=[];
+var hexSpans2=[];
+const type_bytes=[1,2,3,4,4,1,1,1,2,2,2,4,4,4,8,8,8,4,8];
+var hx_interps=Array.from(Array(19), () => []);
+var hx_interps_be=Array.from(Array(19), () => []);
+
+elems.type_view = document.getElementById('type_view');
+elems.type_view.selectedIndex=17;
+
+elems.hex_scts = document.getElementById('hex_scts');
+elems.hex_sct = document.getElementById('hex_sct');
+elems.hex_sct2 = document.getElementById('hex_sct2');
+elems.hex = document.getElementById('hex');
+elems.hex2 = document.getElementById('hex2');
+elems.big_end = document.getElementById('big_end');
+elems.be_box = document.getElementById('be_box');
+
+function get_interps(){
+	let tp=elems.type_view.selectedIndex;
+	let be=elems.big_end.checked;
+	let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+	if(tp===0){ //1 byte char
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			let rhx=[hx_arr[i]];
+			let b=n_byte_unit8_to_int(rhx);
+			hx_interps_curr[tp].push(String.fromCharCode(b.u));
+		}
+	}else if(tp===1){ //2 byte char
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=2){
+				let rhx=[hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(String.fromCharCode(b.u));
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===2){ //3 byte char
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=3){
+				let rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(String.fromCharCode(b.u));
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===3){ //4 byte char
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(String.fromCharCode(b.u));
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===4){ //4 byte surrogate pair char
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let rhx=(be)?[hx_arr[i]+hx_arr[i+1], hx_arr[i+2]+hx_arr[i+3]]:[hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]];
+				let codePoint =rhx.reduce((acc, cur) => {
+					cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
+				}, 0);
+				try{
+					hx_interps_curr[tp].push(String.fromCodePoint(codePoint));
+				}catch(e){
+					hx_interps_curr[tp].push(null);
+				}
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===6){// 1 byte signed int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let rhx=[hx_arr[i]];
+			let b=n_byte_unit8_to_int(rhx);
+			hx_interps_curr[tp].push(b.s);
+		}
+	}else if(tp===7){ //1 byte unsigned int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			hx_interps_curr[tp].push(hx_arr_int[i]);
+		}
+	}else if(tp===5){ //1 byte int (unsigned, signed)
+	
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let rhx=[hx_arr[i]];
+			let b=n_byte_unit8_to_int(rhx);
+			hx_interps_curr[6].push(b.s);
+			hx_interps_curr[7].push(hx_arr_int[i]);
+		}
+		
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let p=`(${hx_interps_curr[7][i]}, ${hx_interps_curr[6][i]})`;
+			hx_interps_curr[tp].push(p);
+		}
+	}else if(tp===9){//2 byte signed int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=2){
+				let rhx=[hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(b.s);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===10){ //2 byte unsigned int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=2){
+				let rhx=[hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(b.u);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===8){ //2 byte int (unsigned, signed)
+
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+				if(df>=2){
+				let rhx=[hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[9].push(b.s);
+				hx_interps_curr[10].push(b.u);
+			}else{
+				hx_interps_curr[9].push(null);
+				hx_interps_curr[10].push(null);
+			}
+		}
+		
+
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=2){
+				let p=`(${hx_interps_curr[10][i]}, ${hx_interps_curr[9][i]})`;
+				hx_interps_curr[tp].push(p);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===12){//4 byte signed int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(b.s);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===13){ //4 byte unsigned int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(b.u);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===11){ //4 byte int (unsigned, signed)
+			
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+						rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[12].push(b.s);
+				hx_interps_curr[13].push(b.u);
+			}else{
+				hx_interps_curr[12].push(null);
+				hx_interps_curr[13].push(null);
+			}
+		}
+		
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let p=`(${hx_interps_curr[13][i]}, ${hx_interps_curr[12][i]})`;
+				hx_interps_curr[tp].push(p);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===15){//8 byte signed int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=8){
+				let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(b.s);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===16){ //8 byte unsigned int
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=8){
+				let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(b.u);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===14){ //8 byte int (unsigned, signed)
+		
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=8){
+				let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[15].push(b.s);
+				hx_interps_curr[16].push(b.u);
+			}else{
+				hx_interps_curr[15].push(null);
+				hx_interps_curr[16].push(null);
+			}
+		}
+
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=8){
+				let p=`(${hx_interps_curr[16][i]}, ${hx_interps_curr[15][i]})`;
+				hx_interps_curr[tp].push(p);
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else if(tp===17){ //Float
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let rhx=[hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let data = rhx;
+				let view = new DataView(new Uint8Array(data).buffer);
+				let f=view.getFloat32(0); //to be rounded
+				if( isNaN(f) ){
+					hx_interps_curr[tp].push(null);
+				}else{
+					let x=7;
+					let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+					let d=getNoDigits(f);
+					if(d>=x){
+						hx_interps_curr[tp].push( f.toExponential(x) );
+					}else{
+						opts.maximumFractionDigits=Math.max(0, x+1-d );
+						hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
+					}
+				}
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}else{ //Double
+		for(let i=0, len=hx_arr.length; i<len; i++){
+			let df=hx_arr_int.length-i;
+			if(df>=8){
+				let rhx=[hx_arr_int[i+7],hx_arr_int[i+6],hx_arr_int[i+5],hx_arr_int[i+4],hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
+				if(be){
+					rhx.reverse();
+				}
+				let data = rhx;
+				let view = new DataView(new Uint8Array(data).buffer);
+				let f=view.getFloat64(0); //to be rounded
+				if( isNaN(f) ){
+					hx_interps_curr[tp].push(null);
+				}else{
+					let x=15;
+					let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+					let d=getNoDigits(f);
+					if(d>=x){
+						hx_interps_curr[tp].push( f.toExponential(x) );
+					}else{
+						opts.maximumFractionDigits=Math.max(0, x+1-d );
+						hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
+					}
+				}
+			}else{
+				hx_interps_curr[tp].push(null);
+			}
+		}
+	}
+	console.log(hx_interps_curr);
+}
+
+function makeSpans(leaveHex){
+		if(hx_arr!== null && hx_arr.length>0){
+			hx_arr=hx_arr.map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
+			hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
+			let hxtm='';
+			let hxtm2='';
+			let tp=elems.type_view.selectedIndex;
+			get_interps();
+			let be=elems.big_end.checked;
+			let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+			for(let i=0, len=hx_arr.length; i<len; i++){
+					let c=hx_interps_curr[tp][i];
+					let p=(c===null)?'':c+' ';
+					let x=(i>9)?('+'+i+' {+'+(i.toString(16).toLocaleUpperCase() )+'}'):('+'+i);
+					if(leaveHex!==true){
+						hxtm+='<span onpointerenter="p_enter(event,1);" onpointerleave="p_leave();"  title="'+x+'" ix="'+i+'">'+hx_arr[i]+' </span>';
+					}
+					hxtm2+='<span onpointerenter="p_enter(event,2);" onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
+			}
+			if(leaveHex!==true){
+						elems.hex.innerHTML=hxtm;
+						hexSpans=[...elems.hex.getElementsByTagName('SPAN')];
+			}		
+			elems.hex2.innerHTML=hxtm2;
+			hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];
+			for(let i=0, len=hexSpans2.length; i<len; i++){
+					hexSpans2[i].style.minHeight=hexSpans[i].clientHeight+'px';
+					hexSpans2[i].style.minWidth=hexSpans[i].clientWidth+'px';
+			}
+	}
+}
+
+function p_enter(event,n){
+	let t=event.target;
+	for(let i=0, len=hovSpans.length; i<len; i++){
+		hovSpans[i].classList.remove('isHovered');
+	}
+	for(let i=0, len=hovSpans2.length; i<len; i++){
+		hovSpans2[i].classList.remove('isHovered');
+	}
+		let ix=parseInt(t.getAttribute('ix'));
+		t.classList.add('isHovered');
+	if(n===1){
+		hovSpans=[t];
+		let t2=hexSpans2[ix];
+		t2.classList.add('isHovered');
+		hovSpans2=[t2];
+	}else{
+		hovSpans2=[t];
+		hovSpans=[];
+		let g=type_bytes[elems.type_view.selectedIndex];
+			for(let i=ix, len=Math.min(hexSpans.length,ix+g); i<len; i++){
+				let s=hexSpans[i];
+				s.classList.add('isHovered');
+				hovSpans.push(s);
+			}
+	}
+
+}
+
+function p_leave(){
+	for(let i=0, len=hovSpans.length; i<len; i++){
+		hovSpans[i].classList.remove('isHovered');
+	}
+	for(let i=0, len=hovSpans2.length; i<len; i++){
+		hovSpans2[i].classList.remove('isHovered');
+	}
+	hovSpans=[];
+	hovSpans2=[];
+}
+
+elems.hex.oninput=(event)=>{
+	let t=event.target;
+	hx_arr=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
+	t.innerHTML='';
+	hx_interps=Array.from(Array(19), () => []);
+	hx_interps_be=Array.from(Array(19), () => []);
+	makeSpans();
+	selDivEditable(t);
+}
+
+function type_change(event){
+	let tp=elems.type_view.selectedIndex;
+	let be=elems.big_end.checked;
+	let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+	
+	if(hx_interps_curr[tp].length===0){
+		get_interps();
+	}
+	makeSpans(true);
+	
+}
+
+elems.type_view.oninput=(event)=>{
+	if( type_bytes[elems.type_view.selectedIndex]===1 ){
+		elems.be_box.style.visibility='hidden';
+	}else{
+		elems.be_box.style.visibility='visible';
+	}
+	type_change(event);
+}
+
+elems.big_end.oninput=(event)=>{
+	type_change(event);
+}
+
+
+</script>
+
+</body>
+
+</html>
