@@ -536,7 +536,8 @@ let scls={	outer:document.getElementById('scrlr'),
 				
 let base_nm='base';
 document.body.onscroll=(event)=>{
-	scls.outer.style.top=document.body.scrollTop+'px';
+	let anlys_i_R=absBoundingClientRect(anlys_i);
+	scls.outer.style.top=Math.max(anlys_i_R.top, document.body.scrollTop)+'px';
 };
 
 let hxBse=0;
@@ -1474,6 +1475,12 @@ hx.oninput=(event)=>{
 			procPrint();
 		}
 		console.log(all_hex);
+	}else{
+		anlys_i.innerHTML='';
+		try{
+			let aobd=[...scls.ce.querySelectorAll('#base_AOB')][0];
+			aobd.innerHTML='';
+		}catch(e){;}
 	}
 
     selDivEditable(hx);
