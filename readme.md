@@ -26,7 +26,7 @@ Paste space-separated byte hex into the text area and it shows the data converte
 
 N.B.
 
-* This is faster than "Hex converter".
+* This is much faster than "Hex converter".
 
 * Hovering over the (converted) bytes highlights them.
 
