@@ -3,32 +3,33 @@
 <head>
 <meta charset="UTF-8">
 	<style>
-	body {
-		background-color: hsl(0 0% 8% / 1);
-		color: white;
-	}
-	input[type="checkbox"] {
-		background: buttonface;
-		margin-bottom: 2px;
-		margin-left: 3px;
-		vertical-align: bottom;
-		margin-right: 0.2ch;
-	}
-	#hex span, #hex2 span {
-		margin: 0.115ch 0.115ch 0.123ch 0.1285ch;
-		white-space: nowrap;
-		border-width: 1px;
-		border-color: rgb(128 128 128);
-		border-style: dotted;
-		text-align: center;
-		place-self: center;
-		height: max-content;
-		padding: 0.24ch 0.24ch 0.24ch 0.24ch;
-	}
-	#hex span.isHovered, #hex2 span.isHovered {
-		background-color:hsl(129deg 55% 16%);
-	}
-	</style>
+		body {
+			background-color: hsl(0 0% 8% / 1);
+			color: white;
+		}
+		input[type="checkbox"] {
+			background: buttonface;
+			margin-bottom: 2px;
+			margin-left: 3px;
+			vertical-align: bottom;
+			margin-right: 0.2ch;
+		}
+		#hex span, #hex2 span {
+			margin: 0.115ch 0.115ch 0.123ch 0.1285ch;
+			white-space: nowrap;
+			border-width: 1px;
+			border-color: rgb(128 128 128);
+			border-style: dotted;
+			text-align: center;
+			place-self: center;
+			height: max-content;
+			padding: 0.24ch 0.24ch 0.24ch 0.24ch;
+		}
+		#hex span.isHovered, #hex2 span.isHovered {
+			background-color:hsl(129deg 55% 16%);
+		}
+	</style>	
+	<style id="doc_CSS2"></style>
 </head>
 	
 <body>
@@ -400,6 +401,7 @@ elems.hex = document.getElementById('hex');
 elems.hex2 = document.getElementById('hex2');
 elems.big_end = document.getElementById('big_end');
 elems.be_box = document.getElementById('be_box');
+elems.doc_CSS2 = document.getElementById('doc_CSS2');
 
 function get_interps(){
 	let tp=elems.type_view.selectedIndex;
@@ -749,10 +751,15 @@ function makeSpans(leaveHex){
 			elems.hex2.style.height = 'inherit';
 			elems.hex2.style.height = (elems.hex2.scrollHeight+4)+"px";
 			hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];
-			for(let i=0, len=hexSpans2.length; i<len; i++){
-					hexSpans2[i].style.minHeight=hexSpans[i].clientHeight+'px';
-					hexSpans2[i].style.minWidth=hexSpans[i].clientWidth+'px';
+			let mxh=0;
+			let mxw=0;
+			for(let i=0, len=hexSpans.length; i<len; i++){
+				let h=hexSpans[i].clientHeight;
+				let w=hexSpans[i].clientWidth;
+				mxh=(h>mxh)?h:mxh;
+				mxw=(w>mxw)?h:mxw;
 			}
+			elems.doc_CSS2.innerHTML=`#hex2 span{min-height: ${mxh}px !important; height: fit-content !important; min-width: ${mxw}px !important; width: fit-content !important;}`;
 	}else{
 		elems.hex2.innerHTML='';
 	}
