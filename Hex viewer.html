@@ -28,6 +28,10 @@
 		#hex span.isHovered, #hex2 span.isHovered {
 			background-color:hsl(129deg 55% 16%);
 		}
+		#hex2 span.foi {
+			color: hsl(178deg 100% 50%);
+			font-weight: bold;
+		}
 	</style>	
 	<style id="doc_CSS2"></style>
 </head>
@@ -732,14 +736,16 @@ function makeSpans(leaveHex){
 			get_interps();
 			let be=elems.big_end.checked;
 			let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+			let isFl=(tp===17||tp===18)?true:false;
 			for(let i=0, len=hx_arr.length; i<len; i++){
+					let ih=hx_arr[i];
 					let c=hx_interps_curr[tp][i];
-					let p=(c===null)?'':c+' ';
+					let p=(c===null)?'':c;
 					let x=(i>9)?('+'+i+' {+'+(i.toString(16).toLocaleUpperCase() )+'}'):('+'+i);
 					if(leaveHex!==true){
-						hxtm+='<span onpointerenter="p_enter(event,1);" onpointerleave="p_leave();"  title="'+x+'" ix="'+i+'">'+hx_arr[i]+' </span>';
+						hxtm+='<span onpointerenter="p_enter(event,1);" onpointerleave="p_leave();"  title="'+x+'" ix="'+i+'">'+ih+' </span>';
 					}
-					hxtm2+='<span onpointerenter="p_enter(event,2);" onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
+					hxtm2+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
 			}
 			if(leaveHex!==true){
 						elems.hex.innerHTML=hxtm;
