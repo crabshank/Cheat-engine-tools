@@ -38,32 +38,32 @@
 	
 <body>
 	<title>Hex viewer</title>
-	<h1 style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex viewer</h1>
+	<h1 id="ttl" style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex viewer</h1>
 				<select  id="type_view" style="width: max-content;">
 				<optgroup label="Char (Unicode)">
-					<option>1 byte char</option>
-					<option>2 byte char</option>
-					<option>3 byte char</option>
-					<option>4 byte char</option>
-					<option>4 byte surrogate pair char</option>
+					<option meta_type="1c">1 byte char</option>
+					<option meta_type="2c">2 byte char</option>
+					<option meta_type="3c">3 byte char</option>
+					<option meta_type="4c">4 byte char</option>
+					<option meta_type="4c">4 byte surrogate pair char</option>
 				</optgroup>
 				<optgroup label="Int">
-					<option>1 byte int (unsigned, signed)</option>
-					<option>1 byte signed int</option>
-					<option>1 byte unsigned int</option>
-					<option>2 byte int (unsigned, signed)</option>
-					<option>2 byte signed int</option>
-					<option>2 byte unsigned int</option>
-					<option>4 byte int (unsigned, signed)</option>
-					<option>4 byte signed int</option>
-					<option>4 byte unsigned int</option>
-					<option>8 byte int (unsigned, signed)</option>
-					<option>8 byte signed int</option>
-					<option>8 byte unsigned int</option>
+					<option meta_type="1i">1 byte int (unsigned, signed)</option>
+					<option meta_type="1i">1 byte signed int</option>
+					<option meta_type="1i">1 byte unsigned int</option>
+					<option meta_type="2i">2 byte int (unsigned, signed)</option>
+					<option meta_type="2i">2 byte signed int</option>
+					<option meta_type="2i">2 byte unsigned int</option>
+					<option meta_type="4i">4 byte int (unsigned, signed)</option>
+					<option meta_type="4i">4 byte signed int</option>
+					<option meta_type="4i">4 byte unsigned int</option>
+					<option meta_type="8i">8 byte int (unsigned, signed)</option>
+					<option meta_type="8i">8 byte signed int</option>
+					<option meta_type="8i">8 byte unsigned int</option>
 				</optgroup>
 				<optgroup label="Float">
-					<option>Float</option>
-					<option>Double</option>
+					<option meta_type="4f">Float</option>
+					<option meta_type="8f">Double</option>
 				</optgroup>
 			</select>
 			<section id='be_box' style="display: contents; visibility: visible;	">
@@ -387,13 +387,17 @@ function n_byte_unit8_to_int(a,u_only){
 var elems={};
 var hx_arr=[];
 var hx_arr_int=[];
+var hx_arr_offs=[];
 var hovSpans=[];
 var hovSpans2=[];
 var hexSpans=[];
 var hexSpans2=[];
 const type_bytes=[1,2,3,4,4,1,1,1,2,2,2,4,4,4,8,8,8,4,8];
+var mxh=0;
+var mxw=0;
 var hx_interps=Array.from(Array(19), () => []);
 var hx_interps_be=Array.from(Array(19), () => []);
+
 
 elems.type_view = document.getElementById('type_view');
 elems.type_view.selectedIndex=17;
@@ -406,370 +410,7 @@ elems.hex2 = document.getElementById('hex2');
 elems.big_end = document.getElementById('big_end');
 elems.be_box = document.getElementById('be_box');
 elems.doc_CSS2 = document.getElementById('doc_CSS2');
-
-function get_interps(){
-	let tp=elems.type_view.selectedIndex;
-	let be=elems.big_end.checked;
-	let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-	if(tp===0){ //1 byte char
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			let rhx=[hx_arr[i]];
-			let b=n_byte_unit8_to_int(rhx);
-			hx_interps_curr[tp].push(String.fromCharCode(b.u));
-		}
-	}else if(tp===1){ //2 byte char
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=2){
-				let rhx=[hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(String.fromCharCode(b.u));
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===2){ //3 byte char
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=3){
-				let rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(String.fromCharCode(b.u));
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===3){ //4 byte char
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=4){
-				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(String.fromCharCode(b.u));
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===4){ //4 byte surrogate pair char
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=4){
-				let rhx=(be)?[hx_arr[i]+hx_arr[i+1], hx_arr[i+2]+hx_arr[i+3]]:[hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]];
-				let codePoint =rhx.reduce((acc, cur) => {
-					cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
-				}, 0);
-				try{
-					hx_interps_curr[tp].push(String.fromCodePoint(codePoint));
-				}catch(e){
-					hx_interps_curr[tp].push(null);
-				}
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===6){// 1 byte signed int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let rhx=[hx_arr[i]];
-			let b=n_byte_unit8_to_int(rhx);
-			hx_interps_curr[tp].push(b.s);
-		}
-	}else if(tp===7){ //1 byte unsigned int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			hx_interps_curr[tp].push(hx_arr_int[i]);
-		}
-	}else if(tp===5){ //1 byte int (unsigned, signed)
-	
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let rhx=[hx_arr[i]];
-			let b=n_byte_unit8_to_int(rhx);
-			hx_interps_curr[6].push(b.s);
-			hx_interps_curr[7].push(hx_arr_int[i]);
-		}
-		
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let p=`(${hx_interps_curr[7][i]}, ${hx_interps_curr[6][i]})`;
-			hx_interps_curr[tp].push(p);
-		}
-	}else if(tp===9){//2 byte signed int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=2){
-				let rhx=[hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(b.s);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===10){ //2 byte unsigned int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=2){
-				let rhx=[hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(b.u);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===8){ //2 byte int (unsigned, signed)
-
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-				if(df>=2){
-				let rhx=[hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[9].push(b.s);
-				hx_interps_curr[10].push(b.u);
-			}else{
-				hx_interps_curr[9].push(null);
-				hx_interps_curr[10].push(null);
-			}
-		}
-		
-
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=2){
-				let p=`(${hx_interps_curr[10][i]}, ${hx_interps_curr[9][i]})`;
-				hx_interps_curr[tp].push(p);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===12){//4 byte signed int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=4){
-				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(b.s);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===13){ //4 byte unsigned int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=4){
-				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(b.u);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===11){ //4 byte int (unsigned, signed)
-			
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=4){
-				let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-						rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[12].push(b.s);
-				hx_interps_curr[13].push(b.u);
-			}else{
-				hx_interps_curr[12].push(null);
-				hx_interps_curr[13].push(null);
-			}
-		}
-		
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=4){
-				let p=`(${hx_interps_curr[13][i]}, ${hx_interps_curr[12][i]})`;
-				hx_interps_curr[tp].push(p);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===15){//8 byte signed int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=8){
-				let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(b.s);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===16){ //8 byte unsigned int
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=8){
-				let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(b.u);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===14){ //8 byte int (unsigned, signed)
-		
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=8){
-				let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[15].push(b.s);
-				hx_interps_curr[16].push(b.u);
-			}else{
-				hx_interps_curr[15].push(null);
-				hx_interps_curr[16].push(null);
-			}
-		}
-
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=8){
-				let p=`(${hx_interps_curr[16][i]}, ${hx_interps_curr[15][i]})`;
-				hx_interps_curr[tp].push(p);
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else if(tp===17){ //Float
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=4){
-				let rhx=[hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let data = rhx;
-				let view = new DataView(new Uint8Array(data).buffer);
-				let f=view.getFloat32(0); //to be rounded
-				if( isNaN(f) ){
-					hx_interps_curr[tp].push(null);
-				}else{
-					let x=7;
-					let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
-					let d=getNoDigits(f);
-					if(d>=x){
-						hx_interps_curr[tp].push( f.toExponential(x) );
-					}else{
-						opts.maximumFractionDigits=Math.max(0, x+1-d );
-						hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
-					}
-				}
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}else{ //Double
-		for(let i=0, len=hx_arr.length; i<len; i++){
-			let df=hx_arr_int.length-i;
-			if(df>=8){
-				let rhx=[hx_arr_int[i+7],hx_arr_int[i+6],hx_arr_int[i+5],hx_arr_int[i+4],hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
-				if(be){
-					rhx.reverse();
-				}
-				let data = rhx;
-				let view = new DataView(new Uint8Array(data).buffer);
-				let f=view.getFloat64(0); //to be rounded
-				if( isNaN(f) ){
-					hx_interps_curr[tp].push(null);
-				}else{
-					let x=15;
-					let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
-					let d=getNoDigits(f);
-					if(d>=x){
-						hx_interps_curr[tp].push( f.toExponential(x) );
-					}else{
-						opts.maximumFractionDigits=Math.max(0, x+1-d );
-						hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
-					}
-				}
-			}else{
-				hx_interps_curr[tp].push(null);
-			}
-		}
-	}
-	console.log(hx_interps_curr);
-}
-
-function makeSpans(leaveHex){
-		if(hx_arr!== null && hx_arr.length>0){
-			hx_arr=hx_arr.map((x)=>{return x.trim();}).filter((x)=>{return x!=='';});
-			hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
-			let hxtm='';
-			let hxtm2='';
-			let tp=elems.type_view.selectedIndex;
-			get_interps();
-			let be=elems.big_end.checked;
-			let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-			let isFl=(tp===17||tp===18)?true:false;
-			for(let i=0, len=hx_arr.length; i<len; i++){
-					let ih=hx_arr[i];
-					let c=hx_interps_curr[tp][i];
-					let p=(c===null)?'':c;
-					let x=(i>9)?('+'+i+' {+'+(i.toString(16).toLocaleUpperCase() )+'}'):('+'+i);
-					if(leaveHex!==true){
-						hxtm+='<span onpointerenter="p_enter(event,1);" onpointerleave="p_leave();"  title="'+x+'" ix="'+i+'">'+ih+' </span>';
-					}
-					hxtm2+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
-			}
-			if(leaveHex!==true){
-						elems.hex.innerHTML=hxtm;
-						elems.hex.style.height = 'inherit';
-						elems.hex.style.height = (elems.hex.scrollHeight+4)+"px";
-						hexSpans=[...elems.hex.getElementsByTagName('SPAN')];
-			}		
-			elems.hex2.innerHTML=hxtm2;
-			elems.hex2.style.height = 'inherit';
-			elems.hex2.style.height = (elems.hex2.scrollHeight+4)+"px";
-			hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];
-			let mxh=0;
-			let mxw=0;
-			for(let i=0, len=hexSpans.length; i<len; i++){
-				let h=hexSpans[i].clientHeight;
-				let w=hexSpans[i].clientWidth;
-				mxh=(h>mxh)?h:mxh;
-				mxw=(w>mxw)?h:mxw;
-			}
-			elems.doc_CSS2.innerHTML=`#hex2 span{min-height: ${mxh}px !important; height: fit-content !important; min-width: ${mxw}px !important; width: fit-content !important;}`;
-	}else{
-		elems.hex2.innerHTML='';
-	}
-}
+elems.ttl = document.getElementById('ttl');
 
 function p_enter(event,n){
 	let t=event.target;
@@ -810,28 +451,305 @@ function p_leave(){
 	hovSpans2=[];
 }
 
+async function get_interps(i){
+	return new Promise(function(resolve) {
+		let tp=elems.type_view.selectedIndex;
+		let mt=elems.type_view[tp].getAttribute("meta_type");
+		let be=elems.big_end.checked;
+		let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+		if(tp===0){ //1 byte char
+				let df=hx_arr_int.length-i;
+				let rhx=[hx_arr[i]];
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[tp].push(String.fromCharCode(b.u));
+		}else if(tp===1){ //2 byte char
+				let df=hx_arr_int.length-i;
+				if(df>=2){
+					let rhx=[hx_arr[i+1],hx_arr[i]];
+					if(be){
+						rhx.reverse();
+					}
+					let b=n_byte_unit8_to_int(rhx);
+					hx_interps_curr[tp].push(String.fromCharCode(b.u));
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+		}else if(tp===2){ //3 byte char
+				let df=hx_arr_int.length-i;
+				if(df>=3){
+					let rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+					if(be){
+						rhx.reverse();
+					}
+					let b=n_byte_unit8_to_int(rhx);
+					hx_interps_curr[tp].push(String.fromCharCode(b.u));
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+		}else if(tp===3){ //4 byte char
+				let df=hx_arr_int.length-i;
+				if(df>=4){
+					let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+					if(be){
+						rhx.reverse();
+					}
+					let b=n_byte_unit8_to_int(rhx);
+					hx_interps_curr[tp].push(String.fromCharCode(b.u));
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+		}else if(tp===4){ //4 byte surrogate pair char
+				let df=hx_arr_int.length-i;
+				if(df>=4){
+					let rhx=(be)?[hx_arr[i]+hx_arr[i+1], hx_arr[i+2]+hx_arr[i+3]]:[hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]];
+					let codePoint =rhx.reduce((acc, cur) => {
+						cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
+					}, 0);
+					try{
+						hx_interps_curr[tp].push(String.fromCodePoint(codePoint));
+					}catch(e){
+						hx_interps_curr[tp].push(null);
+					}
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+		}else if(mt==='1i'){ //1 byte int (unsigned, signed)
+		
+				let rhx=[hx_arr[i]];
+				let b=n_byte_unit8_to_int(rhx);
+				hx_interps_curr[6].push(b.s);
+				hx_interps_curr[7].push(hx_arr_int[i]);
+				let p=`(${hx_arr_int[i]}, ${b.s})`;
+				hx_interps_curr[5].push(p);
+
+			
+		}else if(mt==='2i'){ //2 byte int (unsigned, signed)
+
+				let df=hx_arr_int.length-i;
+					if(df>=2){
+					let rhx=[hx_arr[i+1],hx_arr[i]];
+					if(be){
+						rhx.reverse();
+					}
+					let b=n_byte_unit8_to_int(rhx);
+					hx_interps_curr[9].push(b.s);
+					hx_interps_curr[10].push(b.u);
+					let p=`(${b.u}, ${b.s})`;
+					hx_interps_curr[8].push(p);
+				}else{
+					hx_interps_curr[9].push(null);
+					hx_interps_curr[10].push(null);
+				}
+			
+		}else if(mt==='4i'){ //4 byte int (unsigned, signed)
+				
+				let df=hx_arr_int.length-i;
+				if(df>=4){
+					let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+					if(be){
+							rhx.reverse();
+					}
+					let b=n_byte_unit8_to_int(rhx);
+					hx_interps_curr[12].push(b.s);
+					hx_interps_curr[13].push(b.u);
+					let p=`(${b.u}, ${b.s})`;
+					hx_interps_curr[11].push(p);
+				}else{
+					hx_interps_curr[12].push(null);
+					hx_interps_curr[13].push(null);
+					hx_interps_curr[11].push(null);
+				}
+			
+		}else if(mt==='8i'){ //8 byte int (unsigned, signed)
+			
+				let df=hx_arr_int.length-i;
+				if(df>=8){
+					let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+					if(be){
+						rhx.reverse();
+					}
+					let b=n_byte_unit8_to_int(rhx);
+					hx_interps_curr[15].push(b.s);
+					hx_interps_curr[16].push(b.u);
+					let p=`(${b.u}, ${b.s})`;
+					hx_interps_curr[14].push(p);
+				}else{
+					hx_interps_curr[15].push(null);
+					hx_interps_curr[16].push(null);
+					hx_interps_curr[14].push(null);
+				}
+		}else if(tp===17){ //Float
+				let df=hx_arr_int.length-i;
+				if(df>=4){
+					let rhx=[hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
+					if(be){
+						rhx.reverse();
+					}
+					let data = rhx;
+					let view = new DataView(new Uint8Array(data).buffer);
+					let f=view.getFloat32(0); //to be rounded
+					if( isNaN(f) ){
+						hx_interps_curr[tp].push(null);
+					}else{
+						let x=7;
+						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+						let d=getNoDigits(f);
+						if(d>=x){
+							hx_interps_curr[tp].push( f.toExponential(x) );
+						}else{
+							opts.maximumFractionDigits=Math.max(0, x+1-d );
+							hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
+						}
+					}
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+		}else{ //Double
+				let df=hx_arr_int.length-i;
+				if(df>=8){
+					let rhx=[hx_arr_int[i+7],hx_arr_int[i+6],hx_arr_int[i+5],hx_arr_int[i+4],hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
+					if(be){
+						rhx.reverse();
+					}
+					let data = rhx;
+					let view = new DataView(new Uint8Array(data).buffer);
+					let f=view.getFloat64(0); //to be rounded
+					if( isNaN(f) ){
+						hx_interps_curr[tp].push(null);
+					}else{
+						let x=15;
+						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+						let d=getNoDigits(f);
+						if(d>=x){
+							hx_interps_curr[tp].push( f.toExponential(x) );
+						}else{
+							opts.maximumFractionDigits=Math.max(0, x+1-d );
+							hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
+						}
+					}
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+		}
+		resolve();
+	});
+}
+
+async function makeSpans(i){
+	return new Promise(function(resolve) {
+			if(hx_arr!== null && hx_arr.length>0){
+				let hxtm='';
+				let hxtm2='';
+				let tp=elems.type_view.selectedIndex;
+				//( async ()=>{ await get_interps(i); } )();
+				let be=elems.big_end.checked;
+				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+				let isFl=(tp===17||tp===18)?true:false;
+				let c=hx_interps_curr[tp][i];
+				let p=(c===null)?'':c;
+				let x=hx_arr_offs[i];
+				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
+		
+		}else{
+			elems.hex2.innerHTML='';
+		}
+		resolve();
+	});
+}
+
+function makeSpansBytes(){
+		let hxtm='';
+		hx_arr_offs=[];
+	for(let i=0, len=hx_arr.length; i<len; i++){
+		let ih=hx_arr[i];
+		let x=(i>9)?('+'+i+' {+'+(i.toString(16).toLocaleUpperCase() )+'}'):('+'+i);
+		hx_arr_offs.push(x);
+			hxtm+='<span onpointerenter="p_enter(event,1);" onpointerleave="p_leave();"  title="'+x+'" ix="'+i+'">'+ih+' </span>';
+	}
+	
+	elems.hex.innerHTML=hxtm;
+	elems.hex.style.height = 'inherit';
+	elems.hex.style.height = (elems.hex.scrollHeight+4)+"px";
+	hexSpans=[...elems.hex.getElementsByTagName('SPAN')];
+	
+	for(let i=0, len=hexSpans.length; i<len; i++){
+		let h=hexSpans[i].clientHeight;
+		let w=hexSpans[i].clientWidth;
+		mxh=(h>mxh)?h:mxh;
+		mxw=(w>mxw)?h:mxw;
+	}
+	elems.doc_CSS2.innerHTML=`#hex2 span{min-height: ${mxh}px !important; height: fit-content !important; min-width: ${mxw}px !important; width: fit-content !important;}`;
+}
+
+async function interp_span(t){
+	return new Promise(function(resolve) {
+		let be=elems.big_end.checked;
+		let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+				for(let i=0, len=hx_arr.length; i<len; i++){
+					setTimeout( 
+												(async ()=>{
+														await get_interps(i);
+														await makeSpans(i);
+														if(i===len-1){
+															elems.ttl.innerText="Hex viewer";
+															console.log(hx_interps_curr);
+															elems.hex2.style.height = 'inherit';
+															elems.hex2.style.height = (elems.hex2.scrollHeight+4)+"px";
+															hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];																	
+															selDivEditable(t);
+															resolve();
+														}else{
+															elems.ttl.innerText="Hex viewer - Loading: "+(i+1)+"/"+len;
+														}
+												}),
+											0);
+			}
+		});
+}
+
+async function interp_span2(){
+	return new Promise(function(resolve) {
+				let tp=elems.type_view.selectedIndex;
+				let be=elems.big_end.checked;
+				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+
+				let empty_interp=(hx_interps_curr[tp].length===0)?true:false;
+				for(let i=0, len=hx_arr.length; i<len; i++){
+				setTimeout( 
+											(async ()=>{
+												if(empty_interp){
+													await get_interps(i);
+												}
+												makeSpans(i);
+												if(i===len-1){
+													elems.ttl.innerText="Hex viewer";
+													resolve();
+												}else{
+													elems.ttl.innerText="Hex viewer - Loading: "+(i+1)+"/"+len;
+												}
+											}),
+										0);
+		}	
+	});
+}
+
 elems.hex.oninput=(event)=>{
+
 	let t=event.target;
+	elems.hex2.innerHTML='';
 	hx_arr=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
-	t.innerHTML='';
+	hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
+	makeSpansBytes();
 	hx_interps=Array.from(Array(19), () => []);
 	hx_interps_be=Array.from(Array(19), () => []);
 	hovSpans=[];
 	hovSpans2=[];
-	makeSpans();
-	selDivEditable(t);
+	( async ()=>{ await interp_span(t); } )();
 }
 
 function type_change(event){
-	let tp=elems.type_view.selectedIndex;
-	let be=elems.big_end.checked;
-	let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-	
-	if(hx_interps_curr[tp].length===0){
-		get_interps();
-	}
-	makeSpans(true);
-	
+	elems.hex2.innerHTML='';
+	( async ()=>{ await interp_span2(); } )();
 }
 
 elems.type_view.oninput=(event)=>{
