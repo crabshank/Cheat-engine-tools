@@ -70,7 +70,7 @@
 				<input type="checkbox" id="big_end"></input>
 				<label for="big_end">Big endian</label>
 			</section>
-		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%;">
+		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%; overflow-y: hidden;">
 		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;">
 			<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
 	</section>
@@ -384,6 +384,50 @@ function n_byte_unit8_to_int(a,u_only){
 		return Math.max(1, Math.floor(Math.log10(Math.abs(n))+1) );
 }
 
+function absBoundingClientRect(el){
+	let st = [window?.scrollY,
+					window?.pageYOffset,
+					el?.ownerDocument?.documentElement?.scrollTop,
+					document?.documentElement?.scrollTop,
+					document?.body?.parentNode?.scrollTop,
+					document?.body?.scrollTop,
+					document?.head?.scrollTop];
+					
+		let sl = [window?.scrollX,
+						window?.pageXOffset,
+						el?.ownerDocument?.documentElement?.scrollLeft,
+						document?.documentElement?.scrollLeft,
+						document?.body?.parentNode?.scrollLeft,
+						document?.body?.scrollLeft,
+						document?.head?.scrollLeft];
+						
+				let scrollTop=0;
+				for(let k=0; k<st.length; k++){
+					if(!!st[k] && typeof  st[k] !=='undefined' && st[k]>0){
+						scrollTop=(st[k]>scrollTop)?st[k]:scrollTop;
+					}
+				}			
+
+				let scrollLeft=0;
+				for(let k=0; k<sl.length; k++){
+					if(!!sl[k] && typeof  sl[k] !=='undefined' && sl[k]>0){
+						scrollLeft=(sl[k]>scrollLeft)?sl[k]:scrollLeft;
+					}
+				}
+	
+	const rct=el.getBoundingClientRect();
+	let r={};
+
+	r.left=rct.left+scrollLeft;
+	r.right=rct.right+scrollLeft;
+	r.top=rct.top+scrollTop;
+	r.bottom=rct.bottom+scrollTop;
+	r.height=rct.height;
+	r.width=rct.width;
+	
+	return r;
+}
+
 var elems={};
 var hx_arr=[];
 var hx_arr_int=[];
@@ -411,44 +455,95 @@ elems.big_end = document.getElementById('big_end');
 elems.be_box = document.getElementById('be_box');
 elems.doc_CSS2 = document.getElementById('doc_CSS2');
 elems.ttl = document.getElementById('ttl');
+allLoadedSpans=false;
+var hexBoxRect=absBoundingClientRect(elems.hex);
+
+function doRsz(){
+	elems.hex.style.transform=`translateY(0px)`;
+	hexBoxRect=absBoundingClientRect(elems.hex);
+}
+
+
+elems.hex_scts = document.getElementById('hex_scts');
+
+elems.hex.addEventListener('pointerleave',(event)=>{
+	elems.hex.style.transform=`translateY(0px)`;
+});
+
+elems.hex2.addEventListener('pointerleave',(event)=>{
+	elems.hex2.style.transform=`translateY(0px)`;
+});
+
+window.addEventListener('resize',(event)=>{
+	doRsz();
+});
+
 
 function p_enter(event,n){
-	let t=event.target;
-	for(let i=0, len=hovSpans.length; i<len; i++){
-		hovSpans[i].classList.remove('isHovered');
-	}
-	for(let i=0, len=hovSpans2.length; i<len; i++){
-		hovSpans2[i].classList.remove('isHovered');
-	}
-		let ix=parseInt(t.getAttribute('ix'));
-		t.classList.add('isHovered');
-	if(n===1){
-		hovSpans=[t];
-		let t2=hexSpans2[ix];
-		t2.classList.add('isHovered');
-		hovSpans2=[t2];
-	}else{
-		hovSpans2=[t];
-		hovSpans=[];
-		let g=type_bytes[elems.type_view.selectedIndex];
-			for(let i=ix, len=Math.min(hexSpans.length,ix+g); i<len; i++){
+	if(allLoadedSpans){
+		let t=event.target;
+		for(let i=0, len=hovSpans.length; i<len; i++){
+			hovSpans[i].classList.remove('isHovered');
+		}
+		for(let i=0, len=hovSpans2.length; i<len; i++){
+			hovSpans2[i].classList.remove('isHovered');
+		}
+			let ix=parseInt(t.getAttribute('ix'));
+			t.classList.add('isHovered');
+		if(n===1){
+			hovSpans=[t];
+			let t2=hexSpans2[ix];
+			t2.classList.add('isHovered');
+			hovSpans2=[t2];
+			
+			let r2=absBoundingClientRect(hexSpans2[parseInt(t2.getAttribute('ix'))]);
+			let r=absBoundingClientRect(t);
+			let r20=absBoundingClientRect(hexSpans2[0]);
+			if((hexBoxRect.top+(r2.top-r20.top))>document.body.clientHeight){
+				let tx=r.top-r2.top-(hexBoxRect.top-r20.top);
+				elems.hex2.style.transform=`translateY(${tx}px)`;
+			}else{
+				elems.hex2.style.transform=`translateY(0px)`;
+			}
+		}else{
+			hovSpans2=[t];
+			hovSpans=[];
+			let g=type_bytes[elems.type_view.selectedIndex];
+			let n=Math.min(hexSpans.length,ix+g)-1;
+			for(let i=ix, len=n; i<=len; i++){
 				let s=hexSpans[i];
 				s.classList.add('isHovered');
 				hovSpans.push(s);
 			}
+			
+			let r=absBoundingClientRect(hexSpans[ix]); //first hovered span of hex div
+			let r2=absBoundingClientRect(t);
+			let r0=absBoundingClientRect(hexSpans[0]);
+			let r20=absBoundingClientRect(hexSpans2[0]);
+			let txb=-r.top-hexBoxRect.top+r0.top;
+			let tx=r2.top+txb; //put both hovered spans at same level
+			let tx0=Math.max(window.scrollY-hexBoxRect.top,0); //Place first byte at top
+			
+					if(r.top-r0.top > document.body.clientHeight){
+						elems.hex.style.transform=`translateY(${tx}px)`;
+					}else{
+						elems.hex.style.transform=`translateY(${tx0}px)`;
+				}
+		}
 	}
-
 }
 
 function p_leave(){
-	for(let i=0, len=hovSpans.length; i<len; i++){
-		hovSpans[i].classList.remove('isHovered');
+	if(allLoadedSpans){
+		for(let i=0, len=hovSpans.length; i<len; i++){
+			hovSpans[i].classList.remove('isHovered');
+		}
+		for(let i=0, len=hovSpans2.length; i<len; i++){
+			hovSpans2[i].classList.remove('isHovered');
+		}
+		hovSpans=[];
+		hovSpans2=[];
 	}
-	for(let i=0, len=hovSpans2.length; i<len; i++){
-		hovSpans2[i].classList.remove('isHovered');
-	}
-	hovSpans=[];
-	hovSpans2=[];
 }
 
 async function get_interps(i){
@@ -641,7 +736,6 @@ async function makeSpans(i){
 				let hxtm='';
 				let hxtm2='';
 				let tp=elems.type_view.selectedIndex;
-				//( async ()=>{ await get_interps(i); } )();
 				let be=elems.big_end.checked;
 				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
 				let isFl=(tp===17||tp===18)?true:false;
@@ -649,7 +743,6 @@ async function makeSpans(i){
 				let p=(c===null)?'':c;
 				let x=hx_arr_offs[i];
 				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
-		
 		}else{
 			elems.hex2.innerHTML='';
 		}
@@ -692,6 +785,7 @@ async function interp_span(t){
 														await makeSpans(i);
 														if(i===len-1){
 															elems.ttl.innerText="Hex viewer";
+															allLoadedSpans=true;
 															console.log(hx_interps_curr);
 															elems.hex2.style.height = 'inherit';
 															elems.hex2.style.height = (elems.hex2.scrollHeight+4)+"px";
@@ -699,7 +793,7 @@ async function interp_span(t){
 															selDivEditable(t);
 															resolve();
 														}else{
-															elems.ttl.innerText="Hex viewer - Loading: "+(i+1)+"/"+len;
+															elems.ttl.innerText="Hex viewer - Loaded: "+(i+1)+"/"+len;
 														}
 												}),
 											0);
@@ -723,9 +817,10 @@ async function interp_span2(){
 												makeSpans(i);
 												if(i===len-1){
 													elems.ttl.innerText="Hex viewer";
+													allLoadedSpans=true;
 													resolve();
 												}else{
-													elems.ttl.innerText="Hex viewer - Loading: "+(i+1)+"/"+len;
+													elems.ttl.innerText="Hex viewer - Loaded: "+(i+1)+"/"+len;
 												}
 											}),
 										0);
@@ -736,7 +831,7 @@ async function interp_span2(){
 elems.hex.oninput=(event)=>{
 
 	let t=event.target;
-	elems.hex2.innerHTML='';
+	allLoadedSpans=false;
 	hx_arr=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
 	hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
 	makeSpansBytes();
@@ -749,6 +844,7 @@ elems.hex.oninput=(event)=>{
 
 function type_change(event){
 	elems.hex2.innerHTML='';
+	allLoadedSpans=false;
 	( async ()=>{ await interp_span2(); } )();
 }
 
