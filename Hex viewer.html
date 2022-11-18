@@ -829,6 +829,7 @@ async function interp_span2(){
 }
 
 elems.hex.oninput=(event)=>{
+  elems.hex2.innerHTML='';
 	let t=event.target;
 	allLoadedSpans=false;
 	let hx_arr_chk=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
