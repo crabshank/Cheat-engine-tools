@@ -829,17 +829,22 @@ async function interp_span2(){
 }
 
 elems.hex.oninput=(event)=>{
-
 	let t=event.target;
 	allLoadedSpans=false;
-	hx_arr=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
-	hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
-	makeSpansBytes();
-	hx_interps=Array.from(Array(19), () => []);
-	hx_interps_be=Array.from(Array(19), () => []);
-	hovSpans=[];
-	hovSpans2=[];
-	( async ()=>{ await interp_span(t); } )();
+	let hx_arr_chk=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
+	if(hx_arr_chk !==null && typeof hx_arr_chk!=='undefined' && hx_arr_chk.length>0){
+		hx_arr=hx_arr_chk;
+		hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
+		makeSpansBytes();
+		hx_interps=Array.from(Array(19), () => []);
+		hx_interps_be=Array.from(Array(19), () => []);
+		hovSpans=[];
+		hovSpans2=[];
+		( async ()=>{ await interp_span(t); } )();
+	}else{
+		elems.hex2.innerHTML='';
+		elems.hex.innerHTML='';
+	}
 }
 
 function type_change(event){
