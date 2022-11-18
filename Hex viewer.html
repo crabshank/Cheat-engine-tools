@@ -614,10 +614,9 @@ async function get_interps(i){
 				let b=n_byte_unit8_to_int(rhx);
 				hx_interps_curr[6].push(b.s);
 				hx_interps_curr[7].push(hx_arr_int[i]);
-				let p=`(${hx_arr_int[i]}, ${b.s})`;
+				let p=(hx_arr_int[i]===b.s)?b.s:`(${hx_arr_int[i]}, ${b.s})`;
 				hx_interps_curr[5].push(p);
 
-			
 		}else if(mt==='2i'){ //2 byte int (unsigned, signed)
 
 				let df=hx_arr_int.length-i;
@@ -629,7 +628,7 @@ async function get_interps(i){
 					let b=n_byte_unit8_to_int(rhx);
 					hx_interps_curr[9].push(b.s);
 					hx_interps_curr[10].push(b.u);
-					let p=`(${b.u}, ${b.s})`;
+					let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
 					hx_interps_curr[8].push(p);
 				}else{
 					hx_interps_curr[9].push(null);
@@ -647,7 +646,7 @@ async function get_interps(i){
 					let b=n_byte_unit8_to_int(rhx);
 					hx_interps_curr[12].push(b.s);
 					hx_interps_curr[13].push(b.u);
-					let p=`(${b.u}, ${b.s})`;
+					let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
 					hx_interps_curr[11].push(p);
 				}else{
 					hx_interps_curr[12].push(null);
@@ -666,7 +665,7 @@ async function get_interps(i){
 					let b=n_byte_unit8_to_int(rhx);
 					hx_interps_curr[15].push(b.s);
 					hx_interps_curr[16].push(b.u);
-					let p=`(${b.u}, ${b.s})`;
+					let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
 					hx_interps_curr[14].push(p);
 				}else{
 					hx_interps_curr[15].push(null);
