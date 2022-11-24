@@ -23,8 +23,9 @@ local function addMemScan()
 			local addr=fl.getAddress(i)
 			local val=fl.getValue(i)
 			local addrConv=tonumber(addr,16)
-			local valConv= tonumber(val,base)
-			ress[currRes][i+1]={Address=addr, Value=val, addressConv=addrConv, valueConv=valConv, ix=i+1}
+			--local valConv= tonumber(val,base)
+			--ress[currRes][i+1]={Address=addr, Value=val, addressConv=addrConv, valueConv=valConv, ix=i+1}
+			ress[currRes][i+1]={Address=addr, Value=val, addressConv=addrConv, ix=i+1}
 		end
 
 	table.sort( ress[currRes], function(a, b) return a.addressConv < b.addressConv end ) -- Converted results array now sorted by address (ascending); "ix" all jumbled
