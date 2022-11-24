@@ -1,3 +1,26 @@
+## proxValues.lua
+
+#### To find multiple values that lie in an area of memory of maz size *m* (argument of 'proxValues.fullScan(m)', below).
+
+To use, open the LUA Engine and type in 'proxValues.', and then it will show you the methods listed below: 
+
+### Methods on (proxValues.…): 
+
+* **addMemScan()** -> Add result of memory scan to the script, for processing.
+
+* **resetAllResults()** -> Reset everything.
+
+* **removeResult(i)** -> Remove the i-th memscan result from the script
+
+* **printFiltered()** -> Print filtered results (usually done after a scan anyway)
+
+* **fullScan(m)** -> Go through all added memscan results to find all instances where a result of all the memscans are found in an area of memory of max size *m* bytes (*m* must be positive integer)
+
+* **narrowDown()** -> If you have done a full scan and then added another memscan result, use this to further filter the results given by 'fullScan(m)'
+
+
+***
+
 ## CETRACE reader x64.html
 
 Load a .cetrace file, wait, and it will finish loading.
