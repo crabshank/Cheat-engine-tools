@@ -2,7 +2,7 @@
 
 #### To find multiple values that lie in an area of memory of maz size *m* (argument of 'proxValues.fullScan(m)', below).
 
-To use, open the LUA Engine and type in 'proxValues.', and then it will show you the methods listed below: 
+To use: place the the file into your autorun folder, open the LUA Engine and type in 'proxValues.', and then it will show you the methods listed below: 
 
 ### Methods on (proxValues.…): 
 
