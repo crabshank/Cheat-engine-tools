@@ -1,6 +1,6 @@
 ## proxValues.lua
 
-#### To find multiple values that lie in an area of memory of maz size *m* bytes (argument of 'proxValues.fullScan(m)', below).
+#### To find multiple values that lie in an area of memory of max size *m* bytes or an unlimited number of bytes (argument of 'proxValues.fullScan(m)', below).
 
 To use: place the the file into your autorun folder, open the LUA Engine and type in 'proxValues.', and then it will show you the methods listed below: 
 
@@ -14,7 +14,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **printFiltered()** -> Print filtered results (usually done after a scan anyway)
 
-* **fullScan(m)** -> Go through all added memscan results to find all instances where a result of all the memscans are found in an area of memory of max size *m* bytes (*m* must be positive integer)
+* **fullScan( m --[[Optional]] )** -> Go through all added memscan results to find all instances where a result of all the memscans are found in an area of memory of max size *m* bytes (*m* must be positive integer >=1), or an unlimited size of memory if no argument is specified.
 
 * **narrowDown()** -> If you have done a full scan and then added another memscan result, use this to further filter the results given by 'fullScan(m)'
 
