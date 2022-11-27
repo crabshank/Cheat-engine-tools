@@ -32,6 +32,9 @@
 			color: hsl(178deg 100% 50%);
 			font-weight: bold;
 		}
+	#offset_info:empty{
+		display: none;
+	}
 	</style>	
 	<style id="doc_CSS2"></style>
 </head>
@@ -77,6 +80,7 @@
 	<section id="hex_sct2"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;min-height: 92%;">
 			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;min-height: 87vh;padding-left: 0.111em;"></div>
 	</section>
+	<section id="offset_info" title="Last hovered offset" style="width: min-content;height: min-content;border:2px outset rgb(113 0 255);text-align: center;white-space: pre-wrap;margin-left: 0.07%;"></section>
 </section>
 
 <script>
@@ -455,6 +459,7 @@ elems.big_end = document.getElementById('big_end');
 elems.be_box = document.getElementById('be_box');
 elems.doc_CSS2 = document.getElementById('doc_CSS2');
 elems.ttl = document.getElementById('ttl');
+elems.offset_info = document.getElementById('offset_info');
 allLoadedSpans=false;
 var hexBoxRect=absBoundingClientRect(elems.hex);
 
@@ -478,6 +483,9 @@ window.addEventListener('resize',(event)=>{
 	doRsz();
 });
 
+window.onscroll=(e)=>{
+	elems.offset_info.style.transform=`translateY(${Math.max(0,window.scrollY-absBoundingClientRect(elems.hex_scts).top+5)}px)`;
+}
 
 function p_enter(event,n){
 	if(allLoadedSpans){
@@ -490,10 +498,12 @@ function p_enter(event,n){
 		}
 			let ix=parseInt(t.getAttribute('ix'));
 			t.classList.add('isHovered');
+			elems.offset_info.innerHTML='Offset: '+t.title;
 		if(n===1){
 			hovSpans=[t];
 			let t2=hexSpans2[ix];
 			t2.classList.add('isHovered');
+			elems.offset_info.innerHTML='Offset: '+t2.title;
 			hovSpans2=[t2];
 			
 			let r2=absBoundingClientRect(hexSpans2[parseInt(t2.getAttribute('ix'))]);
@@ -771,7 +781,7 @@ function makeSpansBytes(){
 		mxh=(h>mxh)?h:mxh;
 		mxw=(w>mxw)?h:mxw;
 	}
-	elems.doc_CSS2.innerHTML=`#hex2 span{min-height: ${mxh}px !important; height: fit-content !important; min-width: ${mxw}px !important; width: fit-content !important;}`;
+	elems.doc_CSS2.innerHTML=`#hex2 span{min-height: ${mxh}px !important; height: fit-content !important; min-width: ${mxw}px !important; width: fit-content !important;} #hex span{min-width: ${mxw}px !important; width: fit-content !important;}`;
 }
 
 async function interp_span(t){
@@ -830,6 +840,7 @@ async function interp_span2(){
 
 elems.hex.oninput=(event)=>{
   elems.hex2.innerHTML='';
+  elems.offset_info.innerHTML='';
 	let t=event.target;
 	allLoadedSpans=false;
 	let hx_arr_chk=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
