@@ -1,20 +1,18 @@
 local ress={}
-local boundedRes={{-1,0}}
+local boundedResParams={{-1,0,false}}
+local boundedRes={}
 local narrow_err=true
 
 local function resetAllResults()
 	ress={}
-	boundedRes={{-1,0}}
+	boundedResParams={{-1,0,false}}
+	boundedRes={}
 	narrow_err=true
 end
 
 local function addMemScan()
 		local ms=getCurrentMemscan()
-		--table.insert(mss,ms)
-
 		local fl=ms.FoundList
-		--table.insert(fls,fl)
-
 		table.insert(ress,{})
 		local currRes=#ress
 		local base = ms.isHexadecimal and 16 or nil
@@ -23,8 +21,6 @@ local function addMemScan()
 			local addr=fl.getAddress(i)
 			local val=fl.getValue(i)
 			local addrConv=tonumber(addr,16)
-			--local valConv= tonumber(val,base)
-			--ress[currRes][i+1]={Address=addr, Value=val, addressConv=addrConv, valueConv=valConv, ix=i+1}
 			ress[currRes][i+1]={Address=addr, Value=val, addressConv=addrConv, ix=i+1}
 		end
 
@@ -38,10 +34,9 @@ local function removeResult(i) --Remove i-th element from results table
 end
 
 local function printFiltered()
-	if #boundedRes>=2 then
+	if #boundedRes>=1 then
 		local brl=#boundedRes
-		print( brl-1 .. ' matching results (within ' .. boundedRes[1][1] .. ' bytes): ')
-		for i = 2, brl do --iterate over boundedRes
+		for i = 1, brl do --iterate over boundedRes
 			local t = {}
 			local d=boundedRes[i].data
 			local dle=#d
@@ -50,6 +45,7 @@ local function printFiltered()
 				for k = 2, dle do --iterate over boundedRes.data
 					t[k]= ' || ' .. d[k].Address .. ' (' .. d[k].Value .. ')'
 				end
+				t[dle+1]=' 〈Range: ' .. boundedRes[i].range .. ' bytes〉'
 			end
 
 			local a = table.concat(t)
@@ -60,8 +56,14 @@ local function printFiltered()
 	end
 end
 
+local function sortBoundedRes()
+	table.sort( boundedRes, function(a, b)
+		return a.range < b.range 
+	end)
+end
+
 local function narrowDown() --m is the same as the first Round
-	local alrdyProc=boundedRes[1][2]
+	local alrdyProc=boundedResParams[1][2]
 	local rl=#ress
 	if rl <= alrdyProc then
 		print("Must have more results than already processed")
@@ -71,13 +73,15 @@ local function narrowDown() --m is the same as the first Round
 		print("Do a full scan!")
 		return
 	end
-	local m=boundedRes[1][1]
-	local bndOut={{m, rl}}
+	local m=boundedResParams[1][1]
+	local unlim=boundedResParams[1][3]
+	boundedResParams={{m, rl,unlim}}
+	local bndOut={}
 	
 			for i=alrdyProc+1, rl do --process ones not already done
 				local cir = ress[i]
 				for j=1, #cir do
-					for k=2, #boundedRes do
+					for k=1, #boundedRes do
 						local cj,bk=cir[j],boundedRes[k]
 						local mn,mx,cjac,ib,ob=bk.min,bk.max,cj.addressConv,false,false
 						local new_min=bk.max-m
@@ -86,10 +90,10 @@ local function narrowDown() --m is the same as the first Round
 							ib=true
 						end
 						if ib==false then
-							if cjac<bk.min and cjac>=new_min then
+							if cjac<bk.min and (cjac>=new_min or unlim==true) then
 								mn=cjac
 								ob=true
-							else if cjac>bk.max and cjac<=new_max then
+							else if cjac>bk.max and (cjac<=new_max or unlim==true) then
 								mx=cjac
 								ob=true
 							end
@@ -97,10 +101,11 @@ local function narrowDown() --m is the same as the first Round
 					if ib==true or ob==true then
 						local nd=bk.data
 						table.insert(nd,cj)
-						local nb ={min=mn, max=mx, data=nd}
+						local rnge=mx-mn
+						local nb ={min=mn, max=mx, range=rnge, data=nd}
 						table.insert(bndOut,nb)
 					end
-					if cjac > bk.max+m then
+					if (cjac > bk.max+m) and (unlim==false) then
 						k=#boundedRes --EARLY TERMINATE
 					end
 				end
@@ -108,20 +113,21 @@ local function narrowDown() --m is the same as the first Round
 		end
 	end
 		boundedRes=bndOut
-		 printFiltered()
+		sortBoundedRes()
+		printFiltered()
 end
 
-local function firstScan(m,narrowDwn)
+local function firstScan(m,narrowDwn,unlim)
 
-	if m < 0 or m==nil then
-		print("Argument must be a positive integer")
+	if (m < 1 or m==nil) and (unlim==false) then
+		print("Argument must be a positive integer >=1")
 		return
 	end
-	if m < #ress-1 then
+	if (m < #ress-1) and (unlim==false) then
 		print("Argument must be >= number of results compared")
 		return
 	end
-	if boundedRes[1][1]==m and boundedRes[1][2]==#ress then
+	if boundedResParams[1][1]==m and boundedResParams[1][2]==#ress and boundedResParams[1][3]==unlim then
 		print("Already printed results!")
 		return
 	end
@@ -133,9 +139,10 @@ local function firstScan(m,narrowDwn)
 		narrow_err=false
 	end
 	
-	local tempBndRes={{m,2}}
+	boundedResParams={{m,2,unlim}}
+	tempBndRes={}
 	
-	table.sort( ress, function(a, b) return #a < #b end ) --sort ress asc. order
+	table.sort( ress, function(a, b) return #a < #b end ) --sort ress asc. order of their lengths
 	
 	local firstResEl=ress[1]
 	
@@ -150,14 +157,14 @@ local function firstScan(m,narrowDwn)
 					local mn,mx=cad[1],cad[2]
 					local dfa=math.abs(df)
 
-					if dfa<=m then
+					if (dfa<=m) or (unlim==true) then
 						if cad[1]>cad[2] then
 									mn=cad[2]
 									mx=cad[1]
 						end
-							local b={min=mn, max=mx,data={ci,cj}}
+							local b={min=mn, max=mx, range=dfa,data={ci,cj}}
 							table.insert(tempBndRes,b)
-						else if df>m then
+						else if (df>m) and (unlim==false) then
 							j=#currResEl
 						end
 					end
@@ -173,9 +180,15 @@ end
 
 local function fullScan(m) -- m is limit (Absolute value)
 	local b=true
+	local unlim=false
 	if #ress==2 then b=false end
-	firstScan(m,b)
-	if b==false then
+	if m==nil then
+		m=0
+		unlim=true
+	end
+	firstScan(m,b,unlim)
+	if b==false then -- if no narrow down
+		sortBoundedRes()
 		printFiltered()
 	end
 end
