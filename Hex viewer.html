@@ -32,9 +32,6 @@
 			color: hsl(178deg 100% 50%);
 			font-weight: bold;
 		}
-	#offset_info:empty{
-		display: none;
-	}
 	</style>	
 	<style id="doc_CSS2"></style>
 </head>
@@ -80,7 +77,7 @@
 	<section id="hex_sct2"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;min-height: 92%;">
 			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;min-height: 87vh;padding-left: 0.111em;"></div>
 	</section>
-	<section id="offset_info" title="Last hovered offset" style="width: min-content;height: min-content;border:2px outset rgb(113 0 255);text-align: center;white-space: pre-wrap;margin-left: 0.07%;"></section>
+	<section id="offset_info" title="Hovered offset" style="width: min-content;height: min-content;border:2px outset rgb(113 0 255);text-align: center;white-space: pre-wrap;margin-left: 0.07%;">Offset: </section>
 </section>
 
 <script>
@@ -551,6 +548,7 @@ function p_leave(){
 		for(let i=0, len=hovSpans2.length; i<len; i++){
 			hovSpans2[i].classList.remove('isHovered');
 		}
+		elems.offset_info.innerHTML='Offset: ';
 		hovSpans=[];
 		hovSpans2=[];
 	}
@@ -840,7 +838,7 @@ async function interp_span2(){
 
 elems.hex.oninput=(event)=>{
   elems.hex2.innerHTML='';
-  elems.offset_info.innerHTML='';
+  elems.offset_info.innerHTML='Offset: ';
 	let t=event.target;
 	allLoadedSpans=false;
 	let hx_arr_chk=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
