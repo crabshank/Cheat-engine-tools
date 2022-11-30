@@ -12,12 +12,18 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **removeResult(i)** -> Remove the i-th memscan result from the script
 
-* **printFiltered()** -> Print filtered results (usually done after a scan anyway)
+* **printFiltered( n,m --[[Optional]] )** -> Print filtered results (usually done after a scan anyway):
+
+printFiltered(n) : Print all results with max. memory area size <=n
+printFiltered(n,m) : Print all results with max. memory area size >=n and <=m
+printFiltered(): Print all results
 
 * **fullScan( m --[[Optional]] )** -> Go through all added memscan results to find all instances where a result of all the memscans are found in an area of memory of max size *m* bytes (*m* must be positive integer >=1), or an unlimited size of memory if no argument is specified.
 
-* **narrowDown()** -> If you have done a full scan and then added another memscan result, use this to further filter the results given by 'fullScan(m)'
+* **narrowDown( n --[[Optional]] )** -> If you have done a full scan and then added another memscan result, use this to further filter the results given by 'fullScan(m)'
 
+narrowDown(n) : Only keep and output results with max. memory area size <=n
+narrowDown() : Use previous memory area size
 
 ***
 
