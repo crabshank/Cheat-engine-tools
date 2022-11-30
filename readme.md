@@ -24,8 +24,9 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **narrowDown( n --[[Optional]] )** -> If you have done a full scan and then added another memscan result, use this to further filter the results given by 'fullScan(m)'
 
-narrowDown(n) : Only keep and output results with max. memory area size <=n
-narrowDown() : Use previous memory area size
+        narrowDown(n) : Only keep and output results with max. memory area size <=n
+        
+        narrowDown() : Use previous memory area size
 
 ***
 
