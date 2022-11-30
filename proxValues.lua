@@ -1,11 +1,11 @@
 local ress={}
-local boundedResParams={{-1,0,false}}
+local boundedResParams={-1,0,false}
 local boundedRes={}
 local narrow_err=true
 
 local function resetAllResults()
 	ress={}
-	boundedResParams={{-1,0,false}}
+	boundedResParams={-1,0,false}
 	boundedRes={}
 	narrow_err=true
 end
@@ -33,23 +33,34 @@ local function removeResult(i) --Remove i-th element from results table
 	narrow_err=true
 end
 
-local function printFiltered()
+local function printFiltered(m,n)		
 	if #boundedRes>=1 then
 		local brl=#boundedRes
+		local ags=2
+		if m==nil then
+		   ags=0
+		elseif n==nil then
+		   ags=1
+		end
+		
 		for i = 1, brl do --iterate over boundedRes
 			local t = {}
-			local d=boundedRes[i].data
+			local bri=boundedRes[i]
+			local d=bri.data
+			local r=bri.range
 			local dle=#d
-			t[1]=d[1].Address .. ' (' .. d[1].Value .. ')'
-			if dle >= 2 then
-				for k = 2, dle do --iterate over boundedRes.data
-					t[k]= ' || ' .. d[k].Address .. ' (' .. d[k].Value .. ')'
-				end
-				t[dle+1]=' 〈Range: ' .. boundedRes[i].range .. ' bytes〉'
-			end
+			if (ags==0) or (ags==1 and r<=m) or (ags==2 and r>=m and r<=n) then
+					t[1]=d[1].Address .. ' (' .. d[1].Value .. ')'
+					if dle >= 2 then
+						for k = 2, dle do --iterate over boundedRes.data
+							t[k]= ' || ' .. d[k].Address .. ' (' .. d[k].Value .. ')'
+						end
+						t[dle+1]=' 〈Range: ' .. boundedRes[i].range .. ' bytes〉'
+					end
 
-			local a = table.concat(t)
-			print(a)
+					local a = table.concat(t)
+					print(a)
+			end
 		end
 	else
 		print('No matching results')
@@ -62,8 +73,21 @@ local function sortBoundedRes()
 	end)
 end
 
-local function narrowDown() --m is the same as the first Round
-	local alrdyProc=boundedResParams[1][2]
+local function filterByRange(n)
+   local brt={}
+   local brl=#boundedRes
+   for i=1, brl do
+      local bri=boundedRes[i]
+      if bri.range<=n then
+         table.insert(brt,boundedRes[i])
+      else
+         i=brl --Early terminate, as sorted by range
+      end
+   end
+end
+
+local function narrowDown(n) --m is the same as the first round, unless argument specified
+	local alrdyProc=boundedResParams[2]
 	local rl=#ress
 	if rl <= alrdyProc then
 		print("Must have more results than already processed")
@@ -73,9 +97,24 @@ local function narrowDown() --m is the same as the first Round
 		print("Do a full scan!")
 		return
 	end
-	local m=boundedResParams[1][1]
-	local unlim=boundedResParams[1][3]
-	boundedResParams={{m, rl,unlim}}
+	
+	local m=boundedResParams[1]
+	local unlim=boundedResParams[3]
+	if n~=nil then
+   if (unlim==false) and (n>=m) then
+	      print('Argument must be <'..m)
+	      return
+	   end
+	   if (n < #ress-1) then
+		print("Argument must be >= number of results compared (>=" .. (#ress-1) .. ")")
+	     return
+   	end
+	      unlim=false
+	      m=n
+	      filterByRange(n)
+	end
+	
+	boundedResParams={m, rl,unlim}
 	local bndOut={}
 	
 			for i=alrdyProc+1, rl do --process ones not already done
@@ -118,20 +157,20 @@ local function narrowDown() --m is the same as the first Round
 end
 
 local function firstScan(m,narrowDwn,unlim)
-
+	local rl=#ress
 	if (m < 1 or m==nil) and (unlim==false) then
 		print("Argument must be a positive integer >=1")
 		return
 	end
-	if (m < #ress-1) and (unlim==false) then
-		print("Argument must be >= number of results compared")
+	if (m < rl-1) and (unlim==false) then
+		print("Argument must be >= number of results compared (>=" .. (rl1) .. ")")
 		return
 	end
-	if boundedResParams[1][1]==m and boundedResParams[1][2]==#ress and boundedResParams[1][3]==unlim then
+	if boundedResParams[1]==m and boundedResParams[2]==rl and boundedResParams[3]==unlim then
 		print("Already printed results!")
 		return
 	end
-	if #ress < 2 then
+	if rl < 2 then
 		print("Must have added at least 2 memscan results!")
 		return
 	end
@@ -139,7 +178,7 @@ local function firstScan(m,narrowDwn,unlim)
 		narrow_err=false
 	end
 	
-	boundedResParams={{m,2,unlim}}
+	boundedResParams={m,2,unlim}
 	tempBndRes={}
 	
 	table.sort( ress, function(a, b) return #a < #b end ) --sort ress asc. order of their lengths
