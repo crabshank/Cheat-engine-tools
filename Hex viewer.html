@@ -442,7 +442,7 @@ var mxh=0;
 var mxw=0;
 var hx_interps=Array.from(Array(19), () => []);
 var hx_interps_be=Array.from(Array(19), () => []);
-
+var prev_be=false;
 
 elems.type_view = document.getElementById('type_view');
 elems.type_view.selectedIndex=17;
@@ -865,8 +865,11 @@ function type_change(event){
 
 elems.type_view.oninput=(event)=>{
 	if( type_bytes[elems.type_view.selectedIndex]===1 ){
+		prev_be=elems.be_box.checked;
+		elems.be_box.checked=false;
 		elems.be_box.style.visibility='hidden';
 	}else{
+		elems.be_box.checked=prev_be;
 		elems.be_box.style.visibility='visible';
 	}
 	type_change(event);
