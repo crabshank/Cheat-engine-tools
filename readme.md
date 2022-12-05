@@ -2,7 +2,7 @@
 
 #### To find multiple values that lie in an area of memory of max size *m* bytes or an unlimited number of bytes (argument of 'proxValues.fullScan(m)', below).
 
-To use: place the the file into your autorun folder, open the LUA Engine and type in 'proxValues.', and then it will show you the methods listed below: 
+To use: place the the file into your autorun folder, open the LUA Engine and type in 'proxValues.' (without quotes), and then it will show you the methods listed below: 
 
 ### Methods on (proxValues.…): 
 
