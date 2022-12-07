@@ -547,21 +547,32 @@ var hx_arr_int=[];
 var hx_arr_cnt=0;
 var fnd=[];
 anlys_i_HTML='';
-
+var plh=true;
 hsrch.onfocus=(e)=>{
 	let t=e.target;
-	if(t.innerText==='Search for AOB'){
+	if(plh){
+		plh=false;
 		t.innerText='';
 		t.style.color='white';
 	}
 }
 
-hsrch.onblur=(e)=>{
-	let t=e.target;
+function plhSet(t){
 	if(t.innerText===''){
+		plh=true;
 		t.innerText='Search for AOB';
 		t.style.color='buttonface';
 	}
+}
+
+hsrch.onblur=(e)=>{
+	let t=e.target;
+	plhSet(t);
+}
+
+hsrch.oninput=(e)=>{
+	let t=e.target;
+	plhSet(t);
 }
 
 function clk_hx(event){
