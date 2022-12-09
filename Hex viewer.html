@@ -65,6 +65,7 @@
 					<option meta_type="4f">Float</option>
 					<option meta_type="8f">Double</option>
 				</optgroup>
+				<option meta_type="3x(1i)">RGB byte hex</option>
 			</select>
 			<section id='be_box' style="display: contents; visibility: visible;	">
 				<input type="checkbox" id="big_end"></input>
@@ -437,12 +438,12 @@ var hovSpans=[];
 var hovSpans2=[];
 var hexSpans=[];
 var hexSpans2=[];
-const type_bytes=[1,2,3,4,4,1,1,1,2,2,2,4,4,4,8,8,8,4,8];
+const type_bytes=[1,2,3,4,4,1,1,1,2,2,2,4,4,4,8,8,8,4,8,3];
 var mxh=0;
 var mxw=0;
-var hx_interps=Array.from(Array(19), () => []);
-var hx_interps_be=Array.from(Array(19), () => []);
-var prev_be=false;
+var hx_interps=Array.from(Array(20), () => []);
+var hx_interps_be=Array.from(Array(20), () => []);
+
 
 elems.type_view = document.getElementById('type_view');
 elems.type_view.selectedIndex=17;
@@ -579,13 +580,33 @@ async function get_interps(i){
 				}
 		}else if(tp===2){ //3 byte char
 				let df=hx_arr_int.length-i;
-				if(df>=3){
+				if(df>=3){		   
 					let rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
 					if(be){
 						rhx.reverse();
 					}
 					let b=n_byte_unit8_to_int(rhx);
 					hx_interps_curr[tp].push(String.fromCharCode(b.u));
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+  }else if(tp===19){ //RGB byte hex
+		  let df=hx_arr_int.length-i;
+				if(df>=3){		   
+					let rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+					if(be){
+						rhx.reverse();
+					}
+					
+					let rhxi=[];
+					for (let k=0; k<3; k++){
+					   let r=[rhx[k]];
+			    	let b=n_byte_unit8_to_int(r);
+			    	rhxi.push(b.u);
+		 		}
+					let rgbx='#'+rhx.join('')+' ('+rhxi.join(', ')+')';
+					
+					hx_interps_curr[tp].push(rgbx);
 				}else{
 					hx_interps_curr[tp].push(null);
 				}
@@ -750,7 +771,8 @@ async function makeSpans(i){
 				let c=hx_interps_curr[tp][i];
 				let p=(c===null)?'':c;
 				let x=hx_arr_offs[i];
-				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
+				let crgb=(tp===19 && c!==null)?c.split(' (')[0]:'';
+				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+( (tp===19 && crgb!=='')?`style="background: ${crgb};border-color: ${crgb}; border-style: solid;border-width:1px;text-decoration: ${crgb} 3px underline;text-decoration-skip-ink: none;" `:'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
 		}else{
 			elems.hex2.innerHTML='';
 		}
@@ -846,8 +868,8 @@ elems.hex.oninput=(event)=>{
 		hx_arr=hx_arr_chk;
 		hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
 		makeSpansBytes();
-		hx_interps=Array.from(Array(19), () => []);
-		hx_interps_be=Array.from(Array(19), () => []);
+		hx_interps=Array.from(Array(20), () => []);
+		hx_interps_be=Array.from(Array(20), () => []);
 		hovSpans=[];
 		hovSpans2=[];
 		( async ()=>{ await interp_span(t); } )();
@@ -865,11 +887,8 @@ function type_change(event){
 
 elems.type_view.oninput=(event)=>{
 	if( type_bytes[elems.type_view.selectedIndex]===1 ){
-		prev_be=elems.be_box.checked;
-		elems.be_box.checked=false;
 		elems.be_box.style.visibility='hidden';
 	}else{
-		elems.be_box.checked=prev_be;
 		elems.be_box.style.visibility='visible';
 	}
 	type_change(event);
