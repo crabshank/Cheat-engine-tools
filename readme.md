@@ -62,6 +62,8 @@ N.B.
 
 * Hovering over the (converted) bytes highlights them.
 
+* Use of dark mode in your browser may make the colour the the underline in the display of the RGB byte hex (rather than the background or border colour).
+
 ***
 
 ## Hex converter
