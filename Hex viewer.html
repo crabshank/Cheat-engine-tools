@@ -27,6 +27,15 @@
 		}
 		#hex span.isHovered, #hex2 span.isHovered {
 			background-color:hsl(129deg 55% 16%);
+			border-color: hsl(129deg 100% 50%);
+			border-style: dashed !important; 
+			border-width: 4px !important;
+		}		
+		#hex span.rgb.isHovered, #hex2 span.rgb.isHovered {
+			border-color: hsl(180deg 100% 50%) !important;
+			border-style: groove !important; 
+			border-width: 10px !important;
+			zoom: 139%;
 		}
 		#hex2 span.foi {
 			color: hsl(178deg 100% 50%);
@@ -772,7 +781,7 @@ async function makeSpans(i){
 				let p=(c===null)?'':c;
 				let x=hx_arr_offs[i];
 				let crgb=(tp===19 && c!==null)?c.split(' (')[0]:'';
-				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+( (tp===19 && crgb!=='')?`style="background: ${crgb};border-color: ${crgb}; border-style: solid;border-width:1px;text-decoration: ${crgb} 3px underline;text-decoration-skip-ink: none;" `:'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
+				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+( (tp===19 && crgb!=='')?`class="rgb" style="background: ${crgb};border-color: ${crgb}; border-style: solid;border-width:1px;text-decoration: ${crgb} 3px underline;text-decoration-skip-ink: none;" `:'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
 		}else{
 			elems.hex2.innerHTML='';
 		}
@@ -846,6 +855,7 @@ async function interp_span2(){
 												}
 												makeSpans(i);
 												if(i===len-1){
+													hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];
 													elems.ttl.innerText="Hex viewer";
 													allLoadedSpans=true;
 													resolve();
