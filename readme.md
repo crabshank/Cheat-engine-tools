@@ -2,6 +2,8 @@
 
 #### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared opcodes.
 
+#### Currently only outputs 64-bit raw hex data.
+
 To use: place the the file into your autorun folder, open the LUA Engine and type in 'attachBpLog.' (without quotes), and then it will show you the methods listed below: 
 
 ### Methods on (attachBpLog.…): 
