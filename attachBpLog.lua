@@ -20,18 +20,20 @@ local function dumpRegisters()
         print('')
 end
 
+
+
+local function removeAttachedBp()
+	debug_removeBreakpoint(abp) 
+	abp=nil
+	regs = {['RAX']=nil,['RBX']=nil,['RCX']=nil,['RDX']=nil,['RDI']=nil,['RSI']=nil,['RBP']=nil,['RSP']=nil,['R8']=nil,['R9']=nil,['R10']=nil,['R11']=nil,['R12']=nil,['R13']=nil,['R14']=nil,['R15']=nil,['XMM0']=nil,['XMM1']=nil,['XMM2']=nil,['XMM3']=nil,['XMM4']=nil,['XMM5']=nil,['XMM6']=nil,['XMM7']=nil,['XMM8']=nil,['XMM9']=nil,['XMM10']=nil,['XMM11']=nil,['XMM12']=nil,['XMM13']=nil,['XMM14']=nil,['XMM15']=nil}
+end
+
 local function attachBp(a)
 	if abp ~=nil then
 		removeAttachedBp()
 	end
 	abp=a
 	debug_setBreakpoint(a)
-end
-
-local function removeAttachedBp()
-	debug_removeBreakpoint(abp) 
-	abp=nil
-	regs = {['RAX']=nil,['RBX']=nil,['RCX']=nil,['RDX']=nil,['RDI']=nil,['RSI']=nil,['RBP']=nil,['RSP']=nil,['R8']=nil,['R9']=nil,['R10']=nil,['R11']=nil,['R12']=nil,['R13']=nil,['R14']=nil,['R15']=nil,['XMM0']=nil,['XMM1']=nil,['XMM2']=nil,['XMM3']=nil,['XMM4']=nil,['XMM5']=nil,['XMM6']=nil,['XMM7']=nil,['XMM8']=nil,['XMM9']=nil,['XMM10']=nil,['XMM11']=nil,['XMM12']=nil,['XMM13']=nil,['XMM14']=nil,['XMM15']=nil}
 end
 
 function debugger_onBreakpoint()
