@@ -1,3 +1,18 @@
+## attachBpLog.lua
+
+#### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared opcodes.
+
+To use: place the the file into your autorun folder, open the LUA Engine and type in 'attachBpLog.' (without quotes), and then it will show you the methods listed below: 
+
+### Methods on (attachBpLog.…): 
+
+* **attachBp(a)** -> Attach logging breakpoint to address a
+
+* **dumpRegisters()** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway.)
+
+* **removeAttachedBp()** -> Remove attached breakpoint
+
+
 ## proxValues.lua
 
 #### To find multiple values that lie in an area of memory of max size *m* bytes or an unlimited number of bytes (argument of 'proxValues.fullScan(m)', below).
