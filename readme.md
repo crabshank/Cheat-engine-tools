@@ -6,11 +6,11 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (attachBpLog.…): 
 
-* **attachBp(a)** -> Attach logging breakpoint to address a
+* **attachBp(a)** -> Attach logging breakpoint to address a.
 
-* **dumpRegisters()** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway.)
+* **dumpRegisters()** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway).
 
-* **removeAttachedBp()** -> Remove attached breakpoint
+* **removeAttachedBp()** -> Remove attached breakpoint.
 
 
 ## proxValues.lua
