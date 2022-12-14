@@ -8,7 +8,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (attachBpLog.…): 
 
-* **attachBp(a)** -> Attach logging breakpoint to address a.
+* **attachBp(a)** -> Attach logging breakpoint to address a (Use '0x…' for addresses in hexadecimal).
 
 * **dumpRegisters()** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway).
 
@@ -89,7 +89,7 @@ Paste space-separated byte hex into the text area and wait for the processing to
 
 N.B.
 
-* Click on a byte in the textarea or double click on the line for an address to prime the button "Set byte #..." to make this the base.
+* Click on a byte in the textarea or double click on the line for an address to prime the button "Set byte #…" to make this the base.
 
 * Click on a line to highlight it (not just on hover), or use the auto highlighting button to search for lines matching your specfied conditions and then press the auto-higlight button.
   
