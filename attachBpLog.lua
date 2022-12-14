@@ -4,6 +4,22 @@ local regs_n={'RAX','RBX','RCX','RDX','RDI','RSI','RBP','RSP','R8','R9','R10','R
 
 local abp=nil
 
+local function hexToAOB(str)
+	local sl=string.len(str)
+	local k=1
+	local out={}
+	for i = 1, sl do
+		local ri=sl + 1 - k
+		local ri2=ri-1
+	  table.insert(out,string.sub(str, ri2,ri) )
+		k=k+2
+		if k>sl then
+			break
+		end
+	end
+	return out
+end
+
 local function dumpRegisters()
 	local c=false
 	for i = 1, 33 do
@@ -41,38 +57,72 @@ if abp ~=nil then
 		if RIP==abp then
 			debug_getContext(true)
 			local rx=string.format('%016X',RAX)
+			local rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RAX']=rx
 			rx=string.format('%016X',RBX)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RBX']=rx
 			rx=string.format('%016X',RCX)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RCX']=rx
 			rx=string.format('%016X',RDX)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RDX']=rx
 			rx=string.format('%016X',RDI)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RDI']=rx
 			rx=string.format('%016X',RSI)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RSI']=rx
 			rx=string.format('%016X',RBP)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RBP']=rx
 			rx=string.format('%016X',RSP)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RSP']=rx
 			rx=string.format('%016X',RIP)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['RIP']=rx
 			rx=string.format('%016X',R8)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R8']=rx
 			rx=string.format('%016X',R9)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R9']=rx
 			rx=string.format('%016X',R10)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R10']=rx
 			rx=string.format('%016X',R11)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R11']=rx
 			rx=string.format('%016X',R12)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R12']=rx
 			rx=string.format('%016X',R13)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R13']=rx
 			rx=string.format('%016X',R14)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R14']=rx
 			rx=string.format('%016X',R15)
+			rxb=hexToAOB(rx)
+			rx=rx .. ' (' .. table.concat(rxb," ") ..')' 
 			regs['R15']=rx
 
 			local decByteString = table.concat(readBytesLocal(debug_getXMMPointer(0),16,true), ' ')
