@@ -21,6 +21,9 @@ local function dumpRegisters()
 end
 
 local function attachBp(a)
+	if abp ~=nil then
+		removeAttachedBp()
+	end
 	abp=a
 	debug_setBreakpoint(a)
 end
