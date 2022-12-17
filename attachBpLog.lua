@@ -1,5 +1,5 @@
 local regs_n={'RAX','RBX','RCX','RDX','RDI','RSI','RBP','RSP','R8','R9','R10','R11','R12','R13','R14','R15','XMM0','XMM1','XMM2','XMM3','XMM4','XMM5','XMM6','XMM7','XMM8','XMM9','XMM10','XMM11','XMM12','XMM13','XMM14','XMM15','FP0','FP1','FP2','FP3','FP4','FP5','FP6','FP7'}
-
+local rl=#regs_n
 local abp=nil
 
 local function hexToAOB(str)
@@ -28,11 +28,11 @@ local function getLenNilTable(n)
 	return out
 end
 
-local regs=getLenNilTable(40)
+local regs=getLenNilTable(rl)
 
 local function dumpRegisters()
 	local c=false
-	for i = 1, 40 do
+	for i = 1, rl do
 		local ri=regs_n[i]
                 local riv=regs[i]
                 if riv ~= nil then
@@ -49,7 +49,7 @@ end
 local function removeAttachedBp()
 	debug_removeBreakpoint(abp) 
 	abp=nil
-	regs =getLenNilTable(40)
+	regs =getLenNilTable(rl)
 end
 
 local function attachBp(a)
