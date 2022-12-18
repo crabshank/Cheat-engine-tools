@@ -105,10 +105,8 @@ if abp ~=nil then
 				hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
 				regs[32+i]=hexByteString
 			end
-
+   dumpRegisters()
 			debug_continueFromBreakpoint(co_run)
-			else
-				 dumpRegisters()
 		end
 	end
 end
