@@ -49,7 +49,7 @@ local function dumpDiffRegs(k)
                 local rivl=ak.regsLastDisp[i]
                 if riv ~= nil then
 					if c==false then
-						print('Changed registers at attached point (' .. string.format('%X',ak.address) .. ') since last break: ')
+						print('Changed registers at attached point (' .. string.format('%X',ak.address) .. ') since last break are marked with "[Δ]": ')
 						c=true
 					end
 					if riv~=rivl then
