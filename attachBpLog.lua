@@ -157,13 +157,24 @@ local function removeAttachedBp(i,b)
 	printAttached()
 end
 
-local function attachBp(a)
+local function attachBpAddr(a)
 	abp=rem_abp(a)
+	table.insert(abp,{['address']=a,['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
+	debug_setBreakpoint(a)
+end
+
+local function attachBp(t)
+	local a=t
+	if type(t)=='table' then
+		for j=1, #t do
+			attachBpAddr(a[j])
+		end
+	else
+		attachBpAddr(a)
+	end
 	for k=1, #abp do
 		abp[k].forcePrint=true
 	end
-	table.insert(abp,{['address']=a,['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
-	debug_setBreakpoint(a)
 end
 
 local function get_abp_el(a)
