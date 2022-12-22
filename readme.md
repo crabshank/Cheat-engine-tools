@@ -8,7 +8,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (attachBpLog.…): 
 
-* **attachBp(a)** -> Attach logging breakpoint to address a (Use '0x…' for addresses in hexadecimal).
+* **attachBp(t)** -> Attach logging breakpoint to address *t* (Use '0x…' for addresses in hexadecimal), or, a table of addresses *t*.
 
 * **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway). Argument *k* is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
 
