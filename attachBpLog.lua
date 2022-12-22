@@ -144,17 +144,26 @@ local function rem_abp(i,b)
 end
 
 local function removeAttachedBp(i,b)
+	local abpl=#abp
 	if b==true then
 		debug_removeBreakpoint(abp[i].address)
 		abp=rem_abp(i,true)
-	else 
+	elseif i==nil then
+		for k=1, abpl do
+			debug_removeBreakpoint(abp[1].address)
+			abp=rem_abp(1,true)
+		end
+	else
 		debug_removeBreakpoint(i)
 		abp=rem_abp(i)
 	end
-	for k=1, #abp do
+	abpl=#abp
+	for k=1, abpl do
 		abp[k].forcePrint=true
 	end
-	printAttached()
+	if abpl>0 then
+		printAttached()
+	end
 end
 
 local function attachBpAddr(a)
