@@ -30,7 +30,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **removeResult(i)** -> Remove the i-th memscan result from the script
 
-* **printFiltered( n,m --[[Optional]] )** -> Print filtered results (usually done after a scan anyway):
+* **printFiltered( n --[[Optional]], m --[[Optional]] )** -> Print filtered results (usually done after a scan anyway):
 
          printFiltered(n) : Print all results with max. memory area size <=n
    
