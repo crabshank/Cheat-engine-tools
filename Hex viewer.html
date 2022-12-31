@@ -31,6 +31,12 @@
 			border-style: dashed !important; 
 			border-width: 4px !important;
 		}		
+		#hex2 span.rgb{
+			transform: skewX(-5deg);
+			border-style: solid;
+			border-width:1px;
+			text-decoration-skip-ink: none;
+		}
 		#hex span.rgb.isHovered, #hex2 span.rgb.isHovered {
 			border-color: hsl(180deg 100% 50%) !important;
 			border-style: groove !important; 
@@ -75,6 +81,7 @@
 					<option meta_type="8f">Double</option>
 				</optgroup>
 				<option meta_type="3x(1i)">RGB byte hex</option>
+				<option meta_type="4x(1i)">RGBA byte hex</option>
 			</select>
 			<section id='be_box' style="display: contents; visibility: visible;	">
 				<input type="checkbox" id="big_end"></input>
@@ -450,12 +457,13 @@ var hexSpans2=[];
 const type_bytes=[1,2,3,4,4,1,1,1,2,2,2,4,4,4,8,8,8,4,8,3];
 var mxh=0;
 var mxw=0;
-var hx_interps=Array.from(Array(20), () => []);
-var hx_interps_be=Array.from(Array(20), () => []);
-
 
 elems.type_view = document.getElementById('type_view');
 elems.type_view.selectedIndex=17;
+
+var arrl=elems.type_view.length;
+var hx_interps=Array.from(Array(arrl), () => []);
+var hx_interps_be=Array.from(Array(arrl), () => []);
 
 elems.hex_scts = document.getElementById('hex_scts');
 elems.hex_sct = document.getElementById('hex_sct');
@@ -469,6 +477,8 @@ elems.ttl = document.getElementById('ttl');
 elems.offset_info = document.getElementById('offset_info');
 allLoadedSpans=false;
 var hexBoxRect=absBoundingClientRect(elems.hex);
+
+
 
 function doRsz(){
 	elems.hex.style.transform=`translateY(0px)`;
@@ -609,9 +619,29 @@ async function get_interps(i){
 					
 					let rhxi=[];
 					for (let k=0; k<3; k++){
-					   let r=[rhx[k]];
-			    	let b=n_byte_unit8_to_int(r);
-			    	rhxi.push(b.u);
+						let r=[rhx[k]];
+						let b=n_byte_unit8_to_int(r);
+						rhxi.push(b.u);
+		 		}
+					let rgbx='#'+rhx.join('')+' ('+rhxi.join(', ')+')';
+					
+					hx_interps_curr[tp].push(rgbx);
+				}else{
+					hx_interps_curr[tp].push(null);
+				}
+		}else if(tp===20){ //RGBA byte hex
+		  let df=hx_arr_int.length-i;
+				if(df>=4){		   
+					let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
+					if(be){
+						rhx.reverse();
+					}
+					
+					let rhxi=[];
+					for (let k=0; k<4; k++){
+						let r=[rhx[k]];
+						let b=n_byte_unit8_to_int(r);
+						rhxi.push(b.u);
 		 		}
 					let rgbx='#'+rhx.join('')+' ('+rhxi.join(', ')+')';
 					
@@ -780,8 +810,14 @@ async function makeSpans(i){
 				let c=hx_interps_curr[tp][i];
 				let p=(c===null)?'':c;
 				let x=hx_arr_offs[i];
-				let crgb=(tp===19 && c!==null)?c.split(' (')[0]:'';
-				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+( (tp===19 && crgb!=='')?`class="rgb" style="background: ${crgb};border-color: ${crgb}; border-style: solid;border-width:1px;text-decoration: ${crgb} 3px underline;text-decoration-skip-ink: none;" `:'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
+				let isCol=(tp===19 || tp===20)?true:false;
+				let crgb=(isCol && c!==null)?c.split(' (')[0]:'';
+				let crgb_3=crgb;
+				if(tp===20 && crgb!==''){
+					crgb_3=crgb_3.slice(0,7);
+				}
+				
+				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+( (isCol && crgb!=='')?`class="rgb" style="background: ${crgb+(tp==20?'':'4f')};border-color: ${crgb_3}; text-decoration: ${crgb} 3px underline;" `:'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
 		}else{
 			elems.hex2.innerHTML='';
 		}
@@ -878,8 +914,8 @@ elems.hex.oninput=(event)=>{
 		hx_arr=hx_arr_chk;
 		hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
 		makeSpansBytes();
-		hx_interps=Array.from(Array(20), () => []);
-		hx_interps_be=Array.from(Array(20), () => []);
+		hx_interps=Array.from(Array(arrl), () => []);
+		hx_interps_be=Array.from(Array(arrl), () => []);
 		hovSpans=[];
 		hovSpans2=[];
 		( async ()=>{ await interp_span(t); } )();
