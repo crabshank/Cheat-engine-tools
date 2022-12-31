@@ -682,15 +682,19 @@ function pnb_click(event){
 	if(event.target.getAttribute('deco')!==null){
 		j=event.target.getAttribute('deco');
 		jp=parseInt(j);
-		let bs=(jp<0)?parseInt(b[0].getAttribute('deco')):parseInt(b.at(-1).getAttribute('deco'));
-		let t=[...document.querySelectorAll('section#anly_info > section > div:nth-child(1)[deco="'+(bs+jp)+'"]')][0];
-		if(typeof t!=='undefined'){
-			hl_sct({currentTarget: t.parentElement});
-			b=[...document.querySelectorAll('#scrlr_hl section')];
-			if(jp<0){
-				b[0].scrollIntoView();
-			}else{
-				b.at(-1).scrollIntoView();
+		let ets=event.target.parentElement;
+		let bix=b.indexOf(ets);
+		while (bix<0 && ets.tagName!=='HTML'){
+			ets=ets.parentElement;
+			bix=b.indexOf(ets);
+		}
+		if(bix>=0){
+			let bs=parseInt(ets.getAttribute('deco'));
+			let t=[...document.querySelectorAll('section#anly_info > section > div:nth-child(1)[deco="'+(bs+jp)+'"]')][0];
+			if(typeof t!=='undefined'){
+				hl_sct({currentTarget: t.parentElement});
+				b=[...document.querySelectorAll('#scrlr_hl section')];
+				b[bix].scrollIntoView();
 			}
 		}
 	}
