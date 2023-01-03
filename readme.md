@@ -1,3 +1,19 @@
+## batchRW.lua
+
+#### Simply attach breakpoints to selected addresses ("batchRW.attach(…)") and: print the addresses and turn them yellow in the address list if they are read or written to ("writeTo" argument in "batchRW.attach(…)").
+
+### Methods on (batchRW.…): 
+
+* **attach(s, z, onWrite --[[Optional]])** -> Attach breakpoints to address *s* ("Index" printed by "batchRW.printAddrs()") and *z*-1 addresses after it (*z* in total, probably will not work if >4). If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
+
+* **printAddrs()** -> Print all attachable addresses in the address list, with their indexes for "batchRW.attach(…)".
+
+* **detachAll()** -> Remove all breakpoints set by this extension.
+
+
+#### Currently only outputs 64-bit raw hex data.
+
+
 ## attachBpLog.lua
 
 #### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared opcodes.
