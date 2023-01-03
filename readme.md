@@ -10,10 +10,6 @@
 
 * **detachAll()** -> Remove all breakpoints set by this extension.
 
-
-#### Currently only outputs 64-bit raw hex data.
-
-
 ## attachBpLog.lua
 
 #### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared opcodes.
