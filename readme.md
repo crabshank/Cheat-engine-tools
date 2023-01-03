@@ -4,7 +4,7 @@
 
 ### Methods on (batchRW.…): 
 
-* **attach(s, z, onWrite --[[Optional]])** -> Attach breakpoints to address *s* ("Index" printed by "batchRW.printAddrs()") and *z*-1 addresses after it (*z* in total, probably will not work if >4). If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
+* **attach(s, z, onWrite --[[Optional]])** -> Attach breakpoints to address *s* ("Index" printed by "batchRW.printAddrs()") and *z*-1 eligible addresses after it (*z* in total, probably will not work if >4). If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
 
 * **printAddrs()** -> Print all attachable addresses in the address list, with their indexes for "batchRW.attach(…)".
 
