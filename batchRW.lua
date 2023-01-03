@@ -1,13 +1,5 @@
 local bps={}
 
-local function removeIndex(t,x)
-	local out={}
-	for i=i, #t do
-		table.insert(out,t[i])
-	end
-	t=out
-end
-
 local function printAddrs()
       local al = getAddressList()
       print('All attachable addresses:')
