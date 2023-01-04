@@ -27,6 +27,12 @@ local function attach(s,z,onWrite)
 			debug_removeBreakpoint(b[1])
 		end
 		bps={}
+		if z==nil then
+			z=1
+		elseif (type(z)~='number') or (z<1) then
+			print('Argument "z", if defined, must be >=1')
+			return
+		end
 		local al = getAddressList()
 		local trg=bptAccess		
 		print('Attached to addresses:')
@@ -38,9 +44,14 @@ local function attach(s,z,onWrite)
 				 if mr ~= nil and mr.type<11 then --See defines.lua for "<11"
 							local ma=mr.CurrentAddress
 							local mhx=string.format('%X',ma)
-							local t={ma,mhx,mr}
+							local md=mr.description
+							local t={ma,mhx,mr,md,sic}
 							table.insert(bps,t)
-							print(mhx .. ' (#' .. sic .. ')')
+							if md=='' then
+								print(mhx .. ' (#' .. sic .. ')')
+							else
+								print(md .. ' - ' .. mhx .. ' (#' .. sic .. ')')
+							end
 							si=si+1
 				end
 				sic=sic+1
@@ -59,7 +70,11 @@ local function attach(s,z,onWrite)
 			local b=bps[i]
 			debug_setBreakpoint(b[1], 1, trg, bpmInt3, function()
 						b[3].Color=65535 --yellow
-						print(b[2])
+						if b[4]=='' then
+								print(b[2] .. ' (#' .. b[5] .. ')')
+							else
+								print(b[4] .. ' - ' .. b[2] .. ' (#' .. b[5] .. ')')
+							end
 						debug_removeBreakpoint(b[1])
 			end)
 		end
