@@ -1031,6 +1031,7 @@ function gen_ct(event){
 	let nmb_el=document.querySelector('div.offset_addr_nm.offset_addr_nm_base');
 	if(nmb_el!==null){
 		nmb=nmb_el.innerText.split(/\s*\(default \=/g)[0];
+		nmb=(nmb.trim()==='')?'base':nmb;
 	}
 	if(nmba.length>0){
 		nmb=nmba[0].innerText;
