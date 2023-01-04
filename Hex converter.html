@@ -1028,6 +1028,10 @@ function gen_ct(event){
 	let t=[...event.target.parentElement.querySelectorAll('label div[contenteditable="true"]')].map((d)=>{return d.innerText;});
 	let nmba=[...event.target.parentElement.querySelectorAll('.offset_addr_nm_base')];
 	let nmb='base';
+	let nmb_el=document.querySelector('div.offset_addr_nm.offset_addr_nm_base');
+	if(nmb_el!==null){
+		nmb=nmb_el.innerText.split(/\s*\(default \=/g)[0];
+	}
 	if(nmba.length>0){
 		nmb=nmba[0].innerText;
 	}
