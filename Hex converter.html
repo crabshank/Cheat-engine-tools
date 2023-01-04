@@ -716,15 +716,13 @@ function sortByArrCols(arr, colsArr, dir){
 	}
 }
 function addr_nm_bse(event){
+	let t=event.target;
 	let a=[...document.querySelectorAll('div.offset_addr_nm')];
-	let et=event.target.innerText.split(/\s*\(default \=/g)[0];
+	let et=t.innerText.split(/\s*\(default \=/g)[0];
 	for(let i=0, len=a.length; i<len; i++){
 		if(a[i].getAttribute('chg')=='false'){
-			if(base_nm===''){
-				a[i].innerText=et+a[i].innerText;
-			}else{
-				a[i].innerText=a[i].innerText.split(base_nm).join(et);
-			}
+			let agp=a[i].parentElement.parentElement;
+			a[i].innerText=et+agp.getAttribute('hod')+' (default ='+a[i].innerText.split(/\s*\(default \=/g)[1];
 		}
 	}
 	base_nm=et;
