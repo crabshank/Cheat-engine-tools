@@ -63,7 +63,7 @@ local function get_print_info_ord(i)
 		if a=='' then
 			pa=chsx
 		else
-			if mt~='' and string.match(a, mt)==nil then
+			if mt~=nil and mt~='' and string.match(a, mt)==nil then
 				mtm=false
 			end
 		end
@@ -94,7 +94,7 @@ local function get_print_info(i)
 		if a=='' then
 			pa=chsx
 		else
-			if mt~='' and mt~=nil and string.match(a, mt)==nil then
+			if mt~=nil and mt~='' and string.match(a, mt)==nil then
 				mtm=false
 			end
 		end
