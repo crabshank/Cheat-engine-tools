@@ -4,7 +4,7 @@
 
 ### Methods on (traceCount.…): 
 
-* **attach( a,c, t --[[Optional]] , m --[[Optional]] , d --[[Optional]] )** -> Attach breakpoints to address *a*, and keep logging for *c* steps afterwards ("step into"). if *t* (string) is specified, will only print the opcodes whose "getNameFromAddress(address)" contains *t*, use '' to match all. If *m* (integer) if specified, the extension will only print opcodes that have been executed >=m times, unless printing in the order of execution. If *d* (boolean) if specified, the extension will print opcodes in order of execution, if true, otherwise will print in ascending order of times executed.
+* **attach( a, c, t --[[Optional]] , m --[[Optional]] , d --[[Optional]] )** -> Attach breakpoints to address *a*, and keep logging for *c* steps afterwards ("step into"). if *t* (string) is specified, will only print the opcodes whose "getNameFromAddress(address)" contains *t*, use '' to match all. If *m* (integer) if specified, the extension will only print opcodes that have been executed >=m times, unless printing in the order of execution. If *d* (boolean) if specified, the extension will print opcodes in order of execution, if true, otherwise will print in ascending order of times executed.
 
 * **printHitsOrder()** -> Print all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses.
 
