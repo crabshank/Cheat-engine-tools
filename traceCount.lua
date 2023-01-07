@@ -1,6 +1,7 @@
 local count=0
 local hits={}
 local hp={}
+local hpd={}
 local hps={}
 local prog=false
 local first=false
@@ -8,8 +9,10 @@ local addr=0
 local hpp={}
 local gm=nil
 local mt=''
+local ord=false
 
-local function attach(a,c,t,m)
+local function attach(a,c,t,m,d)
+	debug_removeBreakpoint(addr)
 	if c==nil or c<0 then
 		print('Argument "c" must be >=0')
 		return
@@ -26,9 +29,15 @@ local function attach(a,c,t,m)
 		print('Argument "m" must be >=1')
 		return
 	end
+	if d~=nil and d~=true and d~=false then
+		print('Argument "d" must be true/false')
+		return
+	end
+	ord=d
 	addr=a
 	hits={}
 	hp={}
+	hpd={}
 	hps={}
 	hpp={}
 	count=c
@@ -37,6 +46,37 @@ local function attach(a,c,t,m)
 	prog=true
 	first=true
 	debug_setBreakpoint(a, 1, bptExecute)
+end
+
+local function get_print_info_ord(i)
+	local ch=hits[i]
+	local chs=tostring(ch)
+	local h=hpd[chs]
+	local mtm=true
+	if i==1 or h==nil then
+		local chsx=string.format('%X',ch)
+		local dst = disassemble(ch)
+		local extraField, opcode, bytes, address = splitDisassembledString(dst)
+		local a = getNameFromAddress(address) or ''
+		local pa=chsx .. ' ( ' .. a .. ' )'
+		
+		if a=='' then
+			pa=chsx
+		else
+			if mt~='' and string.match(a, mt)==nil then
+				mtm=false
+			end
+		end
+		
+		if mtm==true then
+			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
+			hpd[chs]={1,ch,chsx,prinfo}
+			print('#' .. i .. ' (1):\t' ..prinfo)
+		end
+	elseif h~=nil then
+		h[1]=h[1]+1
+		print('#' .. i .. ' (' .. h[1] .. '):\t' ..h[4])
+	end
 end
 
 local function get_print_info(i)
@@ -69,7 +109,13 @@ local function get_print_info(i)
 	end
 end
 
-local function printHits(m,t)
+local function printHitsOrder()
+	for i=1, #hits do
+		get_print_info_ord(i)
+	end
+end
+
+local function printHits()
 	for i=1, #hits do
 		get_print_info(i)
 	end
@@ -79,11 +125,11 @@ local function printHits(m,t)
 	end
 	table.sort( hpp, function(a, b) return a[1] < b[1] end ) -- Converted results array now sorted by count (ascending);
 	local hb=nil
-	if m~=nil and m>=1 then
+	if gm~=nil and gm>=1 then
 		local ic=1
 		for i=1, #hpp do
 			hb=hpp[i]
-			if hb[1]>=m then
+			if hb[1]>=gm then
 				print('#' .. ic .. ' (' .. hb[1] .. '):\t' ..hb[4])
 				ic=ic+1
 			end
@@ -112,7 +158,13 @@ local function onBp()
 				else
 					debug_continueFromBreakpoint(co_run)
 					prog=false
-					printHits(gm)
+					
+					if ord==true then
+						printHitsOrder()
+					else
+						printHits()
+					end
+					
 				end
 		end
 end
@@ -123,5 +175,5 @@ end
 
 traceCount={
 	attach=attach,
-	printHits=printHits
+	printHitsOrder=printHitsOrder
 }
