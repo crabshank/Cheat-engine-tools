@@ -1,6 +1,6 @@
 ## traceCount.lua
 
-#### Attach a breakpoint to an address ("traceCount.attach(…)") and: print opcodes that are executed afterwards, sorted by the number of times they are executed or in the order in which they were executed.
+#### Attach a breakpoint to an address ("traceCount.attach(…)") and: print opcodes that are executed afterwards, sorted by the number of times they are executed or in the order in which they were executed. This is useful for finding repeating code e.g. single animations.
 
 ### Methods on (traceCount.…): 
 
