@@ -50,38 +50,39 @@
 	</style>	
 	<style id="doc_CSS2"></style>
 </head>
-	
+
 <body>
 	<title>Hex viewer</title>
 	<h1 id="ttl" style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex viewer</h1>
 				<select  id="type_view" style="width: max-content;">
 				<optgroup label="Char (Unicode)">
-					<option meta_type="1c">1 byte char</option>
-					<option meta_type="2c">2 byte char</option>
-					<option meta_type="3c">3 byte char</option>
-					<option meta_type="4c">4 byte char</option>
-					<option meta_type="4c">4 byte surrogate pair char</option>
+					<option meta_type="1c" type_bytes="1">1 byte char</option>
+					<option meta_type="2c" type_bytes="2">2 byte char</option>
+					<option meta_type="3c" type_bytes="3">3 byte char</option>
+					<option meta_type="4c" type_bytes="4">4 byte char</option>
+					<option meta_type="4c" type_bytes="4">4 byte surrogate pair char</option>
 				</optgroup>
 				<optgroup label="Int">
-					<option meta_type="1i">1 byte int (unsigned, signed)</option>
-					<option meta_type="1i">1 byte signed int</option>
-					<option meta_type="1i">1 byte unsigned int</option>
-					<option meta_type="2i">2 byte int (unsigned, signed)</option>
-					<option meta_type="2i">2 byte signed int</option>
-					<option meta_type="2i">2 byte unsigned int</option>
-					<option meta_type="4i">4 byte int (unsigned, signed)</option>
-					<option meta_type="4i">4 byte signed int</option>
-					<option meta_type="4i">4 byte unsigned int</option>
-					<option meta_type="8i">8 byte int (unsigned, signed)</option>
-					<option meta_type="8i">8 byte signed int</option>
-					<option meta_type="8i">8 byte unsigned int</option>
+					<option meta_type="1i" type_bytes="1">1 byte int (unsigned, signed)</option>
+					<option meta_type="1i" type_bytes="1">1 byte signed int</option>
+					<option meta_type="1i" type_bytes="1">1 byte unsigned int</option>
+					<option meta_type="2i" type_bytes="2">2 byte int (unsigned, signed)</option>
+					<option meta_type="2i" type_bytes="2">2 byte signed int</option>
+					<option meta_type="2i" type_bytes="2">2 byte unsigned int</option>
+					<option meta_type="4i" type_bytes="4">4 byte int (unsigned, signed)</option>
+					<option meta_type="4i" type_bytes="4">4 byte signed int</option>
+					<option meta_type="4i" type_bytes="4">4 byte unsigned int</option>
+					<option meta_type="8i" type_bytes="8">8 byte int (unsigned, signed)</option>
+					<option meta_type="8i" type_bytes="8">8 byte signed int</option>
+					<option meta_type="8i" type_bytes="8">8 byte unsigned int</option>
 				</optgroup>
 				<optgroup label="Float">
-					<option meta_type="4f">Float</option>
-					<option meta_type="8f">Double</option>
+					<option meta_type="4f" type_bytes="4">Float</option>
+					<option meta_type="8f" type_bytes="8">Double</option>
 				</optgroup>
-				<option meta_type="3x(1i)">RGB byte hex</option>
-				<option meta_type="4x(1i)">RGBA byte hex</option>
+				<option meta_type="3x(1i)" type_bytes="3">RGB byte hex</option>
+				<option meta_type="4x(1i)" type_bytes="4">RGBA byte hex</option>
+				<option meta_type="b" type_bytes="1">Binary</option>
 			</select>
 			<section id='be_box' style="display: contents; visibility: visible;	">
 				<input type="checkbox" id="big_end"></input>
@@ -98,6 +99,34 @@
 </section>
 
 <script>
+
+function reverse_string(s) {
+  let o = '';
+  for (let i=s.length - 1; i >= 0; i--){
+		o += s[i];
+	}
+  return o;
+}
+
+const lookup_hex_bin={
+												'0': '0000',
+												'1': '0001',
+												'2': '0010',
+												'3': '0011',
+												'4': '0100',
+												'5': '0101',
+												'6': '0110',
+												'7': '0111',
+												'8': '1000',
+												'9': '1001',
+												'A': '1010',
+												'B': '1011',
+												'C': '1100',
+												'D': '1101',
+												'E': '1110',
+												'F': '1111'
+};
+
 const lookup_hex={
 										'00':0,
 										'01':1,
@@ -454,7 +483,7 @@ var hovSpans=[];
 var hovSpans2=[];
 var hexSpans=[];
 var hexSpans2=[];
-const type_bytes=[1,2,3,4,4,1,1,1,2,2,2,4,4,4,8,8,8,4,8,3];
+
 var mxh=0;
 var mxw=0;
 
@@ -462,6 +491,7 @@ elems.type_view = document.getElementById('type_view');
 elems.type_view.selectedIndex=17;
 
 var arrl=elems.type_view.length;
+const type_bytes=[...elems.type_view].map((e)=>{return parseInt(e.getAttribute('type_bytes'));});
 var hx_interps=Array.from(Array(arrl), () => []);
 var hx_interps_be=Array.from(Array(arrl), () => []);
 
@@ -574,14 +604,25 @@ function p_leave(){
 	}
 }
 
+
 async function get_interps(i){
 	return new Promise(function(resolve) {
 		let tp=elems.type_view.selectedIndex;
 		let mt=elems.type_view[tp].getAttribute("meta_type");
 		let be=elems.big_end.checked;
 		let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-		if(tp===0){ //1 byte char
-				let df=hx_arr_int.length-i;
+		if(tp===21){ //Binary
+			let x=hx_arr[i];
+			let bx=lookup_hex_bin[x[0]];
+			if(x.length>1){
+				bx+=lookup_hex_bin[x[1]];
+			}
+			if(be){
+				bx=reverse_string(bx);
+			}	
+			hx_interps_curr[tp].push(bx);
+		}else if(tp===0){ //1 byte char
+				//let df=hx_arr_int.length-i;
 				let rhx=[hx_arr[i]];
 				let b=n_byte_unit8_to_int(rhx);
 				hx_interps_curr[tp].push(String.fromCharCode(b.u));
