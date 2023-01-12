@@ -1,3 +1,24 @@
+## logpoint.lua
+
+#### Log specified registers at a breakpoint. Useful for shared opcodes.
+
+To use: place the the file into your autorun folder, open the LUA Engine and type in 'logpoint.' (without quotes), and then it will show you the methods listed below: 
+
+### Methods on (logpoint.…): 
+
+* **attach(t, c --[[Optional]] , p --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] )** -> Attach logging breakpoint to address *t* (Use '0x…' for addresses in hexadecimal), or, a table of addresses *t*. *c* is a string or table of strings specifying what to log (could be a register or e.g. register*y+x or, XMM0-15 or FP0-7 (case-senstive), depending on whether you're using x64 or x86. Also, the float registers are interpreted as byte tables, so using them with argument *p* is undefined behaviour). If *p* is set to **true**, then the string(s) in *c* is/are interpreted as a memory address(es)
+ and the bytes from there will be logged. *bh* and *fw* extend the range of what is captured, e.g `logpoint.attach(0x14022E56F,'RCX',true,-40,60)` will log memory from [RCX-40] to [RCX+60].
+ 
+* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway). Argument *k* is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
+
+* **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address *i*, or, if b==true: the index *i* printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
+
+* **stop()** -> Removes all breakpoints made by this extension and dump all the logged data in the console.
+
+* **printAttached()** -> Print all attached breakpoints preceded by an index.
+
+N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting the data into a notepad, removing everything except the byte hex and pasting it into a hex editor/viewer.
+
 ## traceCount.lua
 
 #### Attach a breakpoint to an address ("traceCount.attach(…)") and: print opcodes that are executed afterwards, sorted by the number of times they are executed or in the order in which they were executed. This is useful for finding repeating code e.g. single animations.
