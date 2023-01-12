@@ -9,7 +9,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 * **attach(t, c --[[Optional]] , p --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] )** -> Attach logging breakpoint to address *t* (Use '0x…' for addresses in hexadecimal), or, a table of addresses *t*. *c* is a string or table of strings specifying what to log (could be a register or e.g. register*y+x or, XMM0-15 or FP0-7 (case-senstive), depending on whether you're using x64 or x86. Also, the float registers are interpreted as byte tables, so using them with argument *p* is undefined behaviour). If *p* is set to **true**, then the string(s) in *c* is/are interpreted as a memory address(es)
  and the bytes from there will be logged. *bh* and *fw* extend the range of what is captured, e.g `logpoint.attach(0x14022E56F,'RCX',true,-40,60)` will log memory from [RCX-40] to [RCX+60].
  
-* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway). Argument *k* is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
+* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output. Argument *k* is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
 
 * **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address *i*, or, if b==true: the index *i* printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
 
