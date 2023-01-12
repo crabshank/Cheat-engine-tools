@@ -169,6 +169,14 @@ local function attachLpAddr(a,c,p,bh,fw)
 end
 
 local function attach(t,c,p,bh,fw)
+	if bh~=nil and bh>=0 then
+		print('Argument "bh", if specified, must be <0')
+		return
+	end
+	if fw~=nil and fw<=0 then
+		print('Argument "fw", if specified, must be >0')
+		return
+	end
 	local a=t
 	if type(t)=='table' then
 		for j=1, #t do
