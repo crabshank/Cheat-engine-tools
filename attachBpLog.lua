@@ -49,7 +49,7 @@ local function dumpDiffRegs(k)
                 local rivl=ak.regsLastDisp[i]
                 if riv ~= nil then
 					if c==false then
-						print('Changed registers at attached point (' .. string.format('%X',ak.address) .. ') since last break are marked with "[Δ]": ')
+						print('Changed registers at attached point (' .. ak['address_hex'] .. ') since last break are marked with "[Δ]": ')
 						c=true
 					end
 					if riv~=rivl then
@@ -70,7 +70,7 @@ local function printAttached()
 			print('Attached breakpoints: ')
 			for  k = 1, abpl do
 				local ak=abp[k]
-				print(k .. ': ' .. string.format('%X',ak.address))
+				print(k .. ': ' .. ak['address_hex'])
 			end
 			print('')
 		end
@@ -85,7 +85,7 @@ local function dumpAllRegisters()
 					local riv=ak.regs[i]
 					if riv ~= nil then
 						if c==false then
-							print('Last registers at attached point (' .. string.format('%X',ak.address) .. ') before this break: ')
+							print('Last registers at attached point (' .. ak['address_hex'] .. ') before this break: ')
 							c=true
 						end
 						print(ri .. ': ' .. riv)
@@ -105,7 +105,7 @@ local function dumpRegisters_k(k)
                 local riv=ak.regs[i]
                 if riv ~= nil then
 					if c==false then
-						print('Last registers at attached point (' .. string.format('%X',ak.address) .. ') before this break: ')
+						print('Last registers at attached point (' .. ak['address_hex'] .. ') before this break: ')
 						c=true
 					end
 					print(ri .. ': ' .. riv)
@@ -168,7 +168,7 @@ end
 
 local function attachBpAddr(a)
 	abp=rem_abp(a)
-	table.insert(abp,{['address']=a,['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
+	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
 	debug_setBreakpoint(a)
 end
 
