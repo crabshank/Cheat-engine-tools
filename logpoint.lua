@@ -7,7 +7,14 @@ local function hexToAOB(str)
 	for i = 1, sl do
 		local ri=sl + 1 - k
 		local ri2=ri-1
-	  table.insert(out,string.sub(str, ri2,ri) )
+		local ss=''
+		if ri2==0 then
+			ss='0' .. string.sub(str, ri,ri)
+		else
+			ss=string.sub(str, ri2,ri) 
+		end
+
+		table.insert(out,ss)
 		k=k+2
 		if k>sl then
 			break
