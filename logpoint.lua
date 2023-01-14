@@ -1,5 +1,89 @@
 local abp={}
 
+local function releaseGlobals()
+	R8D=nil
+	R8W=nil
+	R8B=nil
+	R9D=nil
+	R9W=nil
+	R9B=nil
+	R10D=nil
+	R10W=nil
+	R10B=nil
+	R11D=nil
+	R11W=nil
+	R11B=nil
+	R12D=nil
+	R12W=nil
+	R12B=nil
+	R13D=nil
+	R13W=nil
+	R13B=nil
+	R14D=nil
+	R14W=nil
+	R14B=nil
+	R15D=nil
+	R15W=nil
+	R15B=nil
+	SIL=nil
+	DIL=nil
+	BPL=nil
+	SPL=nil
+	AX=nil
+	AL=nil
+	AH=nil
+	BX=nil
+	BL=nil
+	BH=nil
+	CX=nil
+	CL=nil
+	CH=nil
+	DX=nil
+	DL=nil
+	DH=nil
+	SI=nil
+	DI=nil
+	BP=nil
+	SP=nil
+end
+
+local function getSubRegDecBytes(x,g,a,b,n)
+	local xl=string.len(x)
+    local out=''
+	local out1=x
+	local cl=g*2
+	local pl= xl-cl
+	local xl1=xl
+	if pl<0 then
+	    xl1=cl
+	    out1=''
+	    for i = 1, cl do
+	        local k=pl+i
+	        p=''
+	        if k<1 then
+	            p='0'
+	       else
+	           p=string.sub(x, k,k) 
+	        end
+	        out1=out1 .. p
+	    end
+	elseif pl>0 then
+	    out1=''
+	    for i = cl+pl, 1+pl, -2 do
+	        out1= string.sub(x,i-1,i) .. out1
+	    end
+	end
+
+    for i=b*2, a*2, -2 do
+	   out=string.sub(out1,i-1,i) .. out
+	end
+	if n==true then
+		return tonumber(out,16)
+	else
+		  return out
+	end
+end
+
 local function hexToAOB(str)
 	local sl=string.len(str)
 	local out={}
@@ -97,6 +181,7 @@ local function stop()
 		print('')
 	end
 	removeAttached()
+	releaseGlobals()
 end
 
 local function get_abp_el(a)
@@ -113,51 +198,119 @@ end
 local function onBp()
 
 	local abpl=#abp
-if abpl >0 then
-	local ix=get_abp_el(RIP)
-		if ix>=0 then
-			local abpx=abp[ix]
-			local abpxc=abpx['calc']
+	if abpl >0 then
+		local ix=get_abp_el(RIP)
+			if ix>=0 then
+				local abpx=abp[ix]
+				local abpxc=abpx['calc']
 
-			debug_getContext(true)
+				debug_getContext(true)
+				
+				local r8g=getSubRegDecBytes(string.format("%X", R8), 8,1,8,45)
+				local r9g=getSubRegDecBytes(string.format("%X", R9),8,1,8,46)
+				local r10g=getSubRegDecBytes(string.format("%X", R10),8,1,8,47)
+				local r11g=getSubRegDecBytes(string.format("%X", R11),8,1,8,48)
+				local r12g=getSubRegDecBytes(string.format("%X", R12),8,1,8,49)
+				local r13g=getSubRegDecBytes(string.format("%X", R13),8,1,8,50)
+				local r14g=getSubRegDecBytes(string.format("%X", R14),8,1,8,51)
+				local r15g=getSubRegDecBytes(string.format("%X", R15),8,1,8,52)
+				
+				-- EXTRA SUB-REGISTERS AVAILABLE:
+				
+				R8D=getSubRegDecBytes(r8g,8,5,8,true) --bottom 4 bytes (5,6,7,8)
+				R8W=getSubRegDecBytes(r8g,8,7,8,true) --bottom 2 bytes (7,8)
+				R8B=getSubRegDecBytes(r8g,8,8,8,true) --bottom byte (8)
+				R9D=getSubRegDecBytes(r9g,8,5,8,true)
+				R9W=getSubRegDecBytes(r9g,8,7,8,true) 
+				R9B=getSubRegDecBytes(r9g,8,8,8,true)
+				R10D=getSubRegDecBytes(r10g,8,5,8,true)
+				R10W=getSubRegDecBytes(r10g,8,7,8,true)
+				R10B=getSubRegDecBytes(r10g,8,8,8,true)
+				R11D=getSubRegDecBytes(r11g,8,5,8,true)
+				R11W=getSubRegDecBytes(r11g,8,7,8,true)
+				R11B=getSubRegDecBytes(r11g,8,8,8,true)
+				R12D=getSubRegDecBytes(r12g,8,5,8,true)
+				R12W=getSubRegDecBytes(r12g,8,7,8,true)
+				R12B=getSubRegDecBytes(r12g,8,8,8,true)
+				R13D=getSubRegDecBytes(r13g,8,5,8,true)
+				R13W=getSubRegDecBytes(r13g,8,7,8,true)
+				R13B=getSubRegDecBytes(r13g,8,8,8,true)
+				R14D=getSubRegDecBytes(r14g,8,5,8,true)
+				R14W=getSubRegDecBytes(r14g,8,7,8,true)
+				R14B=getSubRegDecBytes(r14g,8,8,8,true)
+				R15D=getSubRegDecBytes(r15g,8,5,8,true)
+				R15W=getSubRegDecBytes(r15g,8,7,8,true)
+				R15B=getSubRegDecBytes(r15g,8,8,8,true)
+				
+				SIL=getSubRegDecBytes(ESI,4,4,4,true)
+				DIL=getSubRegDecBytes(EDI,4,4,4,true)
+				BPL=getSubRegDecBytes(EBP,4,4,4,true)
+				SPL=getSubRegDecBytes(ESP,4,4,4,true)
 
-			local clc={} 
-			if abpx['c_type']=='table' then
-				for j=1, #abpxc do
-					table.insert(clc,abpxc[j])
+				AX=getSubRegDecBytes(EAX,4,3,4,true) 
+				AL=getSubRegDecBytes(EAX,4,4,4,true) 
+				AH=getSubRegDecBytes(EAX,4,3,3,true) 
+				
+				BX=getSubRegDecBytes(EBX,4,3,4,true) 
+				BL=getSubRegDecBytes(EBX,4,4,4,true) 
+				BH=getSubRegDecBytes(EBX,4,3,3,true) 
+				
+				CX=getSubRegDecBytes(ECX,4,3,4,true) 
+				CL=getSubRegDecBytes(ECX,4,4,4,true) 
+				CH=getSubRegDecBytes(ECX,4,3,3,true) 
+				
+				DX=getSubRegDecBytes(EDX,4,3,4,true) 
+				DL=getSubRegDecBytes(EDX,4,4,4,true) 
+				DH=getSubRegDecBytes(EDX,4,3,3,true) 
+				
+				SI=getSubRegDecBytes(ESI,4,3,4,true)
+				DI=getSubRegDecBytes(EDI,4,3,4,true)
+				BP=getSubRegDecBytes(EBP,4,3,4,true)
+				SP=getSubRegDecBytes(ESP,4,3,4,true)
+				
+				-- EXTRA SUB-REGISTERS
+
+				local clc={} 
+				if abpx['c_type']=='table' then
+					for j=1, #abpxc do
+						table.insert(clc,abpxc[j])
+					end
+				else
+					table.insert(clc,abpxc)
 				end
-			else
-				table.insert(clc,abpxc)
-			end
 
-			for j=1, #clc do
-					local func= load("return function() return ".. clc[j] .." end")
-					local b,r=pcall(func())
-					if abpx['ptr']==true then
-						local rb=r+abpx['bh']
-						local rf=r+abpx['fw']
-						local rg=rf-rb+1
-						local decByteString = table.concat(readBytes(rb,rg,true), ' ')
-						local hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
-						table.insert(abpx.regs,hexByteString)
-					else
-						if type(r)=='table' then
-							local rx=table.concat(r, ' '):gsub('%S+',function (c) return string.format('%02X',c) end)
-							table.insert(abpx.regs,rx)
+				for j=1, #clc do
+						local func= load("return function() return ".. clc[j] .." end")
+						local b,r=pcall(func())
+						releaseGlobals()
+						if abpx['ptr']==true then
+							local rb=r+abpx['bh']
+							local rf=r+abpx['fw']
+							local rg=rf-rb+1
+							local byt=readBytes(rb,rg,true)
+							if type(byt) =='table' then
+								local decByteString = table.concat(byt, ' ')
+								local hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
+								table.insert(abpx.regs,hexByteString)
+							end
 						else
-							local rx=string.format('%016X',r)
-							local rxb=hexToAOB(rx)
-							rxbt=table.concat(rxb," ") 
-							table.insert(abpx.regs,rxbt)
+							if type(r)=='table' then
+								local rx=table.concat(r, ' '):gsub('%S+',function (c) return string.format('%02X',c) end)
+								table.insert(abpx.regs,rx)
+							else
+								local rx=string.format('%X',r)
+								local rxb=hexToAOB(rx)
+								rxbt=table.concat(rxb," ") 
+								table.insert(abpx.regs,rxbt)
+							end
 						end
-					end
-					
-					if #abpx.regs==1 then
-						print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
-					end
+						
+						if #abpx.regs==1 then
+							print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
+						end
+				end
+						
 			end
-					
-		end
 	end
 			debug_continueFromBreakpoint(co_run)
 end
@@ -168,24 +321,37 @@ local function attachLpAddr(a,c,p,bh,fw)
 	debug_setBreakpoint(a,onBp)
 end
 
-local function attach(t,c,p,bh,fw)
-	if bh~=nil and bh>=0 then
-		print('Argument "bh", if specified, must be <0')
-		return
-	end
-	if fw~=nil and fw<=0 then
-		print('Argument "fw", if specified, must be >0')
-		return
-	end
-	local a=t
-	if type(t)=='table' then
-		for j=1, #t do
-			attachLpAddr(a[j],c,p,bh,fw)
+local function attach(...)
+   local args = {...}
+   for i,v in ipairs(args) do
+		if type(v)~='table' then
+			print('Arguments to this function are tables!')
+			return
 		end
-	else
+		
+		local a=v[1]
+		local c=v[2]
+		local p=v[3]
+		local bh=v[4]
+		local fw=v[5]
+
+		if type(c)~='string' and type(c)~='table' then
+			print('Argument "c", must be specified!')
+			return
+		end
+				
+		if bh~=nil and bh>=0 then
+			print('Argument "bh", in table #'..i..', if specified, must be <0')
+			return
+		end
+		
+		if fw~=nil and fw<=0 then
+			print('Argument "fw", in table #'..i..', if specified, must be >0')
+			return
+		end
+		
 		attachLpAddr(a,c,p,bh,fw)
 	end
-
 end
 
 logpoint={
