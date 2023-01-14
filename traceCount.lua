@@ -144,6 +144,15 @@ local function printHits()
 	end
 end
 
+local function stop()
+	prog=false
+	if ord==true then
+		printHitsOrder()
+	else
+		printHits()
+	end
+end
+
 local function onBp()
 		if prog==true then
 				if first ==true then
@@ -164,14 +173,7 @@ local function onBp()
 					end
 				else
 					debug_continueFromBreakpoint(co_run)
-					prog=false
-					
-					if ord==true then
-						printHitsOrder()
-					else
-						printHits()
-					end
-					
+					stop()
 				end
 		end
 end
@@ -182,5 +184,6 @@ end
 
 traceCount={
 	attach=attach,
+	stop=stop,
 	printHitsOrder=printHitsOrder
 }
