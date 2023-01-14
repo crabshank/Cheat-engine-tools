@@ -10,8 +10,9 @@ local hpp={}
 local gm=nil
 local mt=''
 local ord=false
+local stp=false
 
-local function attach(a,c,t,m,d)
+local function attach(a,c,s,t,m,d)
 	debug_removeBreakpoint(addr)
 	if c==nil or c<0 then
 		print('Argument "c" must be >=0')
@@ -43,6 +44,7 @@ local function attach(a,c,t,m,d)
 	count=c
 	gm=m
 	mt=t
+	stp=s
 	prog=true
 	first=true
 	debug_setBreakpoint(a, 1, bptExecute)
@@ -144,7 +146,6 @@ end
 
 local function onBp()
 		if prog==true then
-		
 				if first ==true then
 					debug_removeBreakpoint(addr)
 					first=false
@@ -154,7 +155,12 @@ local function onBp()
 				
 				if count>=0 then
 					table.insert(hits,RIP)
-					debug_continueFromBreakpoint(co_stepinto)
+					
+					if stp==true then 
+						debug_continueFromBreakpoint(co_stepover)
+					else
+						debug_continueFromBreakpoint(co_stepinto)
+					end
 				else
 					debug_continueFromBreakpoint(co_run)
 					prog=false
