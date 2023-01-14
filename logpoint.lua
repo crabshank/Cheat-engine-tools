@@ -206,14 +206,14 @@ local function onBp()
 
 				debug_getContext(true)
 				
-				local r8g=getSubRegDecBytes(string.format("%X", R8), 8,1,8,45)
-				local r9g=getSubRegDecBytes(string.format("%X", R9),8,1,8,46)
-				local r10g=getSubRegDecBytes(string.format("%X", R10),8,1,8,47)
-				local r11g=getSubRegDecBytes(string.format("%X", R11),8,1,8,48)
-				local r12g=getSubRegDecBytes(string.format("%X", R12),8,1,8,49)
-				local r13g=getSubRegDecBytes(string.format("%X", R13),8,1,8,50)
-				local r14g=getSubRegDecBytes(string.format("%X", R14),8,1,8,51)
-				local r15g=getSubRegDecBytes(string.format("%X", R15),8,1,8,52)
+				local r8g=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
+				local r9g=getSubRegDecBytes(string.format("%X", R9),8,1,8)
+				local r10g=getSubRegDecBytes(string.format("%X", R10),8,1,8)
+				local r11g=getSubRegDecBytes(string.format("%X", R11),8,1,8)
+				local r12g=getSubRegDecBytes(string.format("%X", R12),8,1,8)
+				local r13g=getSubRegDecBytes(string.format("%X", R13),8,1,8)
+				local r14g=getSubRegDecBytes(string.format("%X", R14),8,1,8)
+				local r15g=getSubRegDecBytes(string.format("%X", R15),8,1,8)
 				
 				-- EXTRA SUB-REGISTERS AVAILABLE:
 				
