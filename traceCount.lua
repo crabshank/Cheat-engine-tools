@@ -149,6 +149,7 @@ local function onBp()
 				if first ==true then
 					debug_removeBreakpoint(addr)
 					first=false
+					print('Breakpoint at ' .. addr .. ' hit!')
 				end
 				
 				count=count-1
