@@ -2,23 +2,16 @@ local abp={}
 
 local function hexToAOB(str)
 	local sl=string.len(str)
-	local k=1
 	local out={}
-	for i = 1, sl do
-		local ri=sl + 1 - k
-		local ri2=ri-1
+	for i = sl, 1, -2 do
+		local i2=i-1
 		local ss=''
-		if ri2==0 then
-			ss='0' .. string.sub(str, ri,ri)
+		if i2==0 then
+			ss='0' .. string.sub(str, i,i)
 		else
-			ss=string.sub(str, ri2,ri) 
+			ss=string.sub(str, i2,i) 
 		end
-
 		table.insert(out,ss)
-		k=k+2
-		if k>sl then
-			break
-		end
 	end
 	return out
 end
