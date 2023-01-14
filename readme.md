@@ -27,6 +27,8 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 * **attach( a, c, s, t --[[Optional]] , m --[[Optional]] , d --[[Optional]] )** -> Attach breakpoints to address *a* (Use '0x…' for addresses in hexadecimal), and keep logging for *c* steps afterwards ("step into/over"). If *s* is set to **true**, then the extension will "step over" (calls), otherwise it will "step into". if *t* (string) is specified, will only print the opcodes whose "getNameFromAddress(address)" contains *t*, use *''* to match all. If *m* (integer) if specified, the extension will only print opcodes that have been executed >=m times, unless printing in the order of execution. If *d* (boolean) if specified, the extension will print opcodes in order of execution, if true, otherwise will print in ascending order of times executed.
 
+* **stop()** -> End the trace and print in ascending order of times executed.
+
 * **printHitsOrder()** -> Print all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses.
 
 ## batchRW.lua
