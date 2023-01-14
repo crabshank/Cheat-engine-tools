@@ -6,6 +6,7 @@ local hps={}
 local prog=false
 local first=false
 local addr=0
+local addr_hx=0
 local hpp={}
 local gm=nil
 local mt=''
@@ -36,6 +37,7 @@ local function attach(a,c,s,t,m,d)
 	end
 	ord=d
 	addr=a
+	addr_hx=string.format('%X',a)
 	hits={}
 	hp={}
 	hpd={}
@@ -158,7 +160,7 @@ local function onBp()
 				if first ==true then
 					debug_removeBreakpoint(addr)
 					first=false
-					print('Breakpoint at ' .. addr .. ' hit!')
+					print('Breakpoint at ' .. addr_hx .. ' hit!')
 				end
 				
 				count=count-1
