@@ -25,11 +25,19 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 ### Methods on (traceCount.…): 
 
-* **attach( a, c, s, t --[[Optional]] , m --[[Optional]] , d --[[Optional]] )** -> Attach breakpoints to address *a* (Use '0x…' for addresses in hexadecimal), and keep logging for *c* steps afterwards ("step into/over"). If *s* is set to **true**, then the extension will "step over" (calls), otherwise it will "step into". if *t* (string) is specified, will only print the opcodes whose "getNameFromAddress(address)" contains *t*, use *''* to match all. If *m* (integer) if specified, the extension will only print opcodes that have been executed >=m times, unless printing in the order of execution. If *d* (boolean) if specified, the extension will print opcodes in order of execution, if true, otherwise will print in ascending order of times executed.
+* **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to address *a* (Use '0x…' for addresses in hexadecimal), and keep logging for *c* steps afterwards ("step into/over"). If *n* is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If *s* is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
 
 * **stop()** -> End the trace and print in ascending order of times executed.
 
-* **printHitsOrder()** -> Print all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses.
+* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] )** -> If *m*==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if *m*==0 or nil: Prints in ascending order of times executed. If *n* is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. If *l* (integer) if specified, the extension will only print opcodes that have been executed >=*l* times, unless printing in the order of execution.
+
+* **save(n)** -> Save the current trace with the name of the non-empty string *n*
+
+* **saved()** -> Print the names and information of saved traces.
+
+* **compare(...)** -> Takes a series of strings -> *1st*: The name to save the comparison with; *2nd*: The trace from which to take information for the adresses present in all compared traces (*2nd string and beyond*). The output trace can be printed with *.printHits(…)* like any other.
+
+* **delete( n --[[Optional]] )** -> If n is a string matching the name of a saved trace, it will delete that trace. If n is unspecified, it will delete all saved traces.
 
 ## batchRW.lua
 
