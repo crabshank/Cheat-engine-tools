@@ -1,19 +1,33 @@
 local count=0
 local hits={}
+local currTraceDss={}
+local st={}
 local hp={}
-local hpd={}
-local hps={}
 local prog=false
 local first=false
 local addr=0
 local addr_hx=0
 local hpp={}
-local gm=nil
-local mt=''
-local ord=false
 local stp=false
+local trace_info=''
+local forceSave=''
 
-local function attach(a,c,s,t,m,d)
+local function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
+local function attach(a,c,n,s)
 	debug_removeBreakpoint(addr)
 	if c==nil or c<0 then
 		print('Argument "c" must be >=0')
@@ -23,135 +37,239 @@ local function attach(a,c,s,t,m,d)
 		print('Argument "a" must be >=0')
 		return
 	end
-	if t~=nil and type(t)~='string' then
-		print('Argument "t" must be a string')
-		return
-	end	
-	if m~=nil and m<1 then
-		print('Argument "m" must be >=1')
-		return
+	if type(n)=='string' and n~=nil and n~='' then
+		forceSave=n
+	else
+		forceSave=''
 	end
-	if d~=nil and d~=true and d~=false then
-		print('Argument "d" must be true/false')
-		return
-	end
-	ord=d
 	addr=a
 	addr_hx=string.format('%X',a)
 	hits={}
 	hp={}
-	hpd={}
-	hps={}
 	hpp={}
+	currTraceDss={}
 	count=c
-	gm=m
-	mt=t
 	stp=s
+	local sio='step into'
+	if s==true then
+		sio='step over'
+	end
+	trace_info=addr_hx .. ', ' .. c .. ' steps, ' .. sio
 	prog=true
 	first=true
 	debug_setBreakpoint(a, 1, bptExecute)
 end
 
-local function get_print_info_ord(i)
-	local ch=hits[i]
-	local chs=tostring(ch)
-	local h=hpd[chs]
-	local mtm=true
+local function get_disassembly(hi,i)
+	local his=tostring(hi)
+	local h=hp[his]
+	
 	if i==1 or h==nil then
-		local chsx=string.format('%X',ch)
-		local dst = disassemble(ch)
+		local hisx=string.format('%X',hi)
+		local dst = disassemble(hi)
 		local extraField, opcode, bytes, address = splitDisassembledString(dst)
 		local a = getNameFromAddress(address) or ''
-		local pa=chsx .. ' ( ' .. a .. ' )'
+		local pa=hisx .. ' ( ' .. a .. ' )'
 		
 		if a=='' then
-			pa=chsx
-		else
-			if mt~=nil and mt~='' and string.match(a, mt)==nil then
-				mtm=false
-			end
+			pa=hisx
 		end
-		
-		if mtm==true then
-			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
-			hpd[chs]={1,ch,chsx,prinfo}
-			print('#' .. i .. ' (1):\t' ..prinfo)
+		local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
+		if extraField~='' then
+			prinfo=prinfo .. ' (' .. extraField .. ')'
 		end
-	elseif h~=nil then
-		h[1]=h[1]+1
-		print('#' .. i .. ' (' .. h[1] .. '):\t' ..h[4])
-	end
-end
-
-local function get_print_info(i)
-	local ch=hits[i]
-	local chs=tostring(ch)
-	local h=hp[chs]
-	local mtm=true
-	if i==1 or h==nil then
-		local chsx=string.format('%X',ch)
-		local dst = disassemble(ch)
-		local extraField, opcode, bytes, address = splitDisassembledString(dst)
-		local a = getNameFromAddress(address) or ''
-		local pa=chsx .. ' ( ' .. a .. ' )'
-		
-		if a=='' then
-			pa=chsx
-		else
-			if mt~=nil and mt~='' and string.match(a, mt)==nil then
-				mtm=false
-			end
-		end
-		
-		if mtm==true then
-			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
-			hp[chs]={1,ch,chsx,prinfo}
-			table.insert(hps,chs)
-		end
+		h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField}
+		hp[his]=h
 	elseif h~=nil then
 		h[1]=h[1]+1
 	end
+
+	return {['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8],['address_name']=his}
+
 end
 
-local function printHitsOrder()
-	for i=1, #hits do
-		get_print_info_ord(i)
+local function printHits(m,n,l)
+		if m~=nil and (type(m)~='number' or (m<0 or m>1)) then
+		print('Argument "m", if specified, must be a number between 0 and 1')
+		return
 	end
-end
-
-local function printHits()
-	for i=1, #hits do
-		get_print_info(i)
+	
+	if n~=nil and type(n)~='string' then
+		print('Argument "n" , if specified, must be a string')
+		return
 	end
-	hpp={}
-	for i=1, #hps do
-		table.insert(hpp,hp[hps[i]])
+	
+	local stn=currTraceDss
+	if n~=nil and n~='' then
+		stn=st[n]
 	end
-	table.sort( hpp, function(a, b) return a[1] < b[1] end ) -- Converted results array now sorted by count (ascending);
-	local hb=nil
-	if gm~=nil and gm>=1 then
+	
+	if m==1 then
+		--Print by order
+		local stn2=stn[2] -- table of disassembled addresses
+		for i=1, #stn2 do
+			local stn2i=stn2[i]
+			print('#' .. i .. ' (' .. stn2i['count'] .. '):\t' .. stn2i['prinfo'])
+		end
+	else
+		-- Print by count
+		local lm=1
+		if l~=nil then
+			lm=l
+		end
+		local stn3=stn[3] -- table of disassembled addresses, sorted by count
 		local ic=1
-		for i=1, #hpp do
-			hb=hpp[i]
-			if hb[1]>=gm then
-				print('#' .. ic .. ' (' .. hb[1] .. '):\t' ..hb[4])
+		for i=1, #stn3 do
+			local stn3i=stn3[i]
+			local stn3ic=stn3i['count']
+			if stn3ic>=lm then
+				print('#' .. ic .. ' (' ..  stn3ic .. '):\t' .. stn3i['prinfo'])
 				ic=ic+1
 			end
 		end
+	end
+	
+end
+
+local function doSave(n,c)
+	if type(n)~='string' or n=='' then
+		print('Argument "n" must be specified and be a non-empty string')
+		return
+	end
+	
+	if c==true then
+		st[n]=currTraceCmp
+		--currTraceCmp={}
+		print("Comparison trace saved as '" .. n .. "'")
+	elseif #currTraceDss >0 then
+		st[n]=currTraceDss
+		print("Current trace saved as '" .. n .. "'")
+	end
+end
+
+local function save(n)
+	doSave(n,false)
+end
+
+local function saveTrace()
+	local ds={}
+	hp={}
+	for i=1, #hits do
+		local d=get_disassembly(hits[i],i)
+		table.insert(ds,d)
+	end
+	
+	local hpp={}
+	for i=1, #ds do
+		table.insert(hpp,ds[i])
+	end
+	table.sort( hpp, function(a, b) return a['count'] < b['count'] end ) -- Converted results array now sorted by count (ascending);
+	
+	currTraceDss={hits,ds,hpp,trace_info,hp}
+	
+end
+
+local function runStop(b)
+	prog=false
+	saveTrace()
+	if b==true then
+		print('Trace count limit reached')
 	else
-		for i=1, #hpp do
-				hb=hpp[i]
-				print('#' .. i .. ' (' .. hb[1] .. '):\t' ..hb[4])
-			end
+		print('Trace ended')
+	end
+	if forceSave ~='' then
+		save(forceSave)
 	end
 end
 
 local function stop()
-	prog=false
-	if ord==true then
-		printHitsOrder()
+	runStop()
+end
+
+local function saved()
+	for key, value in pairs(st) do
+		print("'" .. key .. "' - " .. value[4]) 
+	end
+end
+
+local function compare(...) -- variadic, trace names
+	local args={...}
+	if #args<3 then
+			print("Must have at least 3 arguments")
+			return
+	end
+	local cmpt=''
+	local traces={}
+	for key, value in ipairs(args) do
+		if key>1 then
+			local stv=st[value]
+			if stv==nil then
+				print("'".. value .. "' is not a saved trace name")
+				return
+			end
+			if key==2 then
+				cmpt=cmpt .. " - COMPARISON: '" .. value .. "' with:"
+			elseif key==3 then
+				cmpt=cmpt .. " '" .. value .. "'"
+			else
+				cmpt=cmpt .. " , '" .. value .. "'"
+			end
+			table.insert(traces,stv)
+		else
+			if value=='' or type(value)~='string' then
+				print("First argument mus be a non-empty string")
+				return
+			end
+		end
+	end
+	
+	local mts={}
+	local nhp={}
+	local t0a=traces[1][5] -- unique addresses
+	local trc=#traces 
+	for i=1, #t0a do -- loop over 1st arg's addresses
+		local mtc=true
+		for k=2, trc do -- loop over rest of args' addresses
+			local tak=traces[k][5]
+				if tak[t0a[i]]==nil then
+					mtc=false
+					k=trc -- EARLY TERMINATE
+				end
+			end
+			if mtc==true then -- match!
+				mts[t0a[i]]=true --table of matching addresses
+				table.insert(nhp,t0a[i])
+			end
+		end
+		
+			currTraceCmp=deepcopy(currTraceDss)
+			currTraceCmp[1]={} -- hits not relevant
+			currTraceCmp[5]=nhp
+			currTraceCmp[4]=currTraceCmp[4] .. cmpt
+			for i=2, 3 do
+				local tb={}
+				local tt=currTraceCmp[i]
+				for k=1, #tt do
+					if mts[tt[k]['address_name']]==true then
+						table.insert(tb,tt[k])
+					end
+				end
+				tt=tb
+			end
+			doSave(args[1],true)
+			
+end
+
+local function delete(n)
+	if n==nil then
+		st={}
+		print("All saved traces deleted")
+	elseif type(n)~='string' or n=='' then
+		print('Argument "n", if specified, must be a non-empty string')
+		return
 	else
-		printHits()
+		st[n]=nil
+		print("Saved trace '" .. n .. "' deleted")
 	end
 end
 
@@ -175,7 +293,7 @@ local function onBp()
 					end
 				else
 					debug_continueFromBreakpoint(co_run)
-					stop()
+					runStop(true)
 				end
 		end
 end
@@ -187,5 +305,9 @@ end
 traceCount={
 	attach=attach,
 	stop=stop,
-	printHitsOrder=printHitsOrder
+	printHits=printHits,
+	save=save,
+	saved=saved,
+	compare=compare,
+	delete=delete
 }
