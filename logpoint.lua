@@ -406,7 +406,7 @@ local function attach(...)
 				end
 			end
 		end
-		removeAttached()
+		--removeAttached()
 		attachLpAddr(a,c,p,bh,fw,bpst)
 	end
 end
