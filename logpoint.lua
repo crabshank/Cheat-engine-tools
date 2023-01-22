@@ -398,7 +398,7 @@ local function attach(...)
 			return
 		end
 		local bpst={}
-		if bpt~=nil
+		if bpt~=nil then
 			if tybt=='string' then
 				table.insert(bpst,upperc(trim_str(bpt)))
 			else
