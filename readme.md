@@ -29,7 +29,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 * **stop()** -> End the trace and print in ascending order of times executed.
 
-* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] )** -> If *m*==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if *m*==0 or nil: Prints in ascending order of times executed. If *n* is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. If *l* (integer) if specified, the extension will only print opcodes that have been executed >=*l* times, unless printing in the order of execution.
+* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> If *m*==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if *m*==0 or nil: Prints in ascending order of times executed. If *n* is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. If *l* (integer) if specified, the extension will only print opcodes that have been executed >=*l* times, unless printing in the order of execution. If *m==1*, then *f* and *t*, if specified prints from the *f*th breakpoint hit to the *t*th.
 
 * **save(n)** -> Save the current trace with the name of the non-empty string *n*
 
