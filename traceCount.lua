@@ -299,8 +299,10 @@ local function query(a,n)
 		local hxa=string.format('%X',ta[i])
 		local pt={}
 		local rcs=qt[6][hxa]
-		for k=2, #rcs do
-			table.insert(pt,rcs[k])
+		if rcs~=nil then
+			for k=2, #rcs do
+				table.insert(pt,rcs[k])
+			end
 		end
 		if #pt>0 then
 			print('Address ' .. hxa .. ' hit ' .. rcs[1]['count'] .. ' times, and present at indexes: ' .. table.concat(pt,', '))
