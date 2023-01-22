@@ -13,7 +13,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address **i**, or, if b==true: the index **i** printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
 
-* **stop(sp --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **sp**~=true (suppress print), dump all the logged data in the console.
+* **stop(p --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **p**==true (print), dump all the logged data in the console.
 
 * **printAttached()** -> Print all attached breakpoints preceded by an index.
 
