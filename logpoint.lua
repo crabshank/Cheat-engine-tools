@@ -65,7 +65,7 @@ local function getSubRegDecBytes(x,g,a,b,n)
 	    out1=''
 	    for i = 1, cl do
 	        local k=pl+i
-	        p=''
+	        local p=''
 	        if k<1 then
 	            p='0'
 	       else
@@ -177,8 +177,8 @@ local function removeAttached(i,b)
 	end
 end
 
-local function stop(p)
-	if p==true then
+local function stop(pr)
+	if pr==true then
 		local abpl=#abp
 		if abpl>0 then
 			print('All logs:')
