@@ -121,7 +121,7 @@ end
 
 local function dumpRegisters(k)
 	local c=false
-	local ks={1}
+	local ks={#abp}
 	if k~=nil then 
 		ks[1]=k
 	end
