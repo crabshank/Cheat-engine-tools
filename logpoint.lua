@@ -332,7 +332,7 @@ local function onBp()
 	end
 							local bpst=abpx['bpst']
 							local brl=#bpst
-							if chk==true and bpl>0 then
+							if chk==true and brl>0 then
 								local fnd=false
 								local frl=#fres
 								for k=1, frl do
