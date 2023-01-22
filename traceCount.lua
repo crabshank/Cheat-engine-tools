@@ -215,11 +215,17 @@ local function saveTrace()
 	local hpp_a={}
 	for i=1, #ds do
 		local dsi=ds[i]
-		hpp_a[dsi['address_hex_str']]=dsi
+		local hxp=hpp_a[dsi['address_hex_str']]
+		if hxp==nil then
+			hpp_a[dsi['address_hex_str']]={dsi,dsi['order']}
+		else	
+			hpp_a[dsi['address_hex_str']][1]=dsi
+			table.insert(hpp_a[dsi['address_hex_str']],dsi['order'])
+		end
 	end
 
 	for key, value in pairs(hpp_a) do
-		table.insert(hpp,value)
+		table.insert(hpp,value[1])
 	end
 	
 	table.sort( hpp, function(a, b) return a['count'] < b['count'] end ) -- Converted results array now sorted by count (ascending);
@@ -228,7 +234,7 @@ local function saveTrace()
 	else
 		trace_info=addr_hx .. ', ' .. hl .. ' steps (' .. count .. ' specified),' .. sio
 	end
-	currTraceDss={hits,ds,hpp,trace_info,hp}
+	currTraceDss={hits,ds,hpp,trace_info,hp,hpp_a}
 	
 end
 
@@ -253,6 +259,56 @@ local function saved()
 	for key, value in pairs(st) do
 		print("'" .. key .. "' - " .. value[4]) 
 	end
+end
+
+local function tprint (tbl, indent)
+  if not indent then indent = 0 end
+  for k, v in pairs(tbl) do
+    formatting = string.rep("  ", indent) .. k .. ": "
+    if type(v) == "table" then
+      print(formatting)
+      tprint(v, indent+1)
+    elseif type(v) == 'boolean' then
+      print(formatting .. tostring(v))      
+    else
+      print(formatting .. v)
+    end
+  end
+end
+
+local function query(a,n)
+	local ta={}
+	local qt={}
+	local typa=type(a)
+	if typa=='table' then
+		ta=a
+	elseif typa=='number' then
+		ta={a}
+	end
+	
+	if n==nil then
+		qt=currTraceDss
+	elseif type(n)~='string' or n=='' then
+		print('Argument "n", if specified, must be a non-empty string')
+		return
+	else
+		qt=st[n]
+	end
+
+	for i=1, #ta do
+		local hxa=string.format('%X',ta[i])
+		local pt={}
+		local rcs=qt[6][hxa]
+		for k=2, #rcs do
+			table.insert(pt,rcs[k])
+		end
+		if #pt>0 then
+			print('Address ' .. hxa .. ' hit ' .. rcs[1]['count'] .. ' times, and present at indexes: ' .. table.concat(pt,', '))
+		else
+			print('Address ' .. hxa .. ' not hit')
+		end
+	end
+	
 end
 
 local function compare(...) -- variadic, trace names
@@ -372,5 +428,6 @@ traceCount={
 	save=save,
 	saved=saved,
 	compare=compare,
-	delete=delete
+	delete=delete,
+	query=query
 }
