@@ -177,14 +177,16 @@ local function removeAttached(i,b)
 	end
 end
 
-local function stop()
-	local abpl=#abp
-	if abpl>0 then
-		print('All logs:')
-		for  k = 1, abpl do
-			dumpRegisters(k)
+local function stop(sp)
+	if sp~=true then
+		local abpl=#abp
+		if abpl>0 then
+			print('All logs:')
+			for  k = 1, abpl do
+				dumpRegisters(k)
+			end
+			print('')
 		end
-		print('')
 	end
 	removeAttached()
 	releaseGlobals()
