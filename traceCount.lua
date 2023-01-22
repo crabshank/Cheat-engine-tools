@@ -63,11 +63,10 @@ local function attach(a,c,n,s)
 end
 
 local function get_disassembly(hi,i)
-	local his=tostring(hi)
-	local h=hp[his]
+	local hisx=string.format('%X',hi)
+	local h=hp[hisx]
 	
 	if i==1 or h==nil then
-		local hisx=string.format('%X',hi)
 		local dst = disassemble(hi)
 		local extraField, opcode, bytes, address = splitDisassembledString(dst)
 		local a = getNameFromAddress(address) or ''
@@ -81,12 +80,12 @@ local function get_disassembly(hi,i)
 			prinfo=prinfo .. ' (' .. extraField .. ')'
 		end
 		h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField}
-		hp[his]=h
+		hp[hisx]=h
 	elseif h~=nil then
 		h[1]=h[1]+1
 	end
 
-	return {['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8],['address_name']=his}
+	return {['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8]}
 
 end
 
@@ -213,9 +212,16 @@ local function saveTrace()
 	end
 	
 	local hpp={}
+	local hpp_a={}
 	for i=1, #ds do
-		table.insert(hpp,ds[i])
+		local dsi=ds[i]
+		hpp_a[dsi['address_hex_str']]=dsi
 	end
+
+	for key, value in pairs(hpp_a) do
+		table.insert(hpp,value)
+	end
+	
 	table.sort( hpp, function(a, b) return a['count'] < b['count'] end ) -- Converted results array now sorted by count (ascending);
 	if count==hl then
 		trace_info=addr_hx .. ', ' .. count .. ' steps, ' .. sio
@@ -307,7 +313,7 @@ local function compare(...) -- variadic, trace names
 				local tb={}
 				local tt=currTraceCmp[i]
 				for k=1, #tt do
-					if mts[tt[k]['address_name']]==true then
+					if mts[tt[k]['address_hex_str']]==true then
 						table.insert(tb,tt[k])
 					end
 				end
