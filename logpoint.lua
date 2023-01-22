@@ -188,7 +188,6 @@ local function stop(pr)
 			print('')
 		end
 	end
-	removeAttached()
 	releaseGlobals()
 end
 
@@ -407,6 +406,7 @@ local function attach(...)
 				end
 			end
 		end
+		removeAttached()
 		attachLpAddr(a,c,p,bh,fw,bpst)
 	end
 end
