@@ -178,7 +178,7 @@ local function removeAttached(i,b)
 end
 
 local function stop(sp)
-	if sp~=true then
+	if sp==true then
 		local abpl=#abp
 		if abpl>0 then
 			print('All logs:')
