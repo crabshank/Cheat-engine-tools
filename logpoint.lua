@@ -121,21 +121,27 @@ end
 
 local function dumpRegisters(k)
 	local c=false
-	local ak=abp[k]
-	local riv=ak.regs
-	local rivl=#riv
-		print('regs length = ' .. rivl)
-	 if rivl >0 then
-		for i = 1, rivl do
-			if c==false then
-				print( ak['calc'] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
-				c=true
+	local ks={1}
+	if k~=nil then 
+		ks[1]=k
+	end
+		for j=1, #ks do
+			local ak=abp[j]
+			local riv=ak.regs
+			local rivl=#riv
+				print('regs length = ' .. rivl)
+			 if rivl >0 then
+				for i = 1, rivl do
+					if c==false then
+						print( ak['calc'] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
+						c=true
+					end
+					print(riv[i])
+				end
+				if c==true then
+							   print('')
+				end
 			end
-			print(riv[i])
-		end
-		if c==true then
-					   print('')
-		end
 	end
 end
 
