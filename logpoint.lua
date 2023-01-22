@@ -330,12 +330,12 @@ local function onBp()
 
 			end
 	end
-							if chk==true then
+							local bpst=abpx['bpst']
+							local brl=#bpst
+							if chk==true and bpl>0 then
 								local fnd=false
 								local frl=#fres
 								for k=1, frl do
-									local bpst=abpx['bpst']
-									local brl=#bpst
 									for i=1, brl do
 										if str_match(fres[k], bpst[i]) then 
 											fnd=true
@@ -350,6 +350,8 @@ local function onBp()
 								else
 									return 1
 								end		
+							else
+								debug_continueFromBreakpoint(co_run)
 							end
 							
 			
@@ -396,11 +398,13 @@ local function attach(...)
 			return
 		end
 		local bpst={}
-		if tybt=='string' then
-			table.insert(bpst,upperc(trim_str(bpt)))
-		else
-			for i=1, #bpt do
-				table.insert(bpst,upperc(trim_str(bpt[i])))
+		if bpt~=nil
+			if tybt=='string' then
+				table.insert(bpst,upperc(trim_str(bpt)))
+			else
+				for i=1, #bpt do
+					table.insert(bpst,upperc(trim_str(bpt[i])))
+				end
 			end
 		end
 		attachLpAddr(a,c,p,bh,fw,bpst)
