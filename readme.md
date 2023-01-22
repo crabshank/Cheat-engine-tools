@@ -6,12 +6,12 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (logpoint.…): 
 
-* **attach( {a, c, p --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address *a* (Use '0x…' for addresses in hexadecimal). *c* is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). Also, the float registers are interpreted as byte tables, so using them with argument *p* is undefined behaviour). If *p* is set to **true**, then the string(s) in *c* is/are interpreted as a memory address(es)
- and the bytes from there will be logged. *bh* and *fw* extend the range of what is captured, e.g `logpoint.attach(0x14022E56F,'RCX',true,-0x40,0x60)` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). *bpt* is a string or table of strings containing AOBs, that when any of the strings specified by *c* is present, the debugger will pause on the logpoint.
+* **attach( {a, c, p --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). **c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are interpreted as a memory address(es)
+ and the bytes from there will be logged. **bh** and **fw** extend the range of what is captured, e.g `logpoint.attach(0x14022E56F,'RCX',true,-0x40,0x60)` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). **bpt** is a string or table of strings containing AOBs, that when any of the strings specified by **c** is present, the debugger will pause on the logpoint.
  
-* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output. Argument *k* is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
+* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output. Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
 
-* **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address *i*, or, if b==true: the index *i* printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
+* **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address **i**, or, if b==true: the index **i** printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
 
 * **stop()** -> Removes all breakpoints made by this extension and dump all the logged data in the console.
 
@@ -25,17 +25,17 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 ### Methods on (traceCount.…): 
 
-* **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to address *a* (Use '0x…' for addresses in hexadecimal), and keep logging for *c* steps afterwards ("step into/over"). If *n* is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If *s* is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
+* **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to address **a** (Use '0x…' for addresses in hexadecimal), and keep logging for **c** steps afterwards ("step into/over"). If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **s** is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
 
 * **stop()** -> End the trace and print in ascending order of times executed.
 
-* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> If *m*==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if *m*==0 or nil: Prints in ascending order of times executed. If *n* is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. If *l* (integer) if specified, the extension will only print opcodes that have been executed >=*l* times, unless printing in the order of execution. If *m==1*, then *f* and *t*, if specified prints from the *f*th breakpoint hit to the *t*th.
+* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> If **m**==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. If **n** is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. If **l** (integer) if specified, the extension will only print opcodes that have been executed >=**l** times, unless printing in the order of execution. If *m==1*, then **f** and **t**, if specified prints from the *f*th breakpoint hit to the **t**th.
 
-* **save(n)** -> Save the current trace with the name of the non-empty string *n*
+* **save(n)** -> Save the current trace with the name of the non-empty string **n**
 
 * **saved()** -> Print the names and information of saved traces.
 
-* **compare(...)** -> Takes a series of strings -> *1st*: The name to save the comparison with; *2nd*: The trace from which to take information for the adresses present in all compared traces (*2nd string and beyond*). The output trace can be printed with *.printHits(…)* like any other.
+* **compare(...)** -> Takes a series of strings -> **1st**: The name to save the comparison with; **2nd**: The trace from which to take information for the adresses present in all compared traces (*2nd string and beyond*). The output trace can be printed with *.printHits(…)* like any other.
 
 * **delete( n --[[Optional]] )** -> If n is a string matching the name of a saved trace, it will delete that trace. If n is unspecified, it will delete all saved traces.
 
@@ -45,7 +45,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 ### Methods on (batchRW.…): 
 
-* **attach(s, z --[[Optional]] , onWrite --[[Optional]] )** -> Attach breakpoints to address *s* (Use '0x…' for addresses in hexadecimal) (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and *z*-1 eligible addresses after it (*z* in total, probably will not work if >4). If *z* is not specified, it will be set to 1. If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
+* **attach(s, z --[[Optional]] , onWrite --[[Optional]] )** -> Attach breakpoints to address **s** (Use '0x…' for addresses in hexadecimal) (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and **z**-1 eligible addresses after it (**z** in total, probably will not work if >4). If **z** is not specified, it will be set to 1. If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
 
 * **printAddrs()** -> Print all attachable addresses in the address list, with their indexes for "batchRW.attach(…)".
 
@@ -61,17 +61,17 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (attachBpLog.…): 
 
-* **attachBp(t)** -> Attach logging breakpoint to address *t* (Use '0x…' for addresses in hexadecimal), or, a table of addresses *t*.
+* **attachBp(t)** -> Attach logging breakpoint to address **t** (Use '0x…' for addresses in hexadecimal), or, a table of addresses **t**.
 
-* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway). Argument *k* is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
+* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output (Not recommended to use; done after Cheat Engine GUI set breakpoint hit, anyway). Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
 
-* **removeAttachedBp( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address *i*, or, if b==true: the index *i* printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
+* **removeAttachedBp( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address **i**, or, if b==true: the index **i** printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
 
 * **printAttached()** -> Print all attached breakpoints preceded by an index.
 
 ## proxValues.lua
 
-#### To find multiple values that lie in an area of memory of max size *m* bytes or an unlimited number of bytes (argument of 'proxValues.fullScan(m)', below).
+#### To find multiple values that lie in an area of memory of max size **m** bytes or an unlimited number of bytes (argument of 'proxValues.fullScan(m)', below).
 
 To use: place the the file into your autorun folder, open the LUA Engine and type in 'proxValues.' (without quotes), and then it will show you the methods listed below: 
 
@@ -81,7 +81,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **resetAllResults()** -> Reset everything.
 
-* **removeResult(i)** -> Remove the i-th memscan result from the script
+* **removeResult(i)** -> Remove the **i**th memscan result from the script
 
 * **printFiltered( n --[[Optional]], m --[[Optional]] )** -> Print filtered results (usually done after a scan anyway):
 
@@ -91,11 +91,11 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
     
          printFiltered(): Print all results
 
-* **fullScan( m --[[Optional]] )** -> Go through all added memscan results to find all instances where a result of all the memscans are found in an area of memory of max size *m* bytes (*m* must be positive integer >=1), or an unlimited size of memory if no argument is specified.
+* **fullScan( m --[[Optional]] )** -> Go through all added memscan results to find all instances where a result of all the memscans are found in an area of memory of max size **m** bytes (**m** must be positive integer >=1), or an unlimited size of memory if no argument is specified.
 
 * **narrowDown( n --[[Optional]] )** -> If you have done a full scan and then added another memscan result, use this to further filter the results given by 'fullScan(m)'
 
-        narrowDown(n) : Only keep and output results with max. memory area size <=n
+        narrowDown(n) : Only keep and output results with max. memory area size <=**n**
         
         narrowDown() : Use previous memory area size
 
