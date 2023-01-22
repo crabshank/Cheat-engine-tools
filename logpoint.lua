@@ -1,4 +1,10 @@
 local abp={}
+local print=print
+local str_match = string.match
+local function trim_str(s)
+	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
+end
+local upperc=string.upper
 
 local function releaseGlobals()
 	R8D=nil
@@ -196,12 +202,14 @@ local function get_abp_el(a)
 end
 
 local function onBp()
-
+	local chk=false
+	local abpx=0
+	local ar={}
 	local abpl=#abp
 	if abpl >0 then
 		local ix=get_abp_el(RIP)
 			if ix>=0 then
-				local abpx=abp[ix]
+				abpx=abp[ix]
 				local abpxc=abpx['calc']
 
 				debug_getContext(true)
@@ -273,12 +281,13 @@ local function onBp()
 				local clc={} 
 				if abpx['c_type']=='table' then
 					for j=1, #abpxc do
-						table.insert(clc,abpxc[j])
+						table.insert(clc,upperc(abpxc[j]))
 					end
 				else
-					table.insert(clc,abpxc)
+					table.insert(clc,upperc(abpxc))
 				end
-
+			
+			ar=abpx.regs
 				for j=1, #clc do
 						local func= load("return function() return ".. clc[j] .." end")
 						local b,r=pcall(func())
@@ -291,17 +300,20 @@ local function onBp()
 							if type(byt) =='table' then
 								local decByteString = table.concat(byt, ' ')
 								local hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
-								table.insert(abpx.regs,hexByteString)
+								table.insert(ar,hexByteString)
+								chk=true
 							end
 						else
 							if type(r)=='table' then
 								local rx=table.concat(r, ' '):gsub('%S+',function (c) return string.format('%02X',c) end)
-								table.insert(abpx.regs,rx)
+								table.insert(ar,rx)
+								chk=true
 							else
 								local rx=string.format('%X',r)
 								local rxb=hexToAOB(rx)
 								rxbt=table.concat(rxb," ") 
-								table.insert(abpx.regs,rxbt)
+								table.insert(ar,rxbt)
+								chk=true
 							end
 						end
 						
@@ -309,15 +321,33 @@ local function onBp()
 							print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
 						end
 				end
-						
+
 			end
 	end
-			debug_continueFromBreakpoint(co_run)
+							if chk==true then
+								local fnd=false
+								
+								local lastAOB=ar[#ar]
+								local bpst=abpx['bpst']
+								for i=1, #bpst do
+									if str_match(lastAOB, bpst[i]) then 
+										fnd=true
+									end
+								end
+								
+								if fnd==false then
+									debug_continueFromBreakpoint(co_run)
+								else
+									return 1
+								end		
+							end
+							
+			
 end
 
-local function attachLpAddr(a,c,p,bh,fw)
+local function attachLpAddr(a,c,p,bh,fw,bpst)
 	abp=rem_abp(a)
-	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']={},['ptr']=p,['calc']=c,['c_type']=type(c),['bh']=bh,['fw']=fw})
+	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']={},['ptr']=p,['calc']=c,['c_type']=type(c),['bh']=bh,['fw']=fw,['bpst']=bpst})
 	debug_setBreakpoint(a,onBp)
 end
 
@@ -334,6 +364,7 @@ local function attach(...)
 		local p=v[3]
 		local bh=v[4]
 		local fw=v[5]
+		local bpt=v[6]
 
 		if type(c)~='string' and type(c)~='table' then
 			print('Argument "c", must be specified!')
@@ -349,11 +380,25 @@ local function attach(...)
 			print('Argument "fw", in table #'..i..', if specified, must be >0')
 			return
 		end
-		
-		attachLpAddr(a,c,p,bh,fw)
+		tybt=type(bpt)
+		if bpt~=nil and ((tybt=='table' and #bpt<1) or (tybt~='string' and tybt~='table')) then
+			print('Argument "bpt", if specified, must be a string or a table of strings')
+			return
+		end
+		local bpst={}
+		if tybt=='string' then
+			table.insert(bpst,upperc(trim_str(bpt)))
+		else
+			for i=1, #bpt do
+				table.insert(bpst,upperc(trim_str(bpt[i])))
+			end
+		end
+		attachLpAddr(a,c,p,bh,fw,bpst)
 	end
 end
-
+function debugger_onBreakpoint()
+	print('BP!')
+end
 logpoint={
 	attach=attach,
 	dumpRegisters=dumpRegisters,
