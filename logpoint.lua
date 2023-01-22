@@ -205,6 +205,7 @@ local function onBp()
 	local chk=false
 	local abpx=0
 	local ar={}
+	local fres={}
 	local abpl=#abp
 	if abpl >0 then
 		local ix=get_abp_el(RIP)
@@ -301,18 +302,21 @@ local function onBp()
 								local decByteString = table.concat(byt, ' ')
 								local hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
 								table.insert(ar,hexByteString)
+								table.insert(fres,hexByteString)
 								chk=true
 							end
 						else
 							if type(r)=='table' then
 								local rx=table.concat(r, ' '):gsub('%S+',function (c) return string.format('%02X',c) end)
 								table.insert(ar,rx)
+								table.insert(fres,rx)
 								chk=true
 							else
 								local rx=string.format('%X',r)
 								local rxb=hexToAOB(rx)
 								rxbt=table.concat(rxb," ") 
 								table.insert(ar,rxbt)
+								table.insert(fres,rxbt)
 								chk=true
 							end
 						end
@@ -326,12 +330,16 @@ local function onBp()
 	end
 							if chk==true then
 								local fnd=false
-								
-								local lastAOB=ar[#ar]
-								local bpst=abpx['bpst']
-								for i=1, #bpst do
-									if str_match(lastAOB, bpst[i]) then 
-										fnd=true
+								local frl=#fres
+								for k=1, frl do
+									local bpst=abpx['bpst']
+									local brl=#bpst
+									for i=1, brl do
+										if str_match(fres[k], bpst[i]) then 
+											fnd=true
+											i=brl
+											k=frl
+										end
 									end
 								end
 								
