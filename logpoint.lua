@@ -1,4 +1,5 @@
 local abp={}
+local stopped=false
 local print=print
 local str_match = string.match
 local function trim_str(s)
@@ -178,7 +179,7 @@ local function removeAttached(i,b)
 end
 
 local function stop(pr)
-	if pr==true then
+	if pr==true and stopped==false then
 		local abpl=#abp
 		if abpl>0 then
 			print('All logs:')
@@ -188,6 +189,7 @@ local function stop(pr)
 			print('')
 		end
 	end
+	stopped=true
 	releaseGlobals()
 end
 
@@ -407,6 +409,7 @@ local function attach(...)
 			end
 		end
 		--removeAttached()
+		stopped=false
 		attachLpAddr(a,c,p,bh,fw,bpst)
 	end
 end
