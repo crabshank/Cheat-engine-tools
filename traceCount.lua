@@ -91,43 +91,43 @@ local function get_disassembly(hi,i)
 end
 
 local function printHits(m,n,l,f,t)
-	local tm=type(m)
-	if tm~='nil' and (tm~='number' or (m<0 or m>1)) then
+	if m~=nil and (type(m)~='number' or (m<0 or m>1)) then
 		print('Argument "m", if specified, must be a number between 0 and 1')
 		return
 	end
-	local tn=type(n)
-	if tn~='nil' and tn~='string' then
+	
+	if n~=nil and type(n)~='string' then
 		print('Argument "n" , if specified, must be a string')
 		return
 	end
 	
 	local stn=currTraceDss
-	if tn~='nil' and n~='' then
+	if n~=nil and n~='' then
 		stn=st[n]
 	end
 	
 	local stnp=stn[3] -- table of disassembled addresses, sorted by count
+	local stl=#stnp
 	
 	if m==1 then
-		local tf=type(f)
-		if tf~='nil' and (tf~='number' or (f<1 or f>stl)) then
+		stnp=stn[2] -- table of disassembled addresses
+		stl=#stnp
+		if f~=nil and (type(f)~='number' or (f<1 or f>stl)) then
 			print('Argument "f", if specified, must be a number between 0 and ' .. stl)
 			return
 		end
 		
-		local tt=type(f)
-		if tt~='nil' and (tt~='number' or (t<1 or t>stl)) then
+		if t~=nil and (type(t)~='number' or (t<1 or t>stl)) then
 			print('Argument "t", if specified, must be a number between 0 and ' .. stl)
 			return
 		end
 		
-		if (tf~='nil' and tt~='nil') and f>t then
+		if (f~=nil and t~=nil) and f>t then
 			print('Argument "f" cannot be greater than argument "t"')
 			return
 		end
 
-		stnp=stn[2] -- table of disassembled addresses
+		
 	end
 	
 	local stl=#stnp
