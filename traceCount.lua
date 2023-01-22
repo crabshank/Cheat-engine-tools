@@ -1,3 +1,5 @@
+local print=print
+
 local count=0
 local hits={}
 local currTraceDss={}
@@ -11,6 +13,7 @@ local hpp={}
 local stp=false
 local trace_info=''
 local forceSave=''
+local sio=''
 
 local function deepcopy(orig)
     local orig_type = type(orig)
@@ -50,11 +53,10 @@ local function attach(a,c,n,s)
 	currTraceDss={}
 	count=c
 	stp=s
-	local sio='step into'
+	sio='step into'
 	if s==true then
 		sio='step over'
 	end
-	trace_info=addr_hx .. ', ' .. c .. ' steps, ' .. sio
 	prog=true
 	first=true
 	debug_setBreakpoint(a, 1, bptExecute)
@@ -88,8 +90,8 @@ local function get_disassembly(hi,i)
 
 end
 
-local function printHits(m,n,l)
-		if m~=nil and (type(m)~='number' or (m<0 or m>1)) then
+local function printHits(m,n,l,f,t)
+	if m~=nil and (type(m)~='number' or (m<0 or m>1)) then
 		print('Argument "m", if specified, must be a number between 0 and 1')
 		return
 	end
@@ -104,12 +106,51 @@ local function printHits(m,n,l)
 		stn=st[n]
 	end
 	
+	local stnp=stn[3] -- table of disassembled addresses, sorted by count
+	
 	if m==1 then
-		--Print by order
-		local stn2=stn[2] -- table of disassembled addresses
-		for i=1, #stn2 do
-			local stn2i=stn2[i]
-			print('#' .. i .. ' (' .. stn2i['count'] .. '):\t' .. stn2i['prinfo'])
+		if f~=nil and (type(f)~='number' or (f<1 or f>stl)) then
+			print('Argument "f", if specified, must be a number between 0 and ' .. stl)
+			return
+		end
+		
+		if t~=nil and (type(t)~='number' or (t<1 or t>stl)) then
+			print('Argument "t", if specified, must be a number between 0 and ' .. stl)
+			return
+		end
+		
+		if (f~=nil and t~=nil) and f>t then
+			print('Argument "f" cannot be greater than argument "t"')
+			return
+		end
+
+		stnp=stn[2] -- table of disassembled addresses
+	end
+	
+	local stl=#stnp
+
+	local pt={}
+
+	if m==1 then
+		--Print by orders
+		if f==nil then
+			f=1
+		end
+		
+		if t==nil then
+			t=stl
+		end
+		
+		for i=f, t do
+			local stn2i=stnp[i]
+			table.insert(pt,'#')
+			table.insert(pt,i)
+			table.insert(pt,' (')
+			table.insert(pt,stn2i['count'])
+			table.insert(pt, '):\t' )
+			table.insert(pt,stn2i['prinfo'])
+			print(table.concat(pt))
+			pt={}
 		end
 	else
 		-- Print by count
@@ -119,11 +160,18 @@ local function printHits(m,n,l)
 		end
 		local stn3=stn[3] -- table of disassembled addresses, sorted by count
 		local ic=1
-		for i=1, #stn3 do
-			local stn3i=stn3[i]
-			local stn3ic=stn3i['count']
+				
+		for i=1, stl do
+			local stn3i=stnp[i]
 			if stn3ic>=lm then
-				print('#' .. ic .. ' (' ..  stn3ic .. '):\t' .. stn3i['prinfo'])
+				table.insert(pt,'#')
+				table.insert(pt,ic)
+				table.insert(pt,' (')
+				table.insert(pt,stn3i['count'])
+				table.insert(pt, '):\t' )
+				table.insert(pt,stn3i['prinfo'])
+				print(table.concat(pt))
+				pt={}
 				ic=ic+1
 			end
 		end
@@ -154,7 +202,8 @@ end
 local function saveTrace()
 	local ds={}
 	hp={}
-	for i=1, #hits do
+	local hl=#hits
+	for i=1, hl do
 		local d=get_disassembly(hits[i],i)
 		table.insert(ds,d)
 	end
@@ -164,7 +213,11 @@ local function saveTrace()
 		table.insert(hpp,ds[i])
 	end
 	table.sort( hpp, function(a, b) return a['count'] < b['count'] end ) -- Converted results array now sorted by count (ascending);
-	
+	if count==hl then
+		trace_info=addr_hx .. ', ' .. count .. ' steps, ' .. sio
+	else
+		trace_info=addr_hx .. ', ' .. hl .. ' steps (' .. count .. ' specified),' .. sio
+	end
 	currTraceDss={hits,ds,hpp,trace_info,hp}
 	
 end
