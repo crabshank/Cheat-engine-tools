@@ -166,11 +166,12 @@ local function printHits(m,n,l,f,t)
 				
 		for i=1, stl do
 			local stn3i=stnp[i]
+			local stn3ic=stn3i['count']
 			if stn3ic>=lm then
 				table.insert(pt,'#')
 				table.insert(pt,ic)
 				table.insert(pt,' (')
-				table.insert(pt,stn3i['count'])
+				table.insert(pt,stn3ic)
 				table.insert(pt, '):\t' )
 				table.insert(pt,stn3i['prinfo'])
 				print(table.concat(pt))
