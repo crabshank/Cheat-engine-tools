@@ -24,6 +24,13 @@
 [ address_string: address of found opcode as a hex string (set by extension) ]
 ```
   
+  * **scrpt**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```$%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.)
+  * **pattern**: a LUA string with a pattern that opcodes are checked against for matches.
+  * **aobs**: a table or, table of tables, that contain `{'aob string', search from (string + this number), until (string + this number) }`
+  * **lookahead_n**: at least this many bytes worth of opcodes will be stored, ahead of the found opcode.
+  * **parts**: a table or, table of tables, that contain `{ a substring from your pattern , nth occurrence of this substring will be matched , name given to this part }`
+  * **module_names**: a table or, table of tables: match only addresses with address strings (usually containing module name) that contain one of these strings.
+  
 Example script:
 
 ```
