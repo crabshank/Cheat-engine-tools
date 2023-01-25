@@ -441,5 +441,5 @@ end
  opcode_inj['inject']=inject
  opcode_inj['disable']=disable
  opcode_inj['disable_nop']=disable_nop
- opcode_inj['dump_vars']=dump_vars
+ opcode_inj['dump']=dump_vars
  opcode_inj['nop']=nop
