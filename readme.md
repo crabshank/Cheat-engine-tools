@@ -1,3 +1,29 @@
+## opcode_inj.lua
+
+* **nop(vars,pattern,aobs,module_names)**
+
+Example script:
+
+```
+{$lua}
+if syntaxcheck then return end
+local vars={}
+vars.script_ref='Left_arm_nop' --  opcode_inj[vars.script_ref] stores vars
+vars.inj_name='INJECT_la'
+
+local pattern='^%s*mov.+%s*xmm%d+,%s*%[[^%]]+%]'
+local aobs={'48 89 44 24 20 C7 44 24 28 FF FF FF FF 89 44 24 2C',-24,0}
+local module_names='FL_2023.exe'
+
+[ENABLE]
+
+opcode_inj.nop(vars,pattern,aobs,module_names)
+
+[DISABLE]
+opcode_inj.disable_nop(opcode_inj[vars.script_ref])
+opcode_inj[vars.script_ref]=nil
+```
+
 ## logpoint.lua
 
 #### Log specified registers at a breakpoint. Useful for shared opcodes.
