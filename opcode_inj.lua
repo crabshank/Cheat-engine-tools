@@ -340,13 +340,19 @@ local function disable(vars,scrpt)
 	autoAssemble(dsb)
 end
 
-local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
-
-	local enb = [[
-	define($%s{inj_name},$%s{address})
-	alloc(newmem,$1000,%s)
-	$%d{varis_1_size}
+local function disable_nop(vars)
+	local scrpt=[[
+		define($%s{inj_name},$%s{address_string})
+		$%s{inj_name}:
+		  $%s{nopped_opcode}
+		return:
 	]]
+	local dedollar=string_Dollar(scrpt,vars)
+	local dsb=string_variFormat(dedollar.string,dedollar.args)
+	autoAssemble(dsb)
+end
+
+local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
 
 	local opa=opcode_address(pattern,aobs,lookahead_n,parts,module_names)
 	for k, v in pairs(opa) do
@@ -406,6 +412,30 @@ local function dump_vars(ref)
 	tprint(opcode_inj[ref])
 end
 
+local function nop(vars,pattern,aobs,module_names)
+
+	local opa=opcode_address(pattern,aobs,0,{},module_names)
+	for k, v in pairs(opa) do
+		vars[k]=v
+	end
+	vars.instruction_size=getInstructionSize(vars.address_string)
+	vars.nops=vars.instruction_size
+	vars.nopped_opcode=vars.opcode
+	local enb_jmp_size=[[
+	define($%s{inj_name},$%s{address_string})
+	$%s{inj_name}:
+	  nop $%d{nops}
+	return:
+	]]
+	local dedollar=string_Dollar(enb_jmp_size,vars)
+	local nop_ntk=string_variFormat(dedollar.string,dedollar.args)
+	autoAssemble(nop_ntk)
+	-- CORRECT INJECTION!!
+	 opcode_inj[vars.script_ref]=vars
+end
+ 
  opcode_inj['inject']=inject
  opcode_inj['disable']=disable
+ opcode_inj['disable_nop']=disable_nop
  opcode_inj['dump_vars']=dump_vars
+ opcode_inj['nop']=nop
