@@ -122,6 +122,7 @@ opcode_inj[vars.script_ref]=nil
 ```
 
 * **dump_vars(ref)**
+
   **ref**: dump all the data stored at `opcode_inj[ref]` a.k.a. `opcode_inj[vars.script_ref]` go to the LUA engine to see the dump.
 
 ## logpoint.lua
