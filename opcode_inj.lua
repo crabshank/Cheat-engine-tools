@@ -4,7 +4,7 @@ local function giveModuleAndOffset(address) -- https://github.com/cheat-engine/c
   local modulesTable,size = enumModules(),0
   for i,v in pairs(modulesTable) do
       size = getModuleSize(v.Name)
-      if address>=v.Address and address<=v.Address+size then
+      if (address>=v.Address and address<=v.Address+size) then
         return v.Name..'+'..string.format('%X',address-v.Address)
       end
   end
@@ -302,19 +302,21 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
           end
 		  	  aob_list.destroy()
       end
+		local outp={}
+		if #fnd>0 then 
+		  for key, value in pairs(fnd) do
+			table.insert(fnd_it,value) -- create sortable table
+		  end
 
-      for key, value in pairs(fnd) do
-		table.insert(fnd_it,value) -- create sortable table
-      end
+		  table.sort( fnd_it, function(a, b) return a[3] > b[3] end ) -- Converted results array now sorted by count (descending);
+		  local f1=fnd_it[1]
 
-      table.sort( fnd_it, function(a, b) return a[3] > b[3] end ) -- Converted results array now sorted by count (descending);
-      local f1=fnd_it[1]
-
-      local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['opcode']=f1[7]}
-      -- Spread parts arry
-      for i=1, #f1[5] do
-          outp[ f1[5][i][1] ]= f1[5][i][2]
-      end
+		  local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['opcode']=f1[7]}
+		  -- Spread parts arry
+		  for i=1, #f1[5] do
+			  outp[ f1[5][i][1] ]= f1[5][i][2]
+		  end
+		end
       return outp
 end
 
@@ -335,12 +337,18 @@ local function string_Dollar(s,t)
 end
 
 local function disable(vars,scrpt)
+	if vars==nil then
+		return
+	end
 	local dedollar=string_Dollar(scrpt,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
 	autoAssemble(dsb)
 end
 
 local function disable_nop(vars)
+	if vars==nil then
+		return
+	end
 	local scrpt=[[
 		define($%s{inj_name},$%s{address_string})
 		$%s{inj_name}:
@@ -355,6 +363,9 @@ end
 local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
 
 	local opa=opcode_address(pattern,aobs,lookahead_n,parts,module_names)
+	if #opa==0 then 
+		return
+	end
 	for k, v in pairs(opa) do
 		vars[k]=v
 	end
@@ -415,6 +426,9 @@ end
 local function nop(vars,pattern,aobs,module_names)
 
 	local opa=opcode_address(pattern,aobs,0,{},module_names)
+	if #opa==0 then 
+		return
+	end
 	for k, v in pairs(opa) do
 		vars[k]=v
 	end
