@@ -121,7 +121,7 @@ opcode_inj.disable_nop(opcode_inj[vars.script_ref])
 opcode_inj[vars.script_ref]=nil
 ```
 
-* **dump_vars(ref)**
+* **dump(ref)**
 
   **ref**: dump all the data stored at `opcode_inj[ref]` a.k.a. `opcode_inj[vars.script_ref]` go to the LUA engine to see the dump.
 
