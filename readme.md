@@ -31,10 +31,12 @@
   * **parts**: a table or, table of tables, that contain `{ a substring from your pattern , nth occurrence of this substring will be matched , name given to this part }`
   * **module_names**: a table or, table of tables: match only addresses with address strings (usually containing module name) that contain one of these strings.
   
+* **disable(vars,scrpt)**
+  * **vars**: `opcode_inj[vars.script_ref]` (see the example script)
+  * **scrpt** an auto-assembler script
 Example script:
 
 ```
-
 {$lua}
 if syntaxcheck then return end
 local vars={}
@@ -49,7 +51,7 @@ local pattern='^%s*mov.+%s*%[%s*[^%]]+%]%s*,%s*xmm%d+'
 local aobs={'48 8B 40 10 F3 0F 11 48 44',0,16}
 local lookahead_n=32
 local parts={{'[^%]]+',1,'localAddress'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
-local module_names='FL_2023.exe'
+local module_names='PES2021.exe'
 
 local scrpt=[[
 	define($%s{inj_name},$%s{address_string})
@@ -108,7 +110,7 @@ vars.inj_name='INJECT_la'
 
 local pattern='^%s*mov.+%s*xmm%d+,%s*%[[^%]]+%]'
 local aobs={'48 89 44 24 20 C7 44 24 28 FF FF FF FF 89 44 24 2C',-24,0}
-local module_names='FL_2023.exe'
+local module_names='PES2021.exe'
 
 [ENABLE]
 
@@ -118,6 +120,9 @@ opcode_inj.nop(vars,pattern,aobs,module_names)
 opcode_inj.disable_nop(opcode_inj[vars.script_ref])
 opcode_inj[vars.script_ref]=nil
 ```
+
+* **dump_vars(ref)**
+  **ref**: dump all the data stored at `opcode_inj[ref]` a.k.a. `opcode_inj[vars.script_ref]` go to the LUA engine to see the dump.
 
 ## logpoint.lua
 
