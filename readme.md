@@ -1,5 +1,93 @@
 ## opcode_inj.lua
 
+* **inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)**
+
+  * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys:
+
+```
+[ script_ref: name to give the script so that it recognises a specific cheat table (set by user) ]
+[ part names: ['...']: (set by user) ]
+
+[ instruction_size: the size of the found opcode in bytes (decimal) (set by extension) ]
+[ address_string: a string representing the address of the found opcode, usually "module.…+offset" (set by extension) ]
+[ jmp_size: size of the jmp instruction, placed at the location of the found opcode, that diverts the code to your injected code in bytes (decimal) (set by extension) ]
+[ post_jmp: assembler text to be inserted after the injected jmp to avoid undesired opcodes appearing (set by extension) ]
+[ overwritten: if the jmp instruction overwrites other instructions, this will replace them after your injected code (set by extension) ]
+[ nops: number of nops required to keep the execution flow the same after injection (set by extension)]
+[ overlap: number of opcodes overwritten by jmp (set by extension) ]
+[ ['lookaheads'](['offsets']/['opcodes']): data ahead of the found opcode, to help with nops and overwites to help keep the execution flow the same (set by extension) ]
+[ nopped_opcode: opcode nopped by the method 'disable_nop(…)' (set by extension) ]
+[ opcode: the found opcode (at injection point) (set by extension) ]
+[ og_bytes_dec: byte decimal table of matched opcode (set by extension) ]
+[ og_hex: byte hex table of matched opcode (set by extension) ]
+[ address_dec: address of found opcode in decimal (set by extension) ]
+[ address_string: address of found opcode as a hex string (set by extension) ]
+```
+  
+Example script:
+
+```
+
+{$lua}
+if syntaxcheck then return end
+local vars={}
+vars.script_ref='Animation_speed' --  opcode_inj[vars.script_ref] stores vars
+vars.inj_name='INJECT_5'
+vars.alloc_size='$1000'
+vars.varis_1_n='mult_5'
+vars.varis_1_d='dd (float)1'
+vars.varis_1_size=4
+
+local pattern='^%s*mov.+%s*%[%s*[^%]]+%]%s*,%s*xmm%d+'
+local aobs={'48 8B 40 10 F3 0F 11 48 44',0,16}
+local lookahead_n=32
+local parts={{'[^%]]+',1,'localAddress'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
+local module_names='FL_2023.exe'
+
+local scrpt=[[
+	define($%s{inj_name},$%s{address_string})
+    registersymbol($%s{inj_name})
+	alloc($%s{varis_1_n}, $%d{varis_1_size}, $%s{inj_name})
+    registersymbol($%s{varis_1_n})
+	$%s{varis_1_n}:
+	$%s{varis_1_d}
+
+	label(code)
+	label(return)
+
+	newmem:
+	code:
+      mulss $%s{x_reg},[$%s{varis_1_n}]
+	  $%s{opcode}
+      $%s{overwritten}
+	  jmp return
+
+	$%s{inj_name}:
+	  jmp newmem
+	  $%s{post_jmp}
+	return:
+]]
+
+[ENABLE]
+
+opcode_inj.inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
+
+[DISABLE]
+local dsb=[[
+$%s{inj_name}:
+ $%s{opcode}
+ $%s{overwritten}
+
+unregistersymbol($%s{varis_1_n})
+unregistersymbol($%s{inj_name})
+dealloc(newmem)
+]]
+
+opcode_inj.disable(opcode_inj[vars.script_ref],dsb)
+opcode_inj[vars.script_ref]=nil
+
+```
+
 * **nop(vars,pattern,aobs,module_names)** & **disable_nop(vars)**
 
 Example script:
