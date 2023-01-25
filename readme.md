@@ -1,6 +1,6 @@
 ## opcode_inj.lua
 
-* **nop(vars,pattern,aobs,module_names)**
+* **nop(vars,pattern,aobs,module_names)** & **disable_nop(vars)**
 
 Example script:
 
