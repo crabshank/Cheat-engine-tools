@@ -1,5 +1,7 @@
 opcode_inj={}
 
+local vars,scrpt,pattern,aobs,lookahead_n,parts,module_names
+
 local function giveModuleAndOffset(address) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
   local modulesTable,size = enumModules(),0
   for i,v in pairs(modulesTable) do
@@ -338,13 +340,27 @@ local function string_Dollar(s,t)
   return tfmt
 end
 
-local function disable(vars,scrpt)
+local function do_disable()
 	local dedollar=string_Dollar(scrpt,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
 	autoAssemble(dsb)
 end
+	
+local function disable(vars_,scrpt_)
+pause()
 
-local function disable_nop(vars)
+vars=vars_
+scrpt=scrpt_
+
+if not pcall(do_disable) then -- if there is an error within the function then .....
+      unpause()
+else
+      unpause()
+end
+
+end
+
+local function do_disable_nop()
 	local scrpt=[[
 		define($%s{inj_name},$%s{address_string})
 		$%s{inj_name}:
@@ -356,7 +372,20 @@ local function disable_nop(vars)
 	autoAssemble(dsb)
 end
 
-local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
+local function disable_nop(vars_)
+pause()
+
+vars=vars_
+
+if not pcall(do_disable_nop) then -- if there is an error within the function then .....
+      unpause()
+else
+      unpause()
+end
+
+end
+
+local function do_inject()
 
 	local opa=opcode_address(pattern,aobs,lookahead_n,parts,module_names)
 	for k, v in pairs(opa) do
@@ -374,7 +403,6 @@ local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
 	]]
 	local dedollar=string_Dollar(enb_jmp_size,vars)
 	local enb_jmp_size_ntk=string_variFormat(dedollar.string,dedollar.args)
-	pause()
 	autoAssemble(enb_jmp_size_ntk)
 	vars.jmp_size=getInstructionSize(vars.address_string)
 	vars.post_jmp=''
@@ -407,16 +435,34 @@ local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
 	enb_jmp_size_ntk=string_variFormat(dedollar.string,dedollar.args)
 
 	autoAssemble(enb_jmp_size_ntk)
-	unpause()
 	-- CORRECT INJECTION!!
 	 opcode_inj[vars.script_ref]=vars
+end
+
+local function inject(vars_,scrpt_,pattern_,aobs_,lookahead_n_,parts_,module_names_)
+pause()
+
+vars=vars_
+scrpt=scrpt_
+pattern=pattern_
+aobs=aobs_
+lookahead_n=lookahead_n_
+parts=parts_
+module_names=module_names_
+
+if not pcall(do_inject) then -- if there is an error within the function then .....
+      unpause()
+else
+      unpause()
+end
+
 end
 
 local function dump_vars(ref)
 	tprint(opcode_inj[ref])
 end
 
-local function nop(vars,pattern,aobs,module_names)
+local function do_nop()
 
 	local opa=opcode_address(pattern,aobs,0,{},module_names)
 	for k, v in pairs(opa) do
@@ -438,8 +484,26 @@ local function nop(vars,pattern,aobs,module_names)
 	 opcode_inj[vars.script_ref]=vars
 end
  
+local function nop(vars_,pattern_,aobs_,module_names_)
+ 
+ pause()
+
+vars=vars_
+pattern=pattern_
+aobs=aobs_
+module_names=module_names_
+
+if not pcall(do_nop) then -- if there is an error within the function then .....
+      unpause()
+else
+      unpause()
+end
+
+ end
+ 
  opcode_inj['inject']=inject
  opcode_inj['disable']=disable
  opcode_inj['disable_nop']=disable_nop
  opcode_inj['dump']=dump_vars
  opcode_inj['nop']=nop
+	
