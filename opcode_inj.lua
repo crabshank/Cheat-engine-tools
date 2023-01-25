@@ -381,7 +381,7 @@ local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
 	vars.overwritten=''
 	if vars.jmp_size < vars.instruction_size then
 	  vars.nops=vars.instruction_size-vars.jmp_size
-	  vars.post_jmp='nop ' .. vars.nops
+	  vars.post_jmp='db' .. string.rep(' 90',vars.nops)
 	elseif vars.jmp_size > vars.instruction_size then
 	  vars.overlap=0
 	  local offs=vars['lookaheads']['offsets']
@@ -389,7 +389,7 @@ local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
 		  if offs[i]>=vars.jmp_size then
 			 vars.overlap=i-2
                          vars.nops=offs[i]-vars.jmp_size
-	                 vars.post_jmp='nop ' .. vars.nops
+	                 vars.post_jmp='db' .. string.rep(' 90',vars.nops)
 			 break
 		 end
 	  end
