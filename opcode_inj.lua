@@ -339,12 +339,15 @@ local function string_Dollar(s,t)
 end
 
 local function disable(vars,scrpt)
+pause()
 	local dedollar=string_Dollar(scrpt,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
 	autoAssemble(dsb)
+	unpause()
 end
 
 local function disable_nop(vars)
+pause()
 	local scrpt=[[
 		define($%s{inj_name},$%s{address_string})
 		$%s{inj_name}:
@@ -354,10 +357,11 @@ local function disable_nop(vars)
 	local dedollar=string_Dollar(scrpt,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
 	autoAssemble(dsb)
+	unpause()
 end
 
 local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
-
+pause()
 	local opa=opcode_address(pattern,aobs,lookahead_n,parts,module_names)
 	for k, v in pairs(opa) do
 		vars[k]=v
@@ -374,7 +378,6 @@ local function inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
 	]]
 	local dedollar=string_Dollar(enb_jmp_size,vars)
 	local enb_jmp_size_ntk=string_variFormat(dedollar.string,dedollar.args)
-	pause()
 	autoAssemble(enb_jmp_size_ntk)
 	vars.jmp_size=getInstructionSize(vars.address_string)
 	vars.post_jmp=''
@@ -417,7 +420,7 @@ local function dump_vars(ref)
 end
 
 local function nop(vars,pattern,aobs,module_names)
-
+pause()
 	local opa=opcode_address(pattern,aobs,0,{},module_names)
 	for k, v in pairs(opa) do
 		vars[k]=v
@@ -436,6 +439,7 @@ local function nop(vars,pattern,aobs,module_names)
 	autoAssemble(nop_ntk)
 	-- CORRECT INJECTION!!
 	 opcode_inj[vars.script_ref]=vars
+	 unpause()
 end
  
  opcode_inj['inject']=inject
