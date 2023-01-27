@@ -1,6 +1,6 @@
 ## opcode_inj.lua
 
-* **inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)**
+* **inject(script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pattern,aobs,lookahead_n,parts,module_names)**
 
   * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys:
 
@@ -31,7 +31,7 @@
   * **parts**: a table or, table of tables, that contain `{ a substring from your pattern , nth occurrence of this substring will be matched , name given to this part }`
   * **module_names**: a table or, table of tables: match only addresses with address strings (usually containing module name) that contain one of these strings.
   
-* **disable(vars,scrpt)**
+* **disable(script_ref)**
   * **vars**: `opcode_inj[vars.script_ref]` (see the example script)
   * **scrpt** an auto-assembler script
 Example script:
@@ -40,22 +40,27 @@ Example script:
 {$lua}
 if syntaxcheck then return end
 local vars={}
-vars.script_ref='Animation_speed' --  opcode_inj[vars.script_ref] stores vars
-vars.inj_name='INJECT_5'
-vars.alloc_size='$1000'
-vars.varis_1_n='mult_5'
-vars.varis_1_d='dd (float)1'
-vars.varis_1_size=4
-
-local pattern='^%s*mov.+%s*%[%s*[^%]]+%]%s*,%s*xmm%d+'
-local aobs={'48 8B 40 10 F3 0F 11 48 44',0,16}
-local lookahead_n=32
+--OPTIONAL (Add as named element of 'vars' table to use in '$%s{...}' notation)
+local suffix='_la'
+vars.varis_1_n='mult'..suffix
+vars.varis_1_d='dd (float)1\ndd (float)1\ndd (float)1\ndd (float)1'
+vars.varis_1_size=16
 local parts={{'[^%]]+',1,'localAddress'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
 local module_names='PES2021.exe'
 
-local scrpt=[[
+--COMPULSORY
+local newmem_name='newmem'..suffix
+local newmem_size='$1000'
+local script_ref='Left_arm' --  opcode_inj[vars.script_ref] stores vars
+local inj_name='INJECT'..suffix
+local pattern='^%s*mov.+%s*xmm%d+,%s*%[[^%]]+%]'
+local aobs={'48 89 44 24 20 C7 44 24 28 FF FF FF FF 89 44 24 2C',-24,0}
+local lookahead_n=32
+
+local inj_script=[[
 	define($%s{inj_name},$%s{address_string})
     registersymbol($%s{inj_name})
+    alloc($%s{newmem_name}, $%s{newmem_size}, $%s{inj_name})
 	alloc($%s{varis_1_n}, $%d{varis_1_size}, $%s{inj_name})
     registersymbol($%s{varis_1_n})
 	$%s{varis_1_n}:
@@ -64,40 +69,28 @@ local scrpt=[[
 	label(code)
 	label(return)
 
-	newmem:
+	$%s{newmem_name}:
 	code:
-      mulss $%s{x_reg},[$%s{varis_1_n}]
 	  $%s{opcode}
+      mulps $%s{x_reg},[$%s{varis_1_n}]
       $%s{overwritten}
 	  jmp return
 
 	$%s{inj_name}:
-	  jmp newmem
+	  jmp $%s{newmem_name}
 	  $%s{post_jmp}
 	return:
 ]]
 
 [ENABLE]
-
-opcode_inj.inject(vars,scrpt,pattern,aobs,lookahead_n,parts,module_names)
+opcode_inj.inject(script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pattern,aobs,lookahead_n,parts,module_names)
 
 [DISABLE]
-local dsb=[[
-$%s{inj_name}:
- $%s{opcode}
- $%s{overwritten}
-
-unregistersymbol($%s{varis_1_n})
-unregistersymbol($%s{inj_name})
-dealloc(newmem)
-]]
-
-opcode_inj.disable(opcode_inj[vars.script_ref],dsb)
-opcode_inj[vars.script_ref]=nil
-
+opcode_inj.disable(script_ref)
+opcode_inj[script_ref]=nil
 ```
 
-* **nop(vars,pattern,aobs,module_names)** & **disable_nop(vars)**
+* **nop(script_ref,inj_name,vars,pattern,aobs,module_names)** & **disable_nop(script_ref)**
 
 Example script:
 
@@ -105,20 +98,22 @@ Example script:
 {$lua}
 if syntaxcheck then return end
 local vars={}
-vars.script_ref='Left_arm_nop' --  opcode_inj[vars.script_ref] stores vars
-vars.inj_name='INJECT_la'
+--OPTIONAL
+local suffix='_la'
+local parts={{'[^%]]+',1,'localAddress'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
+local module_names='FL_2023.exe'
 
+--COMPULSORY
+local script_ref='Left_arm' --  opcode_inj[vars.script_ref] stores vars
+local inj_name='INJECT'..suffix
 local pattern='^%s*mov.+%s*xmm%d+,%s*%[[^%]]+%]'
 local aobs={'48 89 44 24 20 C7 44 24 28 FF FF FF FF 89 44 24 2C',-24,0}
-local module_names='PES2021.exe'
 
 [ENABLE]
-
-opcode_inj.nop(vars,pattern,aobs,module_names)
-
+opcode_inj.nop(script_ref,inj_name,vars,pattern,aobs,module_names)
 [DISABLE]
-opcode_inj.disable_nop(opcode_inj[vars.script_ref])
-opcode_inj[vars.script_ref]=nil
+opcode_inj.disable_nop(script_ref)
+opcode_inj[script_ref]=nil
 ```
 
 * **dump(ref)**
