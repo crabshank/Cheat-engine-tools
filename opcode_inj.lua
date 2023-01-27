@@ -41,7 +41,7 @@ local function tprint (tbl, indent) -- https://gist.github.com/ripter/4270799
   end
 end
 
-local function safeString(s,not_escape)
+--[[local function safeString(s,not_escape)
 	local ls=string.len(s)
 	local st={}
 	local spl={}
@@ -79,7 +79,7 @@ local function safeString(s,not_escape)
 			end
 	end
         return table.concat(st,'')
-end
+end]]
 
 local function string_variFormat(p,t)
 	return string.format(p,table.unpack(t))
