@@ -82,25 +82,7 @@ local function safeString(s,not_escape)
 end
 
 local function string_variFormat(p,t)
-	local st_bak=st -- borrow global variable
-	local s={"string.format('",  safeString(p) , "',"}
-	local vt={}
-
-	for i=1, #t do
-	  local v={t[i]}
-	  if type(v[1])=='string' then
-		 v={"'", safeString(v[1]) , "'"}
-	  end
-	  table.insert(vt,table.concat(v,''))
-	end
-	table.insert(s,table.concat(vt,','))
-	table.insert(s,')')
-	st=table.concat(s,'')
-
-	local fmt, err = load("return function() return ".. st .." end") -- BEWARE: "eval"-like
-	local b,r = pcall(fmt())
-        st=st_bak
-	return r
+	return string.format(p,table.unpack(t))
 end
 
 local function tbl_ception(t)
