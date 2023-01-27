@@ -1,25 +1,26 @@
 opcode_inj={}
 
-local vars,scrpt,pattern,aobs,lookahead_n,parts,module_names
+local script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pattern,aobs,lookahead_n,parts,module_names
 
 local function giveModuleAndOffset(address) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
   local modulesTable,size = enumModules(),0
   for i,v in pairs(modulesTable) do
       size = getModuleSize(v.Name)
       if address>=v.Address and address<=v.Address+size then
-        return v.Name..'+'..string.format('%X',address-v.Address)
+        return {v.Name..'+'..string.format('%X',address-v.Address),v.Name}
       end
   end
-  return address
+  return {address,''}
 end
 
-local function checkAdressOffset(address,hex_address) -- decimal
+local function checkAdressOffset_ret_string(address,hex_address_string) -- decimal
 	local cea=getNameFromAddress(address)
-	if giveModuleAndOffset(address) == cea then
-		return cea
+	local mfa= giveModuleAndOffset(address)
+	if mfa[1] == cea or string.find(mfa[1], mfa[2], 1,true)==nil or  string.find(cea, mfa[2], 1,true)==nil then
+		return mfa[1]
 	else
-		if hex_address~= nil then
-			return hex_address
+		if hex_address_string~= nil then
+			return hex_address_string
 		else
 			return string.format('%X',address)
 		end
@@ -196,18 +197,71 @@ local function plainReplace(s,r,w,n)
       return s
 end
 
+local function string_Dollar(s,t)
+  tfmt = {['string']='',['tokens']={},['args']={}}
+  local out=''
+  local mtc="%$%%[^%{]+%{%s*[^%}]+%s*%}"
+  local mtc2="%$(%%[^%{]+)%{%s*[^%}]+%s*%}"
+  local mtc3="%$%%[^%{]+%{%s*([^%}]+)%s*%}"
+  tfmt['string']=fullMatchesReplace(s,mtc,mtc2,true)
+  for i in string.gmatch(s,mtc) do
+        local ag=string.match(i,mtc3)
+        local tk=string.match(i,mtc2)
+        table.insert(tfmt['tokens'],tk)
+        table.insert(tfmt['args'],t[ag])
+  end
+  return tfmt
+end
+
+local function str_concat_rep(s,n,p)
+	local out={}
+	for i=1, n do
+		table.insert(out,s)
+	end
+	return table.concat(out,p)
+end
+
+local function getLookaheads(k,lookahead_n,opcode)
+		local lookaheads={['offsets']={0},['opcodes']={opcode}}
+		local szk=getInstructionSize(k)
+
+		local lbc=szk -- running byte count
+		local offset_inst=k+szk --running byte count + address
+		while lbc<lookahead_n+1 do
+			table.insert(lookaheads['offsets'],lbc) --start (offset) of next opcode
+
+			szk=getInstructionSize(offset_inst) -- size of next opcode
+
+			local dsk_off = disassemble(offset_inst)
+			local extraField_off, opcode_off, bytes_off, address_off = splitDisassembledString(dsk_off)
+			table.insert(lookaheads['opcodes'],opcode_off) -- insert next opcode
+
+			lbc=lbc+szk -- running byte count
+			offset_inst=offset_inst+szk --running byte count + address
+		end
+
+		return lookaheads
+end
+
 local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
       local aob_tt=tbl_ception(aobs)
-      local parts_tt=tbl_ception(parts)
-      local fnd={}
-      local fnd_it={}
-      local parts_tt_l=#parts_tt
-      for i=1, parts_tt_l do
+
+	  local parts_tt={}
+	  local parts_tt_l=0
+
+	  if parts~=nil then
+		parts_tt=tbl_ception(parts)
+		parts_tt_l=#parts_tt
+		for i=1, parts_tt_l do
           local pi=parts_tt[i]
           local pi_1=pi[1]
           local adp=plainReplace(pattern,pi_1,table.concat({'(',pi[1],')'},''),pi[2]) --INSERTION [4]!! ; capture part
           parts_tt[i][4]=adp
-      end
+		end
+	end
+
+      local fnd={}
+      local fnd_it={}
 
       for i=1, #aob_tt do
           local bi=aob_tt[i]
@@ -225,7 +279,7 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
             for k=rb, rf do
                 local dsk = disassemble(k)
 				local extraField, opcode, bytes, address = splitDisassembledString(dsk)
-				local a = checkAdressOffset(k,address)
+				local a = checkAdressOffset_ret_string(k,address)
                 local mb=true
                 local mdn={}
                 if module_names~=nil then
@@ -247,9 +301,11 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
                 end
                 if string.match(opcode,pattern)~=nil and mb==true then
 					local pt={}
-					for p=1,parts_tt_l do
-					   local pttp=parts_tt[p]
-					   table.insert(pt,{pttp[3],string.match(opcode, pttp[4])})
+					if parts~=nil then
+						for p=1,parts_tt_l do
+						   local pttp=parts_tt[p]
+						   table.insert(pt,{pttp[3],string.match(opcode, pttp[4])})
+						end
 					end
 
                                         local byt=readBytes(dec_res,lookahead_n+1,true)
@@ -260,29 +316,13 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
                                            end
 					end
 
-					local lookaheads={['offsets']={0},['opcodes']={opcode}}
-					local szk=getInstructionSize(k)
-
-					local lbc=szk -- running byte count
-					local offset_inst=k+szk --running byte count + address
-					while lbc<lookahead_n+1 do
-						table.insert(lookaheads['offsets'],lbc) --start (offset) of next opcode
-
-						szk=getInstructionSize(offset_inst) -- size of next opcode
-
-						local dsk_off = disassemble(offset_inst)
-						local extraField_off, opcode_off, bytes_off, address_off = splitDisassembledString(dsk_off)
-						table.insert(lookaheads['opcodes'],opcode_off) -- insert next opcode
-
-						lbc=lbc+szk -- running byte count
-						offset_inst=offset_inst+szk --running byte count + address
-					end
+				   local lookaheads=getLookaheads(k,lookahead_n,opcode)
 
                    local fda=fnd[a]
                    if fda==nil then
-                    fnd[a]={dec_res,res,1,a,pt,lookaheads,opcode,hexByteTable,byt} -- {decimal address, numeric address, counter, lookup string, parts table of strings, lookahead hex, matched opcode}
+						fnd[a]={dec_res,res,1,a,pt,lookaheads,opcode,hexByteTable,byt} -- {decimal address, numeric address, counter, lookup string, parts table of strings, lookahead hex, matched opcode}
                    else
-                    fnd[a][3]=fda[3]+1 -- counter
+						fnd[a][3]=fda[3]+1 -- counter
                    end
                    k=rg --EARLY TERMINATE!
                 end
@@ -299,71 +339,92 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
       local f1=fnd_it[1]
 
       local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['opcode']=f1[7]}
-      -- Spread parts arry
-      for i=1, #f1[5] do
-          outp[ f1[5][i][1] ]= f1[5][i][2]
-      end
+	  if parts~=nil then
+		  -- Spread parts arry
+		  for i=1, #f1[5] do
+			  outp[ f1[5][i][1] ]= f1[5][i][2]
+		  end
+	  end
       return outp
 end
 
-local function string_Dollar(s,t)
-  tfmt = {['string']='',['tokens']={},['args']={}}
-  local out=''
-  local mtc="%$%%[^%{]+%{%s*[^%}]+%s*%}"
-  local mtc2="%$(%%[^%{]+)%{%s*[^%}]+%s*%}"
-  local mtc3="%$%%[^%{]+%{%s*([^%}]+)%s*%}"
-  tfmt['string']=fullMatchesReplace(s,mtc,mtc2,true)
-  for i in string.gmatch(s,mtc) do
-        local ag=string.match(i,mtc3)
-        local tk=string.match(i,mtc2)
-        table.insert(tfmt['tokens'],tk)
-        table.insert(tfmt['args'],t[ag])
-  end
-  return tfmt
-end
-
 local function do_disable()
-	local dedollar=string_Dollar(scrpt,vars)
-	local dsb=string_variFormat(dedollar.string,dedollar.args)
+			local unregsy={}
+			local deallc={}
+			
+			 for i in string.gmatch(vars.inj_script,'registersymbol%(([^)]+)%)') do
+				table.insert(unregsy,'unregistersymbol('..i..')')
+			end
+			unregsy_txt=table.concat(unregsy,'\n')
+		
+			for i in string.gmatch(vars.inj_script,'alloc%(%s*([^,]+)%s*,') do
+				table.insert(deallc,'dealloc('..i..')')
+			end
+			deallc_txt=table.concat(deallc,'\n')
+			
+			
+			local dedollar=string_Dollar(unregsy_txt,vars)
+			local dsb=string_variFormat(dedollar.string,dedollar.args)
+			vars['unregsy_txt']=dsb
+			
+			dedollar=string_Dollar(deallc_txt,vars)
+			dsb=string_variFormat(dedollar.string,dedollar.args)
+			vars['deallc_txt']=dsb
+			
+			local rst_aa=[[
+			define($%s{inj_name},$%s{address_string})
+			$%s{inj_name}:
+			$%s{all_og_opcodes}
+
+			$%s{deallc_txt}
+			$%s{unregsy_txt}
+			]]
+
+	dedollar=string_Dollar(rst_aa,vars)
+	dsb=string_variFormat(dedollar.string,dedollar.args)
 	autoAssemble(dsb)
 end
-	
-local function disable(vars_,scrpt_)
-pause()
 
-vars=vars_
-scrpt=scrpt_
+local function disable(script_ref_)
+	pause()
 
-if not pcall(do_disable) then -- if there is an error within the function then .....
-      unpause()
-else
-      unpause()
-end
+	vars=opcode_inj[script_ref_]
+
+	local b, r = pcall(do_disable)
+	if b==false then -- if error
+		print(r)
+		unpause()
+	else
+		  unpause()
+	end
 
 end
 
 local function do_disable_nop()
-	local scrpt=[[
+	local inj_script=[[
 		define($%s{inj_name},$%s{address_string})
 		$%s{inj_name}:
 		  $%s{nopped_opcode}
-		return:
+		
+		unregistersymbol($%s{inj_name})
 	]]
-	local dedollar=string_Dollar(scrpt,vars)
+	local dedollar=string_Dollar(inj_script,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
 	autoAssemble(dsb)
 end
 
-local function disable_nop(vars_)
-pause()
+local function disable_nop(script_ref_)
+	pause()
 
-vars=vars_
+	vars=opcode_inj[script_ref_]
 
-if not pcall(do_disable_nop) then -- if there is an error within the function then .....
-      unpause()
-else
-      unpause()
-end
+	local b, r = pcall(do_disable_nop)
+	if b==false then -- if error
+		print(r)
+		unpause()
+	else
+		  unpause()
+	end
 
 end
 
@@ -377,29 +438,47 @@ local function do_inject()
 
 	local enb_jmp_size=[[
 	define($%s{inj_name},$%s{address_string})
-	alloc(newmem,$%s{alloc_size},$%s{inj_name})
+	alloc($%s{newmem_name},$%s{newmem_size},$%s{inj_name})
 
 	$%s{inj_name}:
-	  jmp newmem
+	  jmp $%s{newmem_name}
 	return:
 	]]
+
+	local vpst=vars['post']
+	if vpst~=nil then
+		for i=1, #vpst do
+			local vpi=vpst[i]
+			if type(vpi)=='function' then
+				vars=vpi(vars)
+			end
+		end
+	end
+
 	local dedollar=string_Dollar(enb_jmp_size,vars)
 	local enb_jmp_size_ntk=string_variFormat(dedollar.string,dedollar.args)
 	autoAssemble(enb_jmp_size_ntk)
+
+        local jmp_dss=disassemble(vars.address_string)
+	local extraField_ci, opcode_ci, bytes_ci, addr_ci = splitDisassembledString(jmp_dss)
+        vars['opcode_jmp']=opcode_ci
+        local ad=tonumber(addr_ci,16)
+        vars['address_dec']=ad
+        vars['address_string']=checkAdressOffset_ret_string(ad,addr_ci)
 	vars.jmp_size=getInstructionSize(vars.address_string)
 	vars.post_jmp=''
 	vars.overwritten=''
 	if vars.jmp_size < vars.instruction_size then
 	  vars.nops=vars.instruction_size-vars.jmp_size
-	  vars.post_jmp='db' .. string.rep(' 90',vars.nops)
+	  vars.post_jmp=str_concat_rep('nop',vars.nops,'\n')
 	elseif vars.jmp_size > vars.instruction_size then
 	  vars.overlap=0
 	  local offs=vars['lookaheads']['offsets']
 	  for i=1, #offs do
 		  if offs[i]>=vars.jmp_size then
 			 vars.overlap=i-2
-                         vars.nops=offs[i]-vars.jmp_size
-	                 vars.post_jmp='db' .. string.rep(' 90',vars.nops)
+             vars.nops=offs[i]-vars.jmp_size
+	         vars.post_jmp=str_concat_rep('nop',vars.nops,'\n')
 			 break
 		 end
 	  end
@@ -413,7 +492,7 @@ local function do_inject()
 	  end
 	end
 
-	dedollar=string_Dollar(scrpt,vars)
+	dedollar=string_Dollar(inj_script,vars)
 	enb_jmp_size_ntk=string_variFormat(dedollar.string,dedollar.args)
 
 	autoAssemble(enb_jmp_size_ntk)
@@ -421,22 +500,74 @@ local function do_inject()
 	 opcode_inj[vars.script_ref]=vars
 end
 
-local function inject(vars_,scrpt_,pattern_,aobs_,lookahead_n_,parts_,module_names_)
-pause()
+local function check_inj()
+        if vars['address_dec']==nil then
+           return
+        end
+	local curr_lookahead=getLookaheads(vars['address_dec'],vars['lookahead_n'],vars['opcode_jmp'])
+	local rst=false
+	local c=1
+	local clp=curr_lookahead['opcodes']
+	local ogl=vars['lookaheads']['opcodes']
+	vars['all_og_opcodes']=table.concat(ogl,'\n')
+	for i=1, #clp do
+		local opc=clp[i]
+		if i==1 and string.match(opc,'^jmp%s*.+$')~=nil then
+			c=c+1
+		elseif i==1 then
+			rst=true
+			break
+		elseif string.match(opc,'^%s*nop%s*$')==nil then
+			if opc~=ogl[c] then
+				rst=true
+				break
+			else
+				c=c+1
+			end
+		end
+	end
 
-vars=vars_
-scrpt=scrpt_
-pattern=pattern_
-aobs=aobs_
-lookahead_n=lookahead_n_
-parts=parts_
-module_names=module_names_
-
-if not pcall(do_inject) then -- if there is an error within the function then .....
-      unpause()
-else
-      unpause()
+		if rst==true then
+			opcode_inj[vars.script_ref]=vars
+			do_disable()
+		end
 end
+
+local function inject(script_ref_,inj_name_,newmem_name_,newmem_size_,vars_,inj_script_,pattern_,aobs_,lookahead_n_,parts_,module_names_)
+	pause()
+
+	vars=vars_
+
+	script_ref=script_ref_
+	vars['script_ref']=script_ref
+		inj_name=inj_name_
+		vars['inj_name']=inj_name
+	inj_script=inj_script_
+	vars['inj_script']=inj_script
+		pattern=pattern_
+		vars['pattern']=pattern
+	aobs=aobs_
+	vars['aobs']=aobs
+		lookahead_n=lookahead_n_
+		vars['lookahead_n']=lookahead_n
+	parts=parts_
+	vars['parts']=parts
+		module_names=module_names_
+		vars['module_names']=module_names
+	newmem_name=newmem_name_
+	vars['newmem_name']=newmem_name
+		newmem_size=newmem_size_
+		vars['newmem_size']=newmem_size
+
+	local b, r = pcall(do_inject)
+	if b==false then -- if error
+		print(r)
+		b, r = pcall(check_inj)
+		unpause()
+	else
+		b, r = pcall(check_inj)
+		unpause()
+	end
 
 end
 
@@ -445,19 +576,21 @@ local function dump_vars(ref)
 end
 
 local function do_nop()
-
 	local opa=opcode_address(pattern,aobs,0,{},module_names)
 	for k, v in pairs(opa) do
 		vars[k]=v
 	end
 	vars.instruction_size=getInstructionSize(vars.address_string)
 	vars.nops=vars.instruction_size
+	vars.nop_text=str_concat_rep('nop',vars.nops,'\n')
 	vars.nopped_opcode=vars.opcode
 	local enb_jmp_size=[[
-	define($%s{inj_name},$%s{address_string})
-	$%s{inj_name}:
-	  nop $%d{nops}
-	return:
+		define($%s{inj_name},$%s{address_string})
+		
+		$%s{inj_name}:
+		  $%s{nop_text}
+		  
+		  registersymbol($%s{inj_name})
 	]]
 	local dedollar=string_Dollar(enb_jmp_size,vars)
 	local nop_ntk=string_variFormat(dedollar.string,dedollar.args)
@@ -465,21 +598,30 @@ local function do_nop()
 	-- CORRECT INJECTION!!
 	 opcode_inj[vars.script_ref]=vars
 end
- 
-local function nop(vars_,pattern_,aobs_,module_names_)
- 
- pause()
 
-vars=vars_
-pattern=pattern_
-aobs=aobs_
-module_names=module_names_
+local function nop(script_ref_,inj_name_,vars_,pattern_,aobs_,module_names_)
 
-if not pcall(do_nop) then -- if there is an error within the function then .....
-      unpause()
-else
-      unpause()
-end
+	pause()
+		vars=vars_
+		
+		script_ref=script_ref_
+	vars['script_ref']=script_ref
+		inj_name=inj_name_
+		vars['inj_name']=inj_name
+	pattern=pattern_
+	vars['pattern']=pattern
+	aobs=aobs_
+	vars['aobs']=aobs
+		module_names=module_names_
+		vars['module_names']=module_names
+
+	local b, r = pcall(do_nop)
+	if b==false then -- if error
+		print(r)
+		unpause()
+	else
+		unpause()
+	end
 
  end
  
@@ -488,4 +630,3 @@ end
  opcode_inj['disable_nop']=disable_nop
  opcode_inj['dump']=dump_vars
  opcode_inj['nop']=nop
-	
