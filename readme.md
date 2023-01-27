@@ -1,11 +1,10 @@
 ## opcode_inj.lua
 
-* **inject(script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pattern,aobs,lookahead_n,parts,module_names)**
+* **inject(script_ref, inj_name, newmem_name, newmem_size, vars, inj_script, pattern, aobs, lookahead_n, parts, module_names)**
 
   * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys:
 
 ```
-[ script_ref: name to give the script so that it recognises a specific cheat table (set by user) ]
 [ part names: ['...']: (set by user) ]
 
 [ instruction_size: the size of the found opcode in bytes (decimal) (set by extension) ]
@@ -23,8 +22,12 @@
 [ address_dec: address of found opcode in decimal (set by extension) ]
 [ address_string: address of found opcode as a hex string (set by extension) ]
 ```
-  
-  * **scrpt**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```$%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.)
+  * **script_ref**: name to give the script so that it recognises a specific cheat table
+  * **inj_name**: name to the injection point
+  * **newmem_name**: name to give to the memory that stores the injected (redirected to) code
+  * **newmem_size**: size of the memory that stores the injected (redirected to) code (STRING!: "$%s{newmem_size}"; INTEGER!: "$%d{newmem_size}")
+  * **vars**: put data that you want to be accessible using the "$%s{…}" syntax here
+  * **inj_script**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```$%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.)
   * **pattern**: a LUA string with a pattern that opcodes are checked against for matches.
   * **aobs**: a table or, table of tables, that contain `{'aob string', search from (string + this number), until (string + this number) }`
   * **lookahead_n**: at least this many bytes worth of opcodes will be stored, ahead of the found opcode.
@@ -32,8 +35,7 @@
   * **module_names**: a table or, table of tables: match only addresses with address strings (usually containing module name) that contain one of these strings.
   
 * **disable(script_ref)**
-  * **vars**: `opcode_inj[vars.script_ref]` (see the example script)
-  * **scrpt** an auto-assembler script
+
 Example script:
 
 ```
@@ -90,7 +92,7 @@ opcode_inj.disable(script_ref)
 opcode_inj[script_ref]=nil
 ```
 
-* **nop(script_ref,inj_name,vars,pattern,aobs,module_names)** & **disable_nop(script_ref)**
+* **nop(script_ref, inj_name, vars, pattern, aobs, module_names)** & **disable_nop(script_ref)**
 
 Example script:
 
