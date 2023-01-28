@@ -468,6 +468,7 @@ local function do_inject()
         vars['address_dec']=ad
         vars['address_string']=checkAdressOffset_ret_string(ad,addr_ci)
 	vars.jmp_size=getInstructionSize(vars.address_string)
+
 	vars.post_jmp=''
 	vars.overwritten=''
 	if vars.jmp_size < vars.instruction_size then
@@ -585,6 +586,9 @@ local function do_nop()
 		vars[k]=v
 	end
 	vars.instruction_size=getInstructionSize(vars.address_string)
+	vars['address_dec']=vars['address_dec']-vars.instruction_size
+	vars['address_string']=checkAdressOffset_ret_string(vars['address_dec'])
+
 	vars.nops=vars.instruction_size
 	vars.nop_text=str_concat_rep('nop',vars.nops,'\n')
 	vars.nopped_opcode=vars.opcode
