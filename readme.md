@@ -142,7 +142,7 @@ local vars={}
 --OPTIONAL
 local suffix='_la'
 local parts={{'[^%]]+',1,'localAddress'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
-local module_names='FL_2023.exe'
+local module_names='PES2021.exe'
 
 --COMPULSORY
 local script_ref='Left_arm' --  opcode_inj[vars.script_ref] stores vars
