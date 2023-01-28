@@ -352,7 +352,7 @@ local function do_disable()
 			local unregsy={}
 			local deallc={}
 			
-			 for i in string.gmatch(vars.inj_script,'registersymbol%(([^)]+)%)') do
+			 for i in string.gmatch(vars.inj_script,'registersymbol%(%s*([^%)]+)%s*%)') do
 				table.insert(unregsy,'unregistersymbol('..i..')')
 			end
 			unregsy_txt=table.concat(unregsy,'\n')
