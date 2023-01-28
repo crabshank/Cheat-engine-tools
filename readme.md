@@ -5,7 +5,7 @@
   * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys:
 
 ```
-[ post[…]: use numeric indexes here to run functions assigned to them to run before the "$%s{…}" syntax is first processed (**see example script below!**) (set by user) ]
+[ post[…]: use numeric indexes here to run functions assigned to them to run before the "$%s{…}" syntax is first processed (see example script below!) (set by user) ]
 
 [ instruction_size: the size of the found opcode in bytes (decimal) (set by extension) ]
 [ address_string: a string representing the address of the found opcode, usually "module.…+offset" (set by extension) ]
