@@ -5,7 +5,7 @@
   * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys:
 
 ```
-[ post[…]: use numeric indexes here to run functions assigned to them to run before the "$%s{…}" syntax is first processed (set by user) ]
+[ post[…]: use numeric indexes here to run functions assigned to them to run before the "$%s{…}" syntax is first processed (**see example script below!**) (set by user) ]
 
 [ instruction_size: the size of the found opcode in bytes (decimal) (set by extension) ]
 [ address_string: a string representing the address of the found opcode, usually "module.…+offset" (set by extension) ]
@@ -47,8 +47,21 @@ local suffix='_la'
 vars.varis_1_n='mult'..suffix
 vars.varis_1_d='dd (float)1\ndd (float)1\ndd (float)1\ndd (float)1'
 vars.varis_1_size=16
-local parts={{'[^%]]+',1,'localAddress'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
-local module_names='PES2021.exe'
+local parts={{'[^%]]+',1,'localAddress'},{'%d+',1,'xreg_n'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
+local module_names='FL_2023.exe'
+vars.post={}
+
+vars.post[1]=function() --gives names "xmm~1" to "xmm~15" to all registers that are not 'x_reg'
+ local xn=tonumber(vars.xreg_n)
+ local c=1
+ for i=0,15 do
+  if xn~=i then
+   vars['xmm~'..c]='xmm'..i
+   c=c+1
+  end
+ end
+ return vars --IMPORTANT!
+end
 
 --COMPULSORY
 local newmem_name='newmem'..suffix
@@ -75,6 +88,7 @@ local inj_script=[[
 	code:
 	  $%s{opcode}
       mulps $%s{x_reg},[$%s{varis_1_n}]
+      mulps $%s{x_reg} , $%s{xmm~2} -- FROM: vars.post[1]
       $%s{overwritten}
 	  jmp return
 
