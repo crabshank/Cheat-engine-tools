@@ -4,6 +4,8 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 
 ## opcode_inj.lua
 
+N.B. When the code injection is successful: the extension will show the memory browser at the injection point; if there was no found address, then it won't.
+
 * **inject(script_ref, inj_name, newmem_name, newmem_size, vars, inj_script, pattern, aobs, lookahead_n, parts, module_names)**
 
   * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys:
