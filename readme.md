@@ -1,3 +1,7 @@
+## maxScan.lua
+
+Change the "Memory Scan Options" to search over the maximum area by default.
+
 ## opcode_inj.lua
 
 * **inject(script_ref, inj_name, newmem_name, newmem_size, vars, inj_script, pattern, aobs, lookahead_n, parts, module_names)**
