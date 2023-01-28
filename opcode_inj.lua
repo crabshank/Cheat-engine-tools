@@ -372,12 +372,11 @@ local function do_disable()
 			vars['deallc_txt']=dsb
 			
 			local rst_aa=[[
+			$%s{deallc_txt}
+			$%s{unregsy_txt}
 			define($%s{inj_name},$%s{address_string})
 			$%s{inj_name}:
 			$%s{all_og_opcodes}
-
-			$%s{deallc_txt}
-			$%s{unregsy_txt}
 			]]
 
 	dedollar=string_Dollar(rst_aa,vars)
@@ -391,22 +390,23 @@ local function disable(script_ref_)
 	vars=opcode_inj[script_ref_]
 
 	local b, r = pcall(do_disable)
-	if b==false then -- if error
-		print(r)
-		unpause()
-	else
-		  unpause()
+	if vars ~=nil and vars['address_dec']~=nil then
+		local frm = getMemoryViewForm()
+		local hv = frm.DisassemblerView
+		frm.Show()
+		hv.TopAddress = vars['address_dec']
+		hv.SelectedAddress = vars['address_dec']
 	end
-
+	unpause()
+	
 end
 
 local function do_disable_nop()
 	local inj_script=[[
+		unregistersymbol($%s{inj_name})
 		define($%s{inj_name},$%s{address_string})
 		$%s{inj_name}:
 		  $%s{nopped_opcode}
-		
-		unregistersymbol($%s{inj_name})
 	]]
 	local dedollar=string_Dollar(inj_script,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
@@ -419,12 +419,14 @@ local function disable_nop(script_ref_)
 	vars=opcode_inj[script_ref_]
 
 	local b, r = pcall(do_disable_nop)
-	if b==false then -- if error
-		print(r)
-		unpause()
-	else
-		  unpause()
+	if vars ~=nil and vars['address_dec']~=nil then
+		local frm = getMemoryViewForm()
+		local hv = frm.DisassemblerView
+		frm.Show()
+		hv.TopAddress = vars['address_dec']
+		hv.SelectedAddress = vars['address_dec']
 	end
+	unpause()
 
 end
 
@@ -501,7 +503,7 @@ local function do_inject()
 end
 
 local function check_inj()
-        if vars['address_dec']==nil then
+        if vars==nil or vars['address_dec']==nil then
            return
         end
 	local curr_lookahead=getLookaheads(vars['address_dec'],vars['lookahead_n'],vars['opcode_jmp'])
@@ -560,14 +562,16 @@ local function inject(script_ref_,inj_name_,newmem_name_,newmem_size_,vars_,inj_
 		vars['newmem_size']=newmem_size
 
 	local b, r = pcall(do_inject)
-	if b==false then -- if error
-		print(r)
-		b, r = pcall(check_inj)
-		unpause()
-	else
-		b, r = pcall(check_inj)
-		unpause()
+
+	b, r = pcall(check_inj)
+	if vars ~=nil and vars['address_dec']~=nil then
+		local frm = getMemoryViewForm()
+		local hv = frm.DisassemblerView
+		frm.Show()
+		hv.TopAddress = vars['address_dec']
+		hv.SelectedAddress = vars['address_dec']
 	end
+	unpause()
 
 end
 
@@ -585,12 +589,12 @@ local function do_nop()
 	vars.nop_text=str_concat_rep('nop',vars.nops,'\n')
 	vars.nopped_opcode=vars.opcode
 	local enb_jmp_size=[[
+		registersymbol($%s{inj_name})
 		define($%s{inj_name},$%s{address_string})
 		
 		$%s{inj_name}:
 		  $%s{nop_text}
-		  
-		  registersymbol($%s{inj_name})
+	
 	]]
 	local dedollar=string_Dollar(enb_jmp_size,vars)
 	local nop_ntk=string_variFormat(dedollar.string,dedollar.args)
@@ -616,12 +620,14 @@ local function nop(script_ref_,inj_name_,vars_,pattern_,aobs_,module_names_)
 		vars['module_names']=module_names
 
 	local b, r = pcall(do_nop)
-	if b==false then -- if error
-		print(r)
-		unpause()
-	else
-		unpause()
+	if vars ~=nil and vars['address_dec']~=nil then
+		local frm = getMemoryViewForm()
+		local hv = frm.DisassemblerView
+		frm.Show()
+		hv.TopAddress = vars['address_dec']
+		hv.SelectedAddress = vars['address_dec']
 	end
+	unpause()
 
  end
  
