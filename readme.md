@@ -167,8 +167,15 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (logpoint.…): 
 
-* **attach( {a, c, p --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). **c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are interpreted as a memory address(es)
- and the bytes from there will be logged. **bh** and **fw** extend the range of what is captured, e.g `logpoint.attach(0x14022E56F,'RCX',true,-0x40,0x60)` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). **bpt** is a string or table of strings containing AOBs, that when any of the strings specified by **c** is present, the debugger will pause on the logpoint.
+* **attach( {a, c, p --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). 
+
+**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). 
+
+Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are interpreted as a memory address(es) and the bytes from there will be logged.
+
+**bh** and **fw** extend the range of what is captured, e.g `logpoint.attach(0x14022E56F,'RCX',true,-0x40,0x60)` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). 
+
+**bpt** is a string or table of strings containing AOBs, that when any of the strings specified by **c** is present, the debugger will pause on the logpoint.
  
 * **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output. Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
 
@@ -190,13 +197,25 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 * **stop()** -> End the trace and print in ascending order of times executed.
 
-* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> If **m**==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. If **n** is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. If **l** (integer) if specified, the extension will only print opcodes that have been executed >=**l** times, unless printing in the order of execution. If *m==1*, then **f** and **t**, if specified prints from the *f*th breakpoint hit to the **t**th.
+* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> 
+
+If **m**==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. 
+
+If **n** is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. 
+
+If **l** (integer) if specified, the extension will only print opcodes that have been executed >=**l** times, unless printing in the order of execution. 
+
+If *m==1*, then **f** and **t**, if specified prints from the *f*th breakpoint hit to the **t**th.
 
 * **save(n)** -> Save the current trace with the name of the non-empty string **n**
 
 * **saved()** -> Print the names and information of saved traces.
 
-* **query( a,  n --[[Optional]] )** -> Query the trace for the presence, count, and indexes (order it was hit) of an address or table of addresses. **a** is an an address or table of addresses. If **n** is a specified, non-empty string, then it will query the saved trace saved with that name (see *.saved()* method); if an empty string it will query the current trace.
+* **query( a,  n --[[Optional]] )** -> Query the trace for the presence, count, and indexes (order it was hit) of an address or table of addresses. 
+
+**a** is an an address or table of addresses. 
+
+If **n** is a specified, non-empty string, then it will query the saved trace saved with that name (see *.saved()* method); if an empty string it will query the current trace.
 
 * **compare(...)** -> Takes a series of strings -> **1st**: The name to save the comparison with; **2nd**: The trace from which to take information for the adresses present in all compared traces (*2nd string and beyond*). The output trace can be printed with *.printHits(…)* like any other.
 
@@ -208,7 +227,11 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 ### Methods on (batchRW.…): 
 
-* **attach(s, z --[[Optional]] , onWrite --[[Optional]] )** -> Attach breakpoints to address **s** (Use '0x…' for addresses in hexadecimal) (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and **z**-1 eligible addresses after it (**z** in total, probably will not work if >4). If **z** is not specified, it will be set to 1. If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
+* **attach(s, z --[[Optional]] , onWrite --[[Optional]] )** -> 
+ 
+Attach breakpoints to address **s** (Use '0x…' for addresses in hexadecimal) (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and **z**-1 eligible addresses after it (**z** in total, probably will not work if >4). If **z** is not specified, it will be set to 1. 
+
+If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
 
 * **printAddrs()** -> Print all attachable addresses in the address list, with their indexes for "batchRW.attach(…)".
 
