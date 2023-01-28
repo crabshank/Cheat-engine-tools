@@ -497,7 +497,11 @@ local function do_inject()
 
 	dedollar=string_Dollar(inj_script,vars)
 	enb_jmp_size_ntk=string_variFormat(dedollar.string,dedollar.args)
-
+	 local b, r = autoAssembleCheck(enb_jmp_size_ntk)
+	 if b==false then
+		print(r)
+		error(r)
+	end
 	autoAssemble(enb_jmp_size_ntk)
 	-- CORRECT INJECTION!!
 	 opcode_inj[vars.script_ref]=vars
