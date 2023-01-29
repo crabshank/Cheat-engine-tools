@@ -26,7 +26,6 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 [ og_bytes_dec: byte decimal table of matched opcode (set by extension) ]
 [ og_hex: byte hex table of matched opcode (set by extension) ]
 [ address_dec: address of found opcode in decimal (set by extension) ]
-[ address_string: address of found opcode as a hex string (set by extension) ]
 [ unregsy_txt: text containing code to unregister all symbols registered by the cheat table (set by extension) ]
 [ deallc_txt: text containing code to dealloc all memory allocated by the cheat table (set by extension) ]
 [ opcode_jmp: the opcode of the jmp that redirects execution flow towards the injected code (set by extension) ]
