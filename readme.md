@@ -8,7 +8,7 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 
 * **inject(script_ref, inj_name, newmem_name, newmem_size, vars, inj_script, pattern, aobs, lookahead_n, parts, module_names)**
 
-  * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys:
+  * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys, so check this list to avoid a clash:
 
 ```
 [ post[…]: use numeric indexes here to run functions assigned to them to run before the "$%s{…}" syntax is first processed. You can write a whole list of instructions as one token (see example script below!) (set by user) ]
