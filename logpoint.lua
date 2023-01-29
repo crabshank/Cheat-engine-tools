@@ -7,51 +7,100 @@ local function trim_str(s)
 end
 local upperc=string.upper
 
-local function releaseGlobals()
-	R8D=nil
-	R8W=nil
-	R8B=nil
-	R9D=nil
-	R9W=nil
-	R9B=nil
-	R10D=nil
-	R10W=nil
-	R10B=nil
-	R11D=nil
-	R11W=nil
-	R11B=nil
-	R12D=nil
-	R12W=nil
-	R12B=nil
-	R13D=nil
-	R13W=nil
-	R13B=nil
-	R14D=nil
-	R14W=nil
-	R14B=nil
-	R15D=nil
-	R15W=nil
-	R15B=nil
-	SIL=nil
-	DIL=nil
-	BPL=nil
-	SPL=nil
-	AX=nil
-	AL=nil
-	AH=nil
-	BX=nil
-	BL=nil
-	BH=nil
-	CX=nil
-	CL=nil
-	CH=nil
-	DX=nil
-	DL=nil
-	DH=nil
-	SI=nil
-	DI=nil
-	BP=nil
-	SP=nil
+local R8D_bak,	R8W_bak,	R8B_bak,	R9D_bak,	R9W_bak,	R9B_bak,	R10D_bak,	R10W_bak,	R10B_bak,	R11D_bak,	R11W_bak,	R11B_bak,	R12D_bak,	R12W_bak,	R12B_bak,	R13D_bak,	R13W_bak,	R13B_bak,	R14D_bak,	R14W_bak,	R14B_bak,	R15D_bak,	R15W_bak,	R15B_bak,	SIL_bak,	DIL_bak,	BPL_bak,	SPL_bak,	AX_bak,	AL_bak,	AH_bak,	BX_bak,	BL_bak,	BH_bak,	CX_bak,	CL_bak,	CH_bak,	DX_bak,	DL_bak,	DH_bak,	SI_bak,	DI_bak,	BP_bak,	SP_bak
+
+local function backupGlobals()
+	R8D_bak=R8D
+	R8W_bak=R8W
+	R8B_bak=R8B
+	R9D_bak=R9D
+	R9W_bak=R9W
+	R9B_bak=R9B
+	R10D_bak=R10D
+	R10W_bak=R10W
+	R10B_bak=R10B
+	R11D_bak=R11D
+	R11W_bak=R11W
+	R11B_bak=R11B
+	R12D_bak=R12D
+	R12W_bak=R12W
+	R12B_bak=R12B
+	R13D_bak=R13D
+	R13W_bak=R13W
+	R13B_bak=R13B
+	R14D_bak=R14D
+	R14W_bak=R14W
+	R14B_bak=R14B
+	R15D_bak=R15D
+	R15W_bak=R15W
+	R15B_bak=R15B
+	SIL_bak=SIL
+	DIL_bak=DIL
+	BPL_bak=BPL
+	SPL_bak=SPL
+	AX_bak=AX
+	AL_bak=AL
+	AH_bak=AH
+	BX_bak=BX
+	BL_bak=BL
+	BH_bak=BH
+	CX_bak=CX
+	CL_bak=CL
+	CH_bak=CH
+	DX_bak=DX
+	DL_bak=DL
+	DH_bak=DH
+	SI_bak=SI
+	DI_bak=DI
+	BP_bak=BP
+	SP_bak=SP
+end
+
+local function restoreGlobals()
+	R8D=R8D_bak
+	R8W=R8W_bak
+	R8B=R8B_bak
+	R9D=R9D_bak
+	R9W=R9W_bak
+	R9B=R9B_bak
+	R10D=R10D_bak
+	R10W=R10W_bak
+	R10B=R10B_bak
+	R11D=R11D_bak
+	R11W=R11W_bak
+	R11B=R11B_bak
+	R12D=R12D_bak
+	R12W=R12W_bak
+	R12B=R12B_bak
+	R13D=R13D_bak
+	R13W=R13W_bak
+	R13B=R13B_bak
+	R14D=R14D_bak
+	R14W=R14W_bak
+	R14B=R14B_bak
+	R15D=R15D_bak
+	R15W=R15W_bak
+	R15B=R15B_bak
+	SIL=SIL_bak
+	DIL=DIL_bak
+	BPL=BPL_bak
+	SPL=SPL_bak
+	AX=AX_bak
+	AL=AL_bak
+	AH=AH_bak
+	BX=BX_bak
+	BL=BL_bak
+	BH=BH_bak
+	CX=CX_bak
+	CL=CL_bak
+	CH=CH_bak
+	DX=DX_bak
+	DL=DL_bak
+	DH=DH_bak
+	SI=SI_bak
+	DI=DI_bak
+	BP=BP_bak
+	SP=SP_bak
 end
 
 local function getSubRegDecBytes(x,g,a,b,n)
@@ -196,7 +245,7 @@ local function stop(pr)
 		end
 	end
 	stopped=true
-	releaseGlobals()
+	restoreGlobals()
 end
 
 local function get_abp_el(a)
@@ -223,6 +272,8 @@ local function onBp()
 				local abpxc=abpx['calc']
 
 				debug_getContext(true)
+				
+				backupGlobals()
 				
 				local r8g=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
 				local r9g=getSubRegDecBytes(string.format("%X", R9),8,1,8)
@@ -301,7 +352,7 @@ local function onBp()
 				for j=1, #clc do
 						local func= load("return function() return ".. clc[j] .." end")
 						local b,r=pcall(func())
-						releaseGlobals()
+						restoreGlobals()
 						if abpx['ptr']==true then
 							local rb=r+abpx['bh']
 							local rf=r+abpx['fw']
@@ -419,9 +470,11 @@ local function attach(...)
 		attachLpAddr(a,c,p,bh,fw,bpst)
 	end
 end
+
 function debugger_onBreakpoint()
 	print('BP!')
 end
+
 logpoint={
 	attach=attach,
 	dumpRegisters=dumpRegisters,
