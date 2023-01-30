@@ -7,7 +7,7 @@ local function trim_str(s)
 end
 local upperc=string.upper
 
-local R8D_bak,	R8W_bak,	R8B_bak,	R9D_bak,	R9W_bak,	R9B_bak,	R10D_bak,	R10W_bak,	R10B_bak,	R11D_bak,	R11W_bak,	R11B_bak,	R12D_bak,	R12W_bak,	R12B_bak,	R13D_bak,	R13W_bak,	R13B_bak,	R14D_bak,	R14W_bak,	R14B_bak,	R15D_bak,	R15W_bak,	R15B_bak,	SIL_bak,	DIL_bak,	BPL_bak,	SPL_bak,	AX_bak,	AL_bak,	AH_bak,	BX_bak,	BL_bak,	BH_bak,	CX_bak,	CL_bak,	CH_bak,	DX_bak,	DL_bak,	DH_bak,	SI_bak,	DI_bak,	BP_bak,	SP_bak
+local R8D_bak, R8W_bak, R8B_bak, R9D_bak, R9W_bak, R9B_bak, R10D_bak, R10W_bak, R10B_bak, R11D_bak, R11W_bak, R11B_bak, R12D_bak, R12W_bak, R12B_bak, R13D_bak, R13W_bak, R13B_bak, R14D_bak, R14W_bak, R14B_bak, R15D_bak, R15W_bak, R15B_bak, SIL_bak, DIL_bak, BPL_bak, SPL_bak, AX_bak, AL_bak, AH_bak, BX_bak, BL_bak, BH_bak, CX_bak, CL_bak, CH_bak, DX_bak, DL_bak, DH_bak, SI_bak, DI_bak, BP_bak, SP_bak
 
 local function backupGlobals()
 	R8D_bak=R8D
