@@ -291,11 +291,13 @@ local function query(a,n)
 		end
 		if #pt>0 then
 			local sng='times'
+			local ixs='indexes'
 			local c=rcs[1]['count']
 			if c==1 then
 				sng='time'
+				ixs='index'
 			end
-			print('Address ' .. hxa .. ' hit ' .. c .. ' ' .. sng .. ', and present at indexes: ' .. table.concat(pt,', '))
+			print('Address ' .. hxa .. ' hit ' .. c .. ' ' .. sng .. ', and present at '..ixs..': ' .. table.concat(pt,', '))
 		else
 			print('Address ' .. hxa .. ' not hit')
 		end
