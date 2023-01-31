@@ -8,10 +8,10 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 
 * **inject(script_ref, inj_name, newmem_name, newmem_size, vars, inj_script, pattern, aobs, lookahead_n, parts, module_names)**
 
-  * **vars**: A table in the extension's global scope that can hold any data with any name (key) you like, but the extension adds or expects data with the following keys, so check this list to avoid a clash:
+  * **vars**: A table in the extension's global scope that can hold any data or functions with any name (key) you like, but the extension adds or expects data with the following keys, so check this list to avoid a clash:
 
 ```
-[ post[…]: use numeric indexes here to run functions assigned to them to run before the "$%s{…}" syntax is first processed. You can write a whole list of instructions as one token (see example script below!) (set by user) ]
+[ post[…]: use numeric indexes here to run functions assigned to them to run before the "${…}/$%s{…}" syntax is first processed. You can write a whole list of instructions as one token (see example script below!) (set by user) ]
 
 [ instruction_size: the size of the found opcode in bytes (decimal) (set by extension) ]
 [ address_string: a string representing the address of the found opcode, usually "module.…+offset" (set by extension) ]
@@ -45,13 +45,17 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 [ newmem_name ]
 [ newmem_size ]
 
+If you assign a function on vars (see example below): when there is a corresponding token in your script e.g. "${func_1}(7,8)", the extension will run the function with the specified arguments but as strings. So convert these stringified arguments to whatever type you need. If your function is "$%d{func_1}(7,8)", you must return a number from your function. 
+
+N.B. Functions assigned on vars are run for every token, whereas functions on "vars['post']" are run only once. Therefore, it's better to assign constants with functions on "vars['post']".
+
 ```
   * **script_ref**: name to give the script so that it recognises a specific cheat table
   * **inj_name**: name to the injection point
   * **newmem_name**: name to give to the memory that stores the injected (redirected to) code
   * **newmem_size**: size of the memory that stores the injected (redirected to) code (STRING!: "$%s{newmem_size}"; INTEGER!: "$%d{newmem_size}")
-  * **vars**: put data that you want to be accessible using the "$%s{…}" syntax here
-  * **inj_script**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```$%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.)
+  * **vars**: put data that you want to be accessible using the ```${…}/$%s{…}``` syntax here
+  * **inj_script**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```${key} OR $%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.). Note that ```${…}``` is the same as ```$%s{…}```, because string is the most comnon type.
   * **pattern**: a LUA string with a pattern that opcodes are checked against for matches.
   * **aobs**: a table or, table of tables, that contain `{'aob string', search from (string + this number), until (string + this number) }`
   * **lookahead_n**: at least this many bytes worth of opcodes will be stored, ahead of the found opcode.
@@ -67,10 +71,11 @@ Example script:
 if syntaxcheck then return end
 local vars={}
 --OPTIONAL (Add as named element of 'vars' table to use in '$%s{...}' notation)
-local suffix='_la'
+local suffix='_5'
 vars.varis_1_n='mult'..suffix
-vars.varis_1_d='dd (float)1\ndd (float)1\ndd (float)1\ndd (float)1'
-vars.varis_1_size=16
+vars.varis_1_d='dd (float)1\ndd (float)1'
+vars.varis_1_size=8   --(u +0, r +4, 0.5 +8, 1+C)
+
 local parts={{'[^%]]+',1,'localAddress'},{'%d+',1,'xreg_n'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
 local module_names='FL_2023.exe'
 vars.post={}
@@ -87,39 +92,139 @@ vars.post[1]=function() --gives names "xmm~1" to "xmm~15" to all registers that 
  return vars --IMPORTANT!
 end
 
+-- token functions (below) run after ['post'] functions
+vars['push_xmm']=function(n) -- n, as all arguments used for token functions, is necessarily a string!
+    local s='sub rsp,10\nmovdqu [rsp], '
+    if n=='0' then
+		return s .. vars['x_reg']
+	else
+		return s .. vars['xmm~'..n]
+	end
+end
+
+vars['pop_xmm']=function(n) -- n, as all arguments used for token functions, is necessarily a string!
+    local s=',[rsp]\nadd rsp,10'
+    if n=='0' then
+		return 'movdqu '..vars['x_reg'] .. s
+	else
+		return 'movdqu '..vars['xmm~'..n] .. s
+	end
+end
+
+vars['stack_push']=function(n) -- n, as all arguments used for token functions, is necessarily a string!
+		return 'sub rsp, ' .. n
+end
+
+vars['stack_pop']=function(n) -- n, as all arguments used for token functions, is necessarily a string!
+		return 'add rsp, ' .. n
+end
+
 --COMPULSORY
 local newmem_name='newmem'..suffix
 local newmem_size='$1000'
-local script_ref='Left_arm' --  opcode_inj[vars.script_ref] stores vars
+local script_ref='Animation_speed' --  opcode_inj[vars.script_ref] stores vars
 local inj_name='INJECT'..suffix
-local pattern='^%s*mov.+%s*xmm%d+,%s*%[[^%]]+%]'
-local aobs={'48 89 44 24 20 C7 44 24 28 FF FF FF FF 89 44 24 2C',-24,0}
+local pattern='^%s*movss%s*%[[^%]]+%]%s*,%s*xmm%d+'
+local aobs={'48 8B 40 10 F3 0F 11 48 44',0,16}
 local lookahead_n=32
 
 local inj_script=[[
-	define($%s{inj_name},$%s{address_string})
-    registersymbol($%s{inj_name})
-    alloc($%s{newmem_name}, $%s{newmem_size}, $%s{inj_name})
-	alloc($%s{varis_1_n}, $%d{varis_1_size}, $%s{inj_name})
-    registersymbol($%s{varis_1_n})
-	$%s{varis_1_n}:
-	$%s{varis_1_d}
+  define(${inj_name},${address_string})
+  registersymbol(${inj_name})
+  alloc(${newmem_name}, ${newmem_size}, ${inj_name})
 
-	label(code)
-	label(return)
+  alloc(${varis_1_n}, $%d{varis_1_size}, ${inj_name})
+  registersymbol(${varis_1_n})
+  ${varis_1_n}:
+  ${varis_1_d}
 
-	$%s{newmem_name}:
-	code:
-	  $%s{opcode}
-      mulps $%s{x_reg},[$%s{varis_1_n}]
-      mulps $%s{x_reg} , $%s{xmm~2} -- FROM: vars.post[1]
-      $%s{overwritten}
-	  jmp return
+  label(code)
+  label(return)
 
-	$%s{inj_name}:
-	  jmp $%s{newmem_name}
-	  $%s{post_jmp}
-	return:
+  ${newmem_name}:
+  code:
+    push rcx
+    push rbx
+    push rax
+
+    mov rax,[7FFE0014] //Windows internal clock
+    mov rbx,rax
+    shl rbx,6
+    mov rcx,rax
+    shl rcx,18
+    imul rcx,rbx
+    imul rcx,rax
+    shr rcx,20 //ecx has the number
+ ${push_xmm}(1)
+    ${push_xmm}(2)
+    ${push_xmm}(3)
+    ${push_xmm}(4)
+    ${push_xmm}(5)
+    ${push_xmm}(0)
+
+    cvtsi2ss ${x_reg}, rcx
+    cvtss2sd ${x_reg}, ${x_reg}
+
+    ${stack_push}(8)
+        mov [rsp],FFE00000
+        mov [rsp+4],41EFFFFF //move max_float into stack
+        divsd ${x_reg}, [rsp] //div by max float (in double precision)
+    ${stack_pop}(8)
+
+    cvtsd2ss ${x_reg}, ${x_reg} //random float in ${x_reg}
+
+    cvtss2si ecx, ${x_reg}  //b as int
+    cvtsi2ss  ${xmm~5}, ecx // b
+
+    ${stack_push}(10)
+        mov [rsp], C0000000 //-2
+        mov [rsp+4], 3F800000 //1
+        mov [rsp+8], 40000000 //2
+        mov [rsp+C], 3F3504F3 //sqHalf
+
+        movss ${xmm~1},  [rsp+C] //sqHalf
+        movss ${xmm~2}, [rsp] //-2
+        movss ${xmm~3}, [rsp+4] //1
+        movss ${xmm~4}, [rsp+8] //2
+
+        mulss ${xmm~4}, ${xmm~5} //x~4=b*2
+        subss ${xmm~3}, ${xmm~4} // x~3=1-b*2
+        mulss ${xmm~1}, ${xmm~3} // x~1 = ( sqHalf* (1-b*2) )
+        mulss ${xmm~2}, ${xmm~5} //x~2 = -2*b
+        mulss ${xmm~2}, ${x_reg} // x~2=(-2*b)*x
+        addss ${xmm~2}, ${xmm~5}//x~2=(-2*b*x)+b
+        addss ${xmm~2}, ${x_reg} // x~2=(-2*b*x)+b+x
+        sqrtss ${xmm~2}, ${xmm~2} // // x~2=sqrt(-2*b*x+b+x)
+        mulss  ${xmm~1},${xmm~2} // x~1 = ( sqHalf* (1-b*2) )*sqrt(-2*b*x+b+x)
+        addss ${xmm~1}, ${xmm~5} //  x~1 = b+ ( sqHalf* (1-b*2) )*sqrt(-2*b*x+b+x) || FINAL!
+    ${stack_pop}(10)
+
+    movss  ${xmm~4},  [${varis_1_n}+4]
+    movss  ${xmm~3},  [${varis_1_n}] //u
+    subss  ${xmm~3},  ${xmm~4}
+    mulss  ${xmm~4},  ${xmm~1} //mul by adj_x
+    addss  ${xmm~4},  ${xmm~4}
+    addss  ${xmm~4},  ${xmm~3} //FINAL MULT in x~4 !
+
+    ${pop_xmm}(0)
+	mulss ${x_reg},${xmm~4}
+    ${pop_xmm}(5)
+    ${pop_xmm}(4)
+    ${pop_xmm}(3)
+    ${pop_xmm}(2)
+    ${pop_xmm}(1)
+    pop rax
+    pop rbx
+    pop rcx
+    ${opcode}
+
+    ${overwritten}
+    jmp return
+
+  ${inj_name}:
+  jmp ${newmem_name}
+  ${post_jmp}
+  return:
 ]]
 
 [ENABLE]
