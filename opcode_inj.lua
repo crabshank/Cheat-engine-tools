@@ -27,60 +27,31 @@ local function checkAdressOffset_ret_string(address,hex_address_string) -- decim
 	end
 end
 
-local function tprint (tbl, indent) -- https://gist.github.com/ripter/4270799
-  if not indent then indent = 0 end
-  for k, v in pairs(tbl) do
-    formatting = string.rep("	", indent) .. k .. ": "
-    if type(v) == "table" then
-      print(formatting)
-      tprint(v, indent+1)
-    elseif type(v) == 'boolean' then
-      print(formatting .. tostring(v))
-    else
-      print(formatting .. v)
+function tprint(tbl, indent)
+  local function do_tprint(tbl, indent) -- https://gist.github.com/ripter/4270799
+    if not indent then indent = 0 end
+    for k, v in pairs(tbl) do
+      formatting = string.rep("	", indent) .. k .. ": "
+      if type(v) == "table" then
+        print(formatting)
+        do_tprint(v, indent+1)
+      elseif type(v) == 'boolean' then
+        print(formatting .. tostring(v))
+      elseif type(v) == 'string' then
+		local la, lb=string.find(v, "\n")
+		if la==nil then
+			print(formatting .. '"'.. v ..'"')
+		else
+			print(formatting .. '[['.. v ..']]')
+		end
+      else
+        print(formatting .. v)
+      end
     end
   end
+  do_tprint(tbl,indent)
+  print('\n')
 end
-
---[[local function safeString(s,not_escape)
-	local ls=string.len(s)
-	local st={}
-	local spl={}
-	for i=1, ls do
-		table.insert(spl,string.sub(s,i,i))
-	end
-	if not_escape==true then
-		local i=1
-		while i< ls do
-			local si=spl[i]
-			local si2= spl[i+i]
-			if si=='\\' and si2=="n" then
-				st[i]=string.char(13)
-				st[i+1]=""
-				i=i+2
-			elseif si=='\\' and si2=="'" then
-				st[i]=string.char(39)
-				st[i+1]=""
-				i=i+2
-			else
-				st[i]=si
-				i=i+1
-			end
-		end
-	else
-			for i=1, ls do
-				local si=spl[i]
-				if si==string.char(13) or si==string.char(10) then
-					st[i]='\\n'
-				elseif si==string.char(39) then
-					st[i]="\\'"
-				else
-					st[i]=si
-				end
-			end
-	end
-        return table.concat(st,'')
-end]]
 
 local function string_variFormat(p,t)
 	return string.format(p,table.unpack(t))
@@ -100,12 +71,19 @@ local function tbl_ception(t)
   return tt
 end
 
-local function child_els_index(t,ix)
-      local out={}
-      for i=1, #t do
-          table.insert(out,t[i][ix])
-      end
-      return out
+local function trim_str(s)
+	return string.match(s,'^()%s*$') and '' or string.match(s,'^%s*(.*%S)')
+end
+
+local function trim_table(t)
+	if t==nil then
+		return {}
+	end
+	local out={}
+	for i=1,#t do
+		table.insert(out,trim_str(t[i]))
+	end
+	return out
 end
 
 local function get_subtable(t, strt, ed)
@@ -118,98 +96,192 @@ local function get_subtable(t, strt, ed)
   return out
 end
 
-local function fullMatchesReplace(s,r,w,notAll)
-	local ls=string.len(s)
-	local spl={}
-	for i=1, ls do
-		table.insert(spl,{string.sub(s,i,i),false})
-	end
-	local ended=false
-	local x=1
-	while ended==false do
-        local fss=''
-		local i,j=string.find(s,r,x)
+local function get_substring(starr,strt,ed)
+	return table.concat(get_subtable(starr, strt, ed),'')
+end
 
-		if i==nil then
-			ended=true
-		else
-			local fs=child_els_index(get_subtable(spl,i,j),1)
-			local fst=table.concat(fs,'')
-			fss=string.match(fst,w)
-			x=i+1
-			if notAll==true then
-				x=j+1
-			end
-			if fss~=nil then
-				local c=1
-				for k=i, j do
-					if c==1 then
-						spl[k][1]=fss
-						spl[k][2]=false
-					else
-						spl[k][1]=''
-						spl[k][2]=true
-					end
-				   c=c+1
-				end
-			end
-		end
-		if x>ls then
-			ended=true
-		end
+local function child_els_index(t,ix)
+      local out={}
+      for i=1, #t do
+          table.insert(out,t[i][ix])
+      end
+      return out
+end
+
+local function string_arr(s)
+	local spl={}
+	local sl=string.len(s)
+	for i=1, sl do
+		table.insert(spl,string.sub(s,i,i))
 	end
+	return spl
+end
+
+local function filter_tbl(t,v,b)
 	local out={}
-	for i=1, ls do
-		local spli=spl[i]
-		if spli[2]==false then
-			table.insert(out,spli[1])
+	for i=1, #t do
+		local ti=t[i]
+		if (b==true and ti==v) or (b==false and ti~=v) then
+			table.insert(out,ti)
 		end
 	end
-	return table.concat(out,'')
+        return out
+end
+
+local function tbl_fill(n,v)
+	local t={}
+	for i=1, n do
+		table.insert(t,v)
+	end
+	return t
+end
+
+local function plainSplitKeep(str,ptrn) -- coronalabs.com | https://stackoverflow.com/a/19263313
+	local out = {}
+	local strt_pos = 1
+	local sp_start, sp_end = string.find(str, ptrn, strt_pos,true)
+
+	while sp_start do
+		local sa=string.sub(str, strt_pos, sp_start-1)
+		if sa~='' then
+			table.insert( out, sa )
+		end
+		table.insert( out, string.sub(str, sp_start, sp_end) )
+		strt_pos = sp_end + 1
+		sp_start, sp_end = string.find(str, ptrn, strt_pos,true)
+	end
+
+	local sl=string.sub( str, strt_pos )
+	if sl~='' then
+		table.insert( out,sl  )
+	end
+	return out
 end
 
 local function plainReplace(s,r,w,n)
-      local ls=string.len(s)
-      local lp=string.len(r)
-      local c=0
-      local se=ls-lp+1
-      for i=1, se do
-          local sse=i+lp-1
-          local sbs=string.sub(s,i,sse)
-          if sbs==r then
-             c=c+1
-          end
-          if c==n then
-             local out={}
-             local prev=i-1
-             if i==1 then
-                table.insert(out,w)
-             else
-                 table.insert(out,table.concat({string.sub(s,1,prev),w},''))
-             end
+	local spl=plainSplitKeep(s,r,true)
+	local c=1
+	local is_n=false
+	if type(n)=='number' and n>0 then
+		is_n=true
+	end
+	for i=1, #spl do
+		if spl[i]==r then
+			if is_n and c==n then
+				spl[i]=w
+				break
+			elseif is_n==false then
+				spl[i]=w
+			end
+			c=c+1
+		end
+	end
+	return table.concat(spl,'')
+end
 
-             if sse~=ls then
-                 table.insert(out,table.concat({string.sub(s,sse+1,ls)},''))
-             end
-             return table.concat(out,'')
-          end
-      end
-      return s
+local function str_find_ix_reduce(s,p,d) --BEWARE! FILLS WITH WHITESPACE
+	local out={}
+	local redu={}
+	local redu_s=s
+	
+	for k=1, #p do
+		local pk=p[k]
+		local i=1
+		while true do
+			local a,b=string.find(redu_s,pk,i)
+			if a==nil then
+				break
+			else
+				table.insert(out,{a,b,d[k]})
+				table.insert(redu,string.sub(redu_s,a,b))
+				i=a+1
+			end
+		end
+		for j=1, #redu do
+			local rj=redu[j]
+			redu_s=plainReplace(redu_s,rj,string.rep(' ',string.len(rj)))
+		end
+	end
+	return out
 end
 
 local function string_Dollar(s,t)
-  tfmt = {['string']='',['tokens']={},['args']={}}
-  local out=''
-  local mtc="%$%%[^%{]+%{%s*[^%}]+%s*%}"
-  local mtc2="%$(%%[^%{]+)%{%s*[^%}]+%s*%}"
-  local mtc3="%$%%[^%{]+%{%s*([^%}]+)%s*%}"
-  tfmt['string']=fullMatchesReplace(s,mtc,mtc2,true)
-  for i in string.gmatch(s,mtc) do
-        local ag=string.match(i,mtc3)
-        local tk=string.match(i,mtc2)
-        table.insert(tfmt['tokens'],tk)
-        table.insert(tfmt['args'],t[ag])
-  end
+	tfmt = {['string']='',['tokens']={},['args']={}}
+	local out=''
+	local mtc="%$%%[^%{]+%{%s*[^%}]+%s*%}" --$%s{…} syntax
+	local mtc2="%$(%%[^%{]+)%{%s*[^%}]+%s*%}"
+	local mtc3="%$%%[^%{]+%{%s*([^%}]+)%s*%}"
+
+	local mtcf="%$%{%s*[^%}]+%s*%}%(%s*[^%)]*%s*%)" --full function syntax ${…}(…) syntax
+	local mtcf2="%$%{%s*[^%}]+%s*%}%(%s*([^%)]*)%s*%)" -- ("…")
+	local mtcf3="%$%{%s*([^%}]+)%s*%}%(%s*[^%)]*%s*%)"
+
+	local mtcf_t="%$%%[^{]+%{%s*[^%}]+%s*%}%(%s*[^%)]*%s*%)" --full function syntax $%d{…}(…) syntax
+	local mtcf2_t="%$%%[^{]+%{%s*[^%}]+%s*%}%(%s*([^%)]*)%s*%)" -- ("…")
+	local mtcf3_t="%$%%[^{]+%{%s*([^%}]+)%s*%}%(%s*[^%)]*%s*%)"
+	local mtcf4_t="%$(%%[^{]+)%{%s*[^%}]+%s*%}%(%s*([^%)]*)%s*%)"
+
+	local mt="%$%{%s*[^%}]+%s*%}" --${…} syntax
+	local mt2="%$%{%s*([^%}]+)%s*%}"
+
+	local mrs=s
+	--local sp=string_arr(s)
+	local sf=str_find_ix_reduce(s,{mtc,mtcf,mtcf_t,mt},{0,1,2,3})
+	table.sort( sf, function(a, b) return a[1] < b[1] end ) -- results array now sorted by count (ascending)
+	
+	for k=1, #sf do
+		local sfk=sf[k]
+		local i=string.sub(s,sfk[1],sfk[2])
+		if sfk[3]==0 then
+				local ag=string.match(i,mtc3)
+				local tk=string.match(i,mtc2)
+				mrs=plainReplace(mrs,i,tk)
+				table.insert(tfmt['tokens'],tk)
+				table.insert(tfmt['args'],t[ag])
+		elseif sfk[3]==1 then
+				mrs=plainReplace(mrs,i,'%s')
+
+				local ags=string.match(i,mtcf2)
+				local fn=string.match(i,mtcf3)
+
+				table.insert(tfmt['tokens'],'%s')
+				if string.match(ags,'%s*')~=nil then --there are arguments
+					local agsp=plainSplitKeep(ags,',')
+					local fa=filter_tbl(agsp,',',false)
+					local argms=trim_table(fa)
+					local fr=t[fn](table.unpack(argms))
+					table.insert(tfmt['args'],fr)
+				else
+					table.insert(tfmt['args'],t[fn]())
+				end
+		elseif sfk[3]==2 then
+			    local ags=string.match(i,mtcf2_t)
+				local fn=string.match(i,mtcf3_t)
+				local tk=string.match(i,mtcf4_t)
+				mrs=plainReplace(mrs,i,tk)
+				table.insert(tfmt['tokens'],tk)
+				if string.match(ags,'%s*')~=nil then --there are arguments
+					local agsp=plainSplitKeep(ags,',')
+					local fa=filter_tbl(agsp,',',false)
+					local argms=trim_table(fa)
+					local fr=t[fn](table.unpack(argms))
+					table.insert(tfmt['args'],fr)
+				else
+					table.insert(tfmt['args'],t[fn]())
+				end
+		else
+				mrs=plainReplace(mrs,i,'%s')
+				local fn=string.match(i,mt2)
+				table.insert(tfmt['tokens'],'%s')
+				if type(t[fn])=='function' then
+					table.insert(tfmt['args'],t[fn]())
+				else
+					table.insert(tfmt['args'],t[fn])
+				end
+		end
+	end
+	
+tfmt['string']=mrs
   return tfmt
 end
 
@@ -351,32 +423,32 @@ end
 local function do_disable()
 			local unregsy={}
 			local deallc={}
-			
+
 			 for i in string.gmatch(vars.inj_script,'registersymbol%(%s*([^%)]+)%s*%)') do
 				table.insert(unregsy,'unregistersymbol('..i..')')
 			end
 			unregsy_txt=table.concat(unregsy,'\n')
-		
+
 			for i in string.gmatch(vars.inj_script,'alloc%(%s*([^,]+)%s*,') do
 				table.insert(deallc,'dealloc('..i..')')
 			end
 			deallc_txt=table.concat(deallc,'\n')
-			
-			
+
+
 			local dedollar=string_Dollar(unregsy_txt,vars)
 			local dsb=string_variFormat(dedollar.string,dedollar.args)
 			vars['unregsy_txt']=dsb
-			
+
 			dedollar=string_Dollar(deallc_txt,vars)
 			dsb=string_variFormat(dedollar.string,dedollar.args)
 			vars['deallc_txt']=dsb
-			
+
 			local rst_aa=[[
-			$%s{deallc_txt}
-			$%s{unregsy_txt}
-			define($%s{inj_name},$%s{address_string})
-			$%s{inj_name}:
-			$%s{all_og_opcodes}
+			${deallc_txt}
+			${unregsy_txt}
+			define(${inj_name},${address_string})
+			${inj_name}:
+			${all_og_opcodes}
 			]]
 
 	dedollar=string_Dollar(rst_aa,vars)
@@ -398,15 +470,15 @@ local function disable(script_ref_)
 		hv.SelectedAddress = vars['address_dec']
 	end
 	unpause()
-	
+
 end
 
 local function do_disable_nop()
 	local inj_script=[[
-		unregistersymbol($%s{inj_name})
-		define($%s{inj_name},$%s{address_string})
-		$%s{inj_name}:
-		  $%s{nopped_opcode}
+		unregistersymbol(${inj_name})
+		define(${inj_name},${address_string})
+		${inj_name}:
+		  ${nopped_opcode}
 	]]
 	local dedollar=string_Dollar(inj_script,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
@@ -439,11 +511,11 @@ local function do_inject()
 	vars.instruction_size=getInstructionSize(vars.address_string)
 
 	local enb_jmp_size=[[
-	define($%s{inj_name},$%s{address_string})
-	alloc($%s{newmem_name},$%s{newmem_size},$%s{inj_name})
+	define(${inj_name},${address_string})
+	alloc(${newmem_name},${newmem_size},${inj_name})
 
-	$%s{inj_name}:
-	  jmp $%s{newmem_name}
+	${inj_name}:
+	  jmp ${newmem_name}
 	return:
 	]]
 
@@ -597,12 +669,12 @@ local function do_nop()
 	vars.nop_text=str_concat_rep('nop',vars.nops,'\n')
 	vars.nopped_opcode=vars.opcode
 	local enb_jmp_size=[[
-		registersymbol($%s{inj_name})
-		define($%s{inj_name},$%s{address_string})
-		
-		$%s{inj_name}:
-		  $%s{nop_text}
-	
+		registersymbol(${inj_name})
+		define(${inj_name},${address_string})
+
+		${inj_name}:
+		  ${nop_text}
+
 	]]
 	local dedollar=string_Dollar(enb_jmp_size,vars)
 	local nop_ntk=string_variFormat(dedollar.string,dedollar.args)
@@ -615,7 +687,7 @@ local function nop(script_ref_,inj_name_,vars_,pattern_,aobs_,module_names_)
 
 	pause()
 		vars=vars_
-		
+
 		script_ref=script_ref_
 	vars['script_ref']=script_ref
 		inj_name=inj_name_
@@ -637,7 +709,7 @@ local function nop(script_ref_,inj_name_,vars_,pattern_,aobs_,module_names_)
 	end
 	unpause()
 
- end
+end
  
  opcode_inj['inject']=inject
  opcode_inj['disable']=disable
