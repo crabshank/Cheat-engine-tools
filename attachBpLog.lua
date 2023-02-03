@@ -143,50 +143,8 @@ local function rem_abp(i,b)
 	return out
 end
 
-local function removeAttachedBp(i,b)
-	local abpl=#abp
-	if b==true then
-		debug_removeBreakpoint(abp[i].address)
-		abp=rem_abp(i,true)
-	elseif i==nil then
-		for k=1, abpl do
-			debug_removeBreakpoint(abp[1].address)
-			abp=rem_abp(1,true)
-		end
-	else
-		debug_removeBreakpoint(i)
-		abp=rem_abp(i)
-	end
-	abpl=#abp
-	for k=1, abpl do
-		abp[k].forcePrint=true
-	end
-	if abpl>0 then
-		printAttached()
-	end
-end
-
-local function attachBpAddr(a)
-	abp=rem_abp(a)
-	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
-	debug_setBreakpoint(a)
-end
-
-local function attachBp(t)
-	local a=t
-	if type(t)=='table' then
-		for j=1, #t do
-			attachBpAddr(a[j])
-		end
-	else
-		attachBpAddr(a)
-	end
-	for k=1, #abp do
-		abp[k].forcePrint=true
-	end
-end
-
 local function get_abp_el(a)
+
 	local ix=-1
 	for k=1, #abp do
 			if abp[k].address==a then
@@ -205,7 +163,7 @@ local function set_regsLastDisp(k)
 	ak.rgc=ak.rgc+1
 end
 
-local function onBp()
+local function onBp_attached()
 local abpl=#abp
 if abpl >0 then
 	local ix=get_abp_el(RIP)
@@ -254,10 +212,60 @@ if abpl >0 then
 				hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
 				abpx.regs[32+i]=hexByteString
 			end
-			
-			debug_continueFromBreakpoint(co_run)
-			else
+				debug_continueFromBreakpoint(co_run)
+end
+	end
 
+end
+
+local function removeAttachedBp(i,b)
+	local abpl=#abp
+	if b==true then
+		debug_removeBreakpoint(abp[i].address)
+		abp=rem_abp(i,true)
+	elseif i==nil then
+		for k=1, abpl do
+			debug_removeBreakpoint(abp[1].address)
+			abp=rem_abp(1,true)
+		end
+	else
+		debug_removeBreakpoint(i)
+		abp=rem_abp(i)
+	end
+	abpl=#abp
+	for k=1, abpl do
+		abp[k].forcePrint=true
+	end
+	if abpl>0 then
+		printAttached()
+	end
+end
+
+local function attachBpAddr(a)
+	abp=rem_abp(a)
+	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
+	debug_setBreakpoint(a,onBp_attached)
+end
+
+local function attachBp(t)
+	local a=t
+	if type(t)=='table' then
+		for j=1, #t do
+			attachBpAddr(a[j])
+		end
+	else
+		attachBpAddr(a)
+	end
+	for k=1, #abp do
+		abp[k].forcePrint=true
+	end
+end
+
+local function onBp()
+local abpl=#abp
+if abpl>0 then
+	local ix=get_abp_el(RIP)
+		if ix==-1 then
 					for k=1, abpl do
 						local ak=abp[k]
 						if ak.forcePrint==false and ak.rgc~=0 then
