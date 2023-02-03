@@ -317,9 +317,11 @@ If *m==1*, then **f** and **t**, if specified prints from the *f*th breakpoint h
 
 * **saved()** -> Print the names and information of saved traces.
 
-* **query( a,  n --[[Optional]] )** -> Query the trace for the presence, count, and indexes (order it was hit) of an address or table of addresses. 
+* **query( a, s --[[Optional]] ,  n --[[Optional]] )** -> Query the trace for the presence, count, and indexes (order it was hit) of an address or table of addresses. 
 
 **a** is an an address or table of addresses. 
+
+If **s** is set to *true*, then it will query the trace for whether the address(es) was/were read or written to.
 
 If **n** is a specified, non-empty string, then it will query the saved trace saved with that name (see *.saved()* method); if an empty string it will query the current trace.
 
