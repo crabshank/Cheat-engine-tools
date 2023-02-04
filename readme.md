@@ -299,7 +299,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 ### Methods on (traceCount.…): 
 
-* **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to address **a** (Use '0x…' for addresses in hexadecimal), and keep logging for **c** steps afterwards ("step into/over"). If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **s** is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
+* **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to **a**: address or table of addresses (either in number [Use '0x…' for addresses in hexadecimal] or string, e.g. 'example.exe+7AE', form) (**If a table of addresses, then it will attach a breakpoint to the 1st element, then when it is hit it will attach one to the 2nd and so on until the last breakpoint is hit and then it will start the trace. This is useful for when the trace cannot escape system modules.**), and keep logging for **c** steps afterwards ("step into/over"). If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **s** is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
 
 * **stop()** -> End the trace and print in ascending order of times executed.
 
