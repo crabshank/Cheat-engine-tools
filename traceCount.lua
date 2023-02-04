@@ -535,7 +535,6 @@ local function query(a, s, n)
 		qt=st[n]
 	end
 	-- qt={hits, ds, hpp, trace_info, hp, hpp_a,hits_deref,hits_deref_lookup}
-
 	if s==true then -- accesses
 		for i=1, #ta do
 			local res={}
