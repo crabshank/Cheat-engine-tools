@@ -709,8 +709,10 @@ local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R1
 	end
 
 	local function onBp()
-			local ai1=abp[1][1]
-			local ai1_hx=abp[1][2]
+			if abp[1]~=nil then
+				local ai1=abp[1][1]
+				local ai1_hx=abp[1][2]
+			end
 			if #abp>1 and RIP==ai1 then
 				print('Breakpoint at ' .. ai1_hx .. ' hit!')
 				debug_removeBreakpoint(ai1)
