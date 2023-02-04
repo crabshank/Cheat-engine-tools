@@ -319,7 +319,7 @@ If ***m**==1*, then **f** and **t**, if specified prints from the *f*th breakpoi
 
 * **query( a, s --[[Optional]] ,  n --[[Optional]] )** -> Query the trace for the presence, count, and indexes (order it was hit) of an address or table of addresses. 
 
-**a** is an an address or table of addresses. 
+**a** is an an address or table of addresses (in number or string form). 
 
 If **s** is set to *true*, then it will query the trace for whether the address(es) was/were read or written to.
 
