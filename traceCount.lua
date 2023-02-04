@@ -151,11 +151,13 @@ local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R1
 	local prog=false
 	local first=false
 	local abp={}
+	local abp_save={}
 	local hpp={}
 	local stp=false
 	local trace_info=''
 	local forceSave=''
 	local sio=''
+	local stopped=false
 
 	local function plainSplitKeep(str,ptrn) -- coronalabs.com | https://stackoverflow.com/a/19263313
 		local out = {}
@@ -234,7 +236,10 @@ local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R1
 	end
 
 	local function attach(a,c,n,s)
-		debug_removeBreakpoint(addr)
+		for i=1, #abp do
+			debug_removeBreakpoint(abp[i])
+		end
+		stopped=false
 		if c==nil or c<0 then
 			print('Argument "c" must be >=0')
 			return
@@ -485,6 +490,7 @@ local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R1
 	end
 
 	local function runStop(b)
+		stopped=true
 		prog=false
 		saveTrace()
 		if b==true then
@@ -495,6 +501,7 @@ local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R1
 		if forceSave ~='' then
 			save(forceSave)
 		end
+		stopped=false
 	end
 
 	local function stop()
@@ -711,10 +718,13 @@ local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R1
 	local function onBp()
 		local ai1=0
 		local ai1_hx=''
-			if abp[1]~=nil then
+		if stopped==true then
+			debug_continueFromBreakpoint(co_run)
+		elseif abp[1]~=nil then
 				ai1=abp[1][1]
 				ai1_hx=abp[1][2]
-			end
+				debug_continueFromBreakpoint(co_run)
+		end
 			if #abp>1 and RIP==ai1 then
 				print('Breakpoint at ' .. ai1_hx .. ' hit!')
 				debug_removeBreakpoint(ai1)
@@ -853,7 +863,6 @@ local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R1
 							debug_continueFromBreakpoint(co_stepinto)
 						end
 					else
-						debug_continueFromBreakpoint(co_run)
 						runStop(true)
 					end
 			end
