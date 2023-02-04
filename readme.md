@@ -311,7 +311,7 @@ If **n** is a specified, non-empty string, then it will print the saved trace sa
 
 If **l** (integer) if specified, the extension will only print opcodes that have been executed >=**l** times, unless printing in the order of execution. 
 
-If **m==1**, then **f** and **t**, if specified prints from the *f*th breakpoint hit to the **t**th.
+If ***m**==1*, then **f** and **t**, if specified prints from the *f*th breakpoint hit to the **t**th.
 
 * **save(n)** -> Save the current trace with the name of the non-empty string **n**
 
