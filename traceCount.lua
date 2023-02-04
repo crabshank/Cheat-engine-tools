@@ -305,16 +305,17 @@
 			  end
 					end
 			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
+			local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
 			if extraField~='' then
 				prinfo=prinfo .. ' (' .. extraField .. ')'
 			end
-			h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField}
+			h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
 			hp[hisx]=h
 		elseif h~=nil then
 			h[1]=h[1]+1
 		end
 
-		return { ['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8] }
+		return { ['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['prinfo_cnt']=h[9], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8] }
 
 	end
 
@@ -401,7 +402,7 @@
 					table.insert(pt,' (')
 					table.insert(pt,stn3ic)
 					table.insert(pt, '):\t' )
-					table.insert(pt,stn3i['prinfo'])
+					table.insert(pt,stn3i['prinfo_cnt'])
 					print(table.concat(pt))
 					pt={}
 					ic=ic+1
@@ -495,7 +496,16 @@
 		local qt={}
 		local typa=type(a)
 		if typa=='table' then
-			ta=a
+				for i=1, #a do
+					if type(a[i])=='string' then
+						local as=getAddress(a[i])
+						table.insert(ta, as)
+					else
+						table.insert(ta, a[i])
+					end
+				end
+		elseif typa=='string' then
+			ta={getAddress(a)}
 		elseif typa=='number' then
 			ta={a}
 		end
