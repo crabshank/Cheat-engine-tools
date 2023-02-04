@@ -795,7 +795,7 @@
 							local func= load("return ".. upca)
 							local b,r=pcall(func)
 
-							if r~=nil and type(r)=='number' then
+							if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
 								local rx=string.format('%X',r)
 								local mt={ asc[2][i], asc[1][i], r, rx  } -- [1]={ --[[ just the bracket contents ]] }
 								table.insert(accessed_addrs,rx)
