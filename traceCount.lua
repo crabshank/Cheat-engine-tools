@@ -303,11 +303,11 @@ local function get_disassembly(hi,i)
 
 	if i==1 or h==nil then
 		h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
-		hp[hisx]=h --overwritten
 	elseif h~=nil then
-		hp[hisx]={(h[1]+1),hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
+		h={(h[1]+1),hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
 	end
-
+	hp[hisx]=h --overwritten
+	
 	return { ['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['prinfo_cnt']=h[9], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8] }
 
 end
