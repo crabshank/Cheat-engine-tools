@@ -309,17 +309,17 @@ local function get_disassembly(hi,i)
 				local hdi2_5_l=#hdi2_5
 		local reffed_opcode=opcode
 
-				if hdi2_5_l>0 then
+		if hdi2_5_l>0 then
 		  for i=1, hdi2_5_l do
-						   local hdi2_5_i=hdi2_5[i]
-			  local m_refs=hdi2_5_i[1]
-			  local m_refs_isol=hdi2_5_i[2]
-						  if m_refs~=nil and m_refs_isol~=nil then
-				local rep_with='[ '..m_refs_isol..' ('..hdi2_5_i[4]..' || '..hdi2_5_i[3]..') ]'
-				reffed_opcode=plainReplace(reffed_opcode,m_refs,rep_with)
-						  end
-		  end
+				local hdi2_5_i=hdi2_5[i]
+				local m_refs=hdi2_5_i[1]
+				local m_refs_isol=hdi2_5_i[2]
+				if m_refs~=nil and m_refs_isol~=nil then
+					local rep_with='[ '..m_refs_isol..' ('..hdi2_5_i[4]..' || '..hdi2_5_i[3]..') ]'
+					reffed_opcode=plainReplace(reffed_opcode,m_refs,rep_with)
 				end
+		  end
+		end
 		local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
 		local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
 		if extraField~='' then
@@ -840,8 +840,9 @@ local function onBp()
 
 					deref[2][5]=m_acc --List of accessed memory addresses; table of tables
 					table.insert(deref,RIP) -- add index: {RIPx, { opcode,address,bytes,extraField, m_acc }, RIP}
-					table.insert(hits_deref,deref) -- hits_deref is a table of tables (full local scope)
-					table.insert(deref,#hits) -- add index: {RIPx, { opcode,address,bytes,extraField, m_acc }, RIP, ix}; JUST FOR LOOKUP!
+					local ix=#hits
+					hits_deref[ix]=deref -- hits_deref is a table of tables (full local scope)
+					table.insert(deref,ix) -- add index: {RIPx, { opcode,address,bytes,extraField, m_acc }, RIP, ix}; JUST FOR LOOKUP!
 					for j=1, #accessed_addrs do
 						local aj=accessed_addrs[j]
 						if hits_deref_lookup[ aj ]==nil then
