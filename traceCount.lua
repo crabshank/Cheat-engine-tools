@@ -143,6 +143,7 @@ end
 
 local count=0
 local hits={}
+local hits_lookup={}
 local hits_deref={}
 local hits_deref_lookup={}
 local currTraceDss={}
@@ -268,6 +269,7 @@ local function attach(a,c,n,s)
 			end
 	end
 	hits={}
+	hits_lookup={}
 	hits_deref={}
 	hits_deref_lookup={}
 	hp={}
@@ -369,7 +371,7 @@ local function printHits(m,n,l,f,t)
 			table.insert(pt,'#')
 			table.insert(pt,i)
 			table.insert(pt,' (')
-			table.insert(pt,stn2i['mem_accesses']['count'])
+			table.insert(pt,stn2i['count'])
 			table.insert(pt, '):\t' )
 			table.insert(pt,stn2i['mem_accesses']['prinfo'])
 			print(table.concat(pt))
@@ -456,7 +458,7 @@ local function saveTrace()
 	else
 		trace_info=addr_hx .. ', ' .. hl .. ' steps (' .. count .. ' specified),' .. sio
 	end
-	currTraceDss={hits, ds, hpp, trace_info, hp, hpp_a, hits_deref, hits_deref_lookup}
+	currTraceDss={hits, ds, hpp, trace_info, hp, hpp_a, hits_deref, hits_deref_lookup,hits_lookup}
 end
 
 local function runStop(b)
@@ -509,7 +511,7 @@ local function query(a, s, n)
 	else
 		qt=st[n]
 	end
-	-- qt={hits, ds, hpp, trace_info, hp, hpp_a,hits_deref,hits_deref_lookup}
+	-- qt={hits, ds, hpp, trace_info, hp, hpp_a, hits_deref, hits_deref_lookup,hits_lookup}
 	if s==true then -- accesses
 		for i=1, #ta do
 			local res={}
@@ -540,16 +542,16 @@ local function query(a, s, n)
 		for i=1, #ta do
 			local hxa=string.format('%X',ta[i])
 			local pt={}
-			local rcs=qt[6][hxa] --hpp_a
+			local rcs=qt[9][hxa]
 			if rcs~=nil then
-				for k=2, #rcs do
-					table.insert(pt,rcs[k])
+				for k=1, #rcs[2] do
+					table.insert(pt,rcs[2][k])
 				end
 			end
 			if #pt>0 then
 				local sng='times'
 				local ixs='indexes'
-				local c=rcs[1]['count']
+				local c=#pt
 				if c==1 then
 					sng='time'
 					ixs='index'
@@ -711,7 +713,19 @@ local function onBp()
 
 				if count>=0 then
 					table.insert(hits,RIP)
+					
+					local ix=#hits
 					local RIPx=string.format('%X',RIP)
+					local hit_no=1
+					local hlk=hits_lookup[RIPx]
+					if  hlk~= nil then
+						hit_no=hlk[1]+1
+						hlk[1]=hit_no
+						table.insert(hits_lookup[RIPx][2],ix)
+					else --nil
+						hits_lookup[RIPx]={hit_no,{ix}}
+					end
+					
 					local deref={['hit_address']=RIPx}
 					local dst = disassemble(RIP)
 					local extraField, opcode, bytes, address = splitDisassembledString(dst)
@@ -854,7 +868,7 @@ local function onBp()
 							cnt=#hits_deref_lookup[ aj ]
 						end
 					end
-					hits_deref[ix]['count']=cnt
+					hits_deref[ix]['count']=hit_no
 					if stp==true then
 						debug_continueFromBreakpoint(co_stepover)
 					else
