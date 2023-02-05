@@ -290,37 +290,14 @@ local function get_disassembly(hi,i)
 
 	local hdi=hits_deref[i]
 	local hdi_dss=hdi['disassembly']
-	local extraField = hdi_dss[4]
-	local opcode = hdi_dss[1]
-	local bytes = hdi_dss[3]
-	local address = hdi_dss[2]
-
-	local a = getNameFromAddress(address) or ''
-	local pa=hisx .. ' ( ' .. a .. ' )'
-
-	if a=='' then
-		pa=hisx
-	end
-
-	local mema=hdi['mem_accesses']
-	local mml=#mema
-	local reffed_opcode=opcode
-
-	if mml >0 then
-		for i=1, mml do
-			local mi=mema[i]
-			local m_refs=mi[1]
-			local m_refs_isol=mi[2]
-			local rep_with='[ '..m_refs_isol..' ('..mi[4]..' || '..mi[3]..') ]'
-			reffed_opcode=plainReplace(reffed_opcode,m_refs,rep_with)
-		end
-	end
-
-	local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
-	local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
-	if extraField~='' then
-		prinfo=prinfo .. ' (' .. extraField .. ')'
-	end
+	local hdi_dss_m=hdi['mem_accesses']
+	local extraField = hdi_dss_m['extraField']
+	local opcode = hdi_dss_m['opcode']
+	local bytes = hdi_dss_m['bytes']
+	local address = hdi_dss_m['address']
+	local pa = hdi_dss_m['address_string']
+	local prinfo_cnt = hdi_dss_m['prinfo_cnt']
+	local prinfo = hdi_dss_m['prinfo']
 
 	if i==1 or h==nil then
 		h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
@@ -353,7 +330,7 @@ local function printHits(m,n,l,f,t)
 	local stl=#stnp
 
 	if m==1 then
-		stnp=stn[2] -- table of disassembled addresses
+		stnp=stn[7] -- table of disassembled addresses
 		stl=#stnp
 		if f~=nil and (type(f)~='number' or (f<1 or f>stl)) then
 			print('Argument "f", if specified, must be a number between 0 and ' .. stl)
@@ -394,7 +371,7 @@ local function printHits(m,n,l,f,t)
 			table.insert(pt,' (')
 			table.insert(pt,stn2i['count'])
 			table.insert(pt, '):\t' )
-			table.insert(pt,stn2i['prinfo'])
+			table.insert(pt,stn2i['mem_accesses']['prinfo'])
 			print(table.concat(pt))
 			pt={}
 		end
@@ -406,8 +383,8 @@ local function printHits(m,n,l,f,t)
 		end
 		local stn3=stn[3] -- table of disassembled addresses, sorted by count
 		local ic=1
-
-		for i=1, stl do
+		local stlstl=#stn3
+		for i=1, stlstl do
 			local stn3i=stnp[i]
 			local stn3ic=stn3i['count']
 			if stn3ic>=lm then
@@ -819,7 +796,9 @@ local function onBp()
 
 					local asc=getAccessed(opcode)
 					local m_acc={}
+					local reffed_opcode=opcode
 					local accessed_addrs={}
+
 					for i=1, #asc[1] do
 						local upca=upperc(asc[1][i])
 						local func= load("return ".. upca)
@@ -827,28 +806,55 @@ local function onBp()
 
 						if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
 							local rx=string.format('%X',r)
-							local mt={ asc[2][i], asc[1][i], r, rx  } -- [1]={ --[[ just the bracket contents ]] }
 							table.insert(accessed_addrs,rx)
+							local fstx=asc[2][i]
+							local brkt=asc[1][i]
 							-- [2]= { --[[ full syntax "[...]" ]] }
-							table.insert(m_acc,mt)
+								local rep_with='[ '..brkt..' ('..rx..' || '..r..') ]'
+								reffed_opcode=plainReplace(reffed_opcode,fstx,rep_with)
 						end
 					end
+								local a = getNameFromAddress(address) or ''
+								local pa=''
+								if a=='' then
+									pa=RIPx
+									m_acc['address_string']=pa
+								else
+									m_acc['address_string']=a
+									pa=RIPx .. ' ( ' .. a .. ' )'
+								end
 
-					restoreGlobals()
+								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
+								local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
+								if extraField~='' then
+									prinfo=prinfo .. ' (' .. extraField .. ')'
+								end
+								m_acc['extraField']=extraField
+								m_acc['opcode']=opcode
+								m_acc['bytes']=bytes
+								m_acc['address']=address
+								m_acc['prinfo']=prinfo
+								m_acc['prinfo_cnt']=prinfo_cnt
+								
+										restoreGlobals()
+										
+
 					deref['mem_accesses']=m_acc --List of accessed memory addresses; table of tables
 					deref['dec_address']=RIP
 					local ix=#hits
 					hits_deref[ix]=deref -- hits_deref is a table of tables (full local scope)
 					deref['index']=ix
+					local cnt=1
 					for j=1, #accessed_addrs do
 						local aj=accessed_addrs[j]
 						if hits_deref_lookup[ aj ]==nil then
 							hits_deref_lookup[ aj ] = {deref} --table of tables { {} }
 						else
 							table.insert( hits_deref_lookup[ aj ] , deref) -- { {}, {}, ... }
+							cnt=#hits_deref_lookup[ aj ]
 						end
 					end
-
+					hits_deref[ix]['count']=cnt
 					if stp==true then
 						debug_continueFromBreakpoint(co_stepover)
 					else
