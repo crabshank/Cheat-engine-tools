@@ -686,8 +686,7 @@ end
 
 local function onBp()
 	if prog==false then
-		debug_continueFromBreakpoint(co_run)
-		return 0
+		return
 	end
 	
 	local ai1=0
