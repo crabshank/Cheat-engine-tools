@@ -288,47 +288,45 @@ local function get_disassembly(hi,i)
 	local hisx=string.format('%X',hi)
 	local h=hp[hisx]
 
+	local hdi=hits_deref[i]
+	local hdi_dss=hdi['disassembly']
+	local extraField = hdi_dss[4]
+	local opcode = hdi_dss[1]
+	local bytes = hdi_dss[3]
+	local address = hdi_dss[2]
+
+	local a = getNameFromAddress(address) or ''
+	local pa=hisx .. ' ( ' .. a .. ' )'
+
+	if a=='' then
+		pa=hisx
+	end
+
+	local mema=hdi['mem_accesses']
+	local mml=#mema
+	local reffed_opcode=opcode
+
+	if mml >0 then
+		for i=1, mml do
+			local mi=mema[i]
+			local m_refs=mi[1]
+			local m_refs_isol=mi[2]
+			local rep_with='[ '..m_refs_isol..' ('..mi[4]..' || '..mi[3]..') ]'
+			reffed_opcode=plainReplace(reffed_opcode,m_refs,rep_with)
+		end
+	end
+
+	local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
+	local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
+	if extraField~='' then
+		prinfo=prinfo .. ' (' .. extraField .. ')'
+	end
+
 	if i==1 or h==nil then
-		local hdi=hits_deref[i] -- {RIPx, { opcode,address,bytes,extraField, m_acc }, RIP}
-				local hdi2=hdi[2]
-		local extraField = hdi2[4]
-		local opcode = hdi2[1]
-		local bytes = hdi2[3]
-		local address = hdi2[2]
-
-		local a = getNameFromAddress(address) or ''
-		local pa=hisx .. ' ( ' .. a .. ' )'
-
-		if a=='' then
-			pa=hisx
-		end
-
-		-- hdi2[5] == { asc[2][i], asc[1][i], r, rx  } ||  -- [1]={ --[[ just the bracket contents ]] },  [2]= { --[[ full syntax "[...]" ]] }
-
-				local hdi2_5=hdi2[5]
-				local hdi2_5_l=#hdi2_5
-		local reffed_opcode=opcode
-
-		if hdi2_5_l>0 then
-		  for i=1, hdi2_5_l do
-				local hdi2_5_i=hdi2_5[i]
-				local m_refs=hdi2_5_i[1]
-				local m_refs_isol=hdi2_5_i[2]
-				if m_refs~=nil and m_refs_isol~=nil then
-					local rep_with='[ '..m_refs_isol..' ('..hdi2_5_i[4]..' || '..hdi2_5_i[3]..') ]'
-					reffed_opcode=plainReplace(reffed_opcode,m_refs,rep_with)
-				end
-		  end
-		end
-		local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
-		local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
-		if extraField~='' then
-			prinfo=prinfo .. ' (' .. extraField .. ')'
-		end
 		h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
-		hp[hisx]=h
+		hp[hisx]=h --overwritten
 	elseif h~=nil then
-		h[1]=h[1]+1
+		hp[hisx]={(h[1]+1),hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
 	end
 
 	return { ['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['prinfo_cnt']=h[9], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8] }
@@ -541,11 +539,11 @@ local function query(a, s, n)
 			local tai=ta[i]
 			local taix=string.format("%X",ta[i])
 			--local h_drf=qt[7]
-			local h_drf_lk=qt[8] -- ['...']={ {RIPx, {...}, RIP, ix}, {...}, ... }
+			local h_drf_lk=qt[8] --hits_deref_lookup
 			local acs=h_drf_lk[taix]
 			if acs~=nil then
 				for k=1, #acs do
-					table.insert(res,acs[k][4])
+					table.insert(res,acs[k]['index'])
 				end
 			end
 			if #res>0 then
@@ -565,7 +563,7 @@ local function query(a, s, n)
 		for i=1, #ta do
 			local hxa=string.format('%X',ta[i])
 			local pt={}
-			local rcs=qt[6][hxa]
+			local rcs=qt[6][hxa] --hpp_a
 			if rcs~=nil then
 				for k=2, #rcs do
 					table.insert(pt,rcs[k])
@@ -737,10 +735,10 @@ local function onBp()
 				if count>=0 then
 					table.insert(hits,RIP)
 					local RIPx=string.format('%X',RIP)
-					local deref={RIPx,{}}
+					local deref={['hit_address']=RIPx}
 					local dst = disassemble(RIP)
 					local extraField, opcode, bytes, address = splitDisassembledString(dst)
-					deref[2]={opcode,address,bytes,extraField,{}}
+					deref['disassembly']={opcode,address,bytes,extraField}
 					--Get accessed memory addresses
 
 					debug_getContext(true)
@@ -837,12 +835,11 @@ local function onBp()
 					end
 
 					restoreGlobals()
-
-					deref[2][5]=m_acc --List of accessed memory addresses; table of tables
-					table.insert(deref,RIP) -- add index: {RIPx, { opcode,address,bytes,extraField, m_acc }, RIP}
+					deref['mem_accesses']=m_acc --List of accessed memory addresses; table of tables
+					deref['dec_address']=RIP
 					local ix=#hits
 					hits_deref[ix]=deref -- hits_deref is a table of tables (full local scope)
-					table.insert(deref,ix) -- add index: {RIPx, { opcode,address,bytes,extraField, m_acc }, RIP, ix}; JUST FOR LOOKUP!
+					deref['index']=ix
 					for j=1, #accessed_addrs do
 						local aj=accessed_addrs[j]
 						if hits_deref_lookup[ aj ]==nil then
