@@ -1441,6 +1441,7 @@ local function onBp()
 					
 					for key, value in pairs(present_r_last_lookup) do
 						if present_r_lookup[key] == nil then
+								local insrt=true
 								local ri=value[4]
 								local rgs=registers['regs'][ri]
 								local arg_n=registers['regs_args'][ri]
@@ -1455,8 +1456,13 @@ local function onBp()
 								end
 							if rg['aob']~=nil then
 									rg['aob_str']=table.concat(rg['aob'],' ')
+									if rg['aob_str']==value[2]['aob_str'] then
+										insrt=false
+									end
 							end
-							table.insert(present_r,{value[1],rg,value[3],ri})
+							if insrt==true then
+								table.insert(present_r,{value[1],rg,value[3],ri})
+							end
 						end
 					end
 					present_r_last_lookup={}
@@ -1563,8 +1569,6 @@ local function onBp()
 								m_acc['prinfo']=prinfo
 								m_acc['prinfo_cnt']=prinfo_cnt
 								m_acc['present_regs']=present_r
-								
-							
 
 					deref['mem_accesses']=m_acc --List of accessed memory addresses; table of tables
 					deref['dec_address']=RIP
