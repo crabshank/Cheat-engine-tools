@@ -53,7 +53,7 @@ N.B. Functions assigned on vars are run for every token, whereas functions on "v
   * **script_ref**: name to give the script so that it recognises a specific cheat table
   * **inj_name**: name to the injection point
   * **newmem_name**: name to give to the memory that stores the injected (redirected to) code
-  * **newmem_size**: size of the memory that stores the injected (redirected to) code (STRING!: "$%s{newmem_size}"; INTEGER!: "$%d{newmem_size}")
+  * **newmem_size**: size of the memory that stores the injected (redirected to) code (STRING!: "${newmem_size}" or "$%s{newmem_size}"; INTEGER!: "$%d{newmem_size}")
   * **vars**: put data that you want to be accessible using the ```${…}/$%s{…}``` syntax here
   * **inj_script**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```${key} OR $%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.). Note that ```${…}``` is the same as ```$%s{…}```, because string is the most comnon type.
   * **pattern**: a LUA string with a pattern that opcodes are checked against for matches.
