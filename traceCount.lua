@@ -83,70 +83,16 @@ local function getSubRegDecBytes(x,g,a,b,n)
 	end
 end
 
-traceCount={}
-
 local registers={}
 
 registers['get_regs']={}
 
 registers['alt_names']={
-	['XMM10']='XMM10',
-	['XMM11']='XMM11',
-	['XMM12']='XMM12',
-	['XMM13']='XMM13',
-	['XMM14']='XMM14',
-	['XMM15']='XMM15',
-	['XMM0']='XMM0',
-	['XMM1']='XMM1',
-	['XMM2']='XMM2',
-	['XMM3']='XMM3',
-	['XMM4']='XMM4',
-	['XMM5']='XMM5',
-	['XMM6']='XMM6',
-	['XMM7']='XMM7',
-	['XMM8']='XMM8',
-	['XMM9']='XMM9',
-	['R10D']='R10D',
-	['R10W']='R10W',
 	['R10B']='R10L',
-	['R11D']='R11D',
-	['R11W']='R11W',
 	['R11B']='R11L',
-	['R12D']='R12D',
-	['R12W']='R12W',
 	['R12B']='R12L',
-	['R13D']='R13D',
-	['R13W']='R13W',
 	['R13B']='R13L',
-	['R14D']='R14D',
-	['R14W']='R14W',
-	['R14B']='R14L',
-	['R15D']='R15D',
-	['R15W']='R15W',
 	['R15B']='R15L',
-	['RAX']='RAX',
-	['RBX']='RBX',
-	['RCX']='RCX',
-	['RDX']='RDX',
-	['RDI']='RDI',
-	['RSI']='RSI',
-	['RBP']='RBP',
-	['RSP']='RSP',
-	['R10']='R10',
-	['R11']='R11',
-	['R12']='R12',
-	['R13']='R13',
-	['R14']='R14',
-	['R15']='R15',
-	['EAX']='EAX',
-	['EBX']='EBX',
-	['ECX']='ECX',
-	['EDX']='EDX',
-	['EDI']='EDI',
-	['ESI']='ESI',
-	['EBP']='EBP',
-	['ESP']='ESP',
-	['EIP']='EIP',
 	['FP0']='ST(0)',
 	['FP1']='ST(1)',
 	['FP2']='ST(2)',
@@ -155,34 +101,8 @@ registers['alt_names']={
 	['FP5']='ST(5)',
 	['FP6']='ST(6)',
 	['FP7']='ST(7)',
-	['R8D']='R8D',
-	['R8W']='R8W',
 	['R8B']='R8L',
-	['R9D']='R9D',
-	['R9W']='R9W',
-	['R9B']='R9L',
-	['SIL']='SIL',
-	['DIL']='DIL',
-	['BPL']='BPL',
-	['SPL']='SPL',
-	['R8']='R8',
-	['R9']='R9',
-	['AX']='AX',
-	['AL']='AL',
-	['AH']='AH',
-	['BX']='BX',
-	['BL']='BL',
-	['BH']='BH',
-	['CX']='CX',
-	['CL']='CL',
-	['CH']='CH',
-	['DX']='DX',
-	['DL']='DL',
-	['DH']='DH',
-	['SI']='SI',
-	['DI']='DI',
-	['BP']='BP',
-	['SP']='SP'
+	['R9B']='R9L'
 }
 
 registers['list_regs']={
@@ -1393,7 +1313,7 @@ local function onBp()
 							local ri_fnd=ri
 							local ri_alt=registers['alt_names'][ri]
 							local ri_pos=str_allPosPlain(s,ri)
-							if ri~=ri_alt then
+							if ri~=ri_alt and ri_alt~=nil then
 								local ri_alt_pos=str_allPosPlain(s,ri_alt)
 								if #ri_pos>0 then
 									fnd=true
@@ -1602,6 +1522,7 @@ function debugger_onBreakpoint()
 	onBp()
 end
 
+traceCount={}
 traceCount.attach=attach
 traceCount.stop=stop
 traceCount.printHits=printHits
