@@ -971,7 +971,7 @@ end
 
 local function runStop(b)
 	prog=false
-	if #abp>1  then
+	if abp~= nil and #abp>1 then
 			debug_removeBreakpoint(abp[1][1])
 	end
 	saveTrace()
