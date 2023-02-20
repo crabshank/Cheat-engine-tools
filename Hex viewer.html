@@ -705,9 +705,9 @@ function get_subarray(arr,f,t,rvrs){
 	let out=[];
 	for(i=f; i<=t; ++i){
 		if(rvrs===true){
-			out.unshift(arr[i]);
-		}else{
 			out.push(arr[i]);
+		}else{
+			out.unshift(arr[i]);
 		}
 	}
 	return out;
@@ -798,9 +798,9 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 				if(df>=4){
 					let rhx=[];
 					if(!be){
-						rhx=get_subarray(hx_arr,i,i+3);
+						rhx=get_subarray(hx_arr_int,i,i+3);
 					}else{
-						rhx=get_subarray(hx_arr,i,i+3,true);
+						rhx=get_subarray(hx_arr_int,i,i+3,true);
 					}
 					let data = rhx;
 					let view = new DataView(new Uint8Array(data).buffer);
@@ -826,9 +826,9 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 				if(df>=8){
 					let rhx=[];
 					if(!be){
-						rhx=get_subarray(hx_arr,i,i+7);
+						rhx=get_subarray(hx_arr_int,i,i+7);
 					}else{
-						rhx=get_subarray(hx_arr,i,i+7,true);
+						rhx=get_subarray(hx_arr_int,i,i+7,true);
 					}
 					let data = rhx;
 					let view = new DataView(new Uint8Array(data).buffer);
@@ -1206,8 +1206,12 @@ function type_change(event){
 
 elems.n_count_div.oninput=(event)=>{
 	let t=elems.n_count_div;
-	let tni=parseInt(t.innerText);
-	let tn=(Number.isNaN(tni))?1:tni;
+	let ttx=t.innerText;
+	let tni=parseInt(ttx);
+	let tn='';
+	if(ttx!==''){
+		tn=(Number.isNaN(tni))?1:tni;
+	}
 	t.innerHTML=tn;
 }
 
