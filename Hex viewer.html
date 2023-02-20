@@ -729,9 +729,10 @@ async function get_interps_bit(i, tp_id, be, bit_interps_curr, n, ns){
 				let rhxb=rhx.map((b)=>{return b.bit;});
 				let b=n_bit_to_int(rhxb);
 				let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
-				bit_interps_curr['nbus__'+ns].push([p,to_byte,to_byte2]);
-				bit_interps_curr['nbs__'+ns].push([b.s,to_byte,to_byte2]);
-				bit_interps_curr['nbu__'+ns].push([b.u,to_byte,to_byte2]);
+				let bs=rhxb.join('');
+				bit_interps_curr['nbus__'+ns].push([p,to_byte,to_byte2,bs]);
+				bit_interps_curr['nbs__'+ns].push([b.s,to_byte,to_byte2,bs]);
+				bit_interps_curr['nbu__'+ns].push([b.u,to_byte,to_byte2,bs]);
 			}else{
 				bit_interps_curr['nbus__'+ns].push(null);
 				bit_interps_curr['nbs__'+ns].push(null);
@@ -954,7 +955,7 @@ async function makeSpansBits(i, tp_id, be, bit_interps_curr, n, ns,tp_name){
 				if(c===null){
 					elems.hex2.innerHTML+='<span></span>';
 				}else{
-					elems.hex2.innerHTML+='<span onpointerenter="p_enter_bits(event,'+c[1]+','+c[2]+');" onpointerleave="p_leave();">'+c[0]+'</span>';
+					elems.hex2.innerHTML+='<span onpointerenter="p_enter_bits(event,'+c[1]+','+c[2]+');" onpointerleave="p_leave();">'+c[0]+' ['+c[3]+']'+'</span>';
 					for(let k=c[1]; k<=c[2]; ++k){
 						if(typeof bit_interps_hex[k]==='undefined'){
 							bit_interps_hex[k]=[i]
