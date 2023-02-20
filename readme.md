@@ -336,7 +336,7 @@ If **n** is a specified, non-empty string, then it will query the saved trace sa
 
 * **attach(s, z --[[Optional]] , onWrite --[[Optional]] )** -> 
  
-Attach breakpoints to address with index **s** (Use '0x…' for addresses in hexadecimal) (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and **z**-1 eligible addresses after it (**z** in total, probably will not work if >4). If **z** is not specified, it will be set to 1. 
+Attach breakpoints to address with index **s** (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and **z**-1 eligible addresses after it (**z** in total, probably will not work if >4). If **z** is not specified, it will be set to 1. 
 
 If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
 
