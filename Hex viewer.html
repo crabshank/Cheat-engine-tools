@@ -109,7 +109,7 @@
 				<input type="checkbox" id="big_end"></input>
 				<label for="big_end">Big endian</label>
 			</section>
-		<button id="conv">Convert hex</button>
+		<button id="conv" style="margin-left: 0.16ch;">Convert hex</button>
 		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%; overflow-y: hidden;">
 		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;">
 			<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
@@ -536,7 +536,6 @@ var mxw=0;
 elems.type_view = document.getElementById('type_view');
 elems.type_view.selectedIndex=8; //float
 
-//const type_bytes=[...elems.type_view].map((e)=>{return parseInt(e.getAttribute('type_bytes'));});
 var hx_interps={};
 var hx_interps_be={};
 
