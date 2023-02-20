@@ -588,7 +588,9 @@ local function check_inj()
 	local c=1
 	local clp=curr_lookahead['opcodes']
 	local ogl=vars['lookaheads']['opcodes']
+        local ogll=#ogl
 	vars['all_og_opcodes']=table.concat(ogl,'\n')
+        local farl1=false
 	for i=1, #clp do
 		local opc=clp[i]
 		if i==1 and string.match(opc,'^jmp%s*.+$')~=nil then
@@ -597,9 +599,26 @@ local function check_inj()
 			rst=true
 			break
 		elseif string.match(opc,'^%s*nop%s*$')==nil then
+                       local nf=true
 			if opc~=ogl[c] then
+                           if farl1==false and c<ogll then
+                             farl1=true
+                             local jc=0
+                             for j=c+1,ogll do
+                                 jc=jc+1
+                                 if opc==ogl[j] then
+                                    nf=false
+                                    c=j+1
+                                    --i=i+jc
+                                    break
+                                 end
+                             end
+                           end
+
+                             if nf==true then
 				rst=true
 				break
+                             end
 			else
 				c=c+1
 			end
