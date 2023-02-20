@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 	<style>
+		#rgba_sel select {
+			margin-right: 0.27ch;
+		}
 		body {
 			background-color: hsl(0 0% 8% / 1);
 			color: white;
@@ -54,40 +57,59 @@
 <body>
 	<title>Hex viewer</title>
 	<h1 id="ttl" style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex viewer</h1>
-				<select  id="type_view" style="width: max-content;">
+					<div contenteditable="true" id="n_count_div" style="display: none; border: #7f7f7f 1px outset; padding-left: 0.73ch; padding-right: 0.73ch; zoom: 81.5%; border-style: dotted;">4</div>
+			<select  id="type_view" style="width: max-content;">
 				<optgroup label="Char (Unicode)">
-					<option meta_type="1c" type_bytes="1">1 byte char</option>
-					<option meta_type="2c" type_bytes="2">2 byte char</option>
-					<option meta_type="3c" type_bytes="3">3 byte char</option>
-					<option meta_type="4c" type_bytes="4">4 byte char</option>
-					<option meta_type="4c" type_bytes="4">4 byte surrogate pair char</option>
+					<option id="nbc">n byte char</option>
+					<option id="spc">4 byte surrogate pair char</option>
 				</optgroup>
 				<optgroup label="Int">
-					<option meta_type="1i" type_bytes="1">1 byte int (unsigned, signed)</option>
-					<option meta_type="1i" type_bytes="1">1 byte signed int</option>
-					<option meta_type="1i" type_bytes="1">1 byte unsigned int</option>
-					<option meta_type="2i" type_bytes="2">2 byte int (unsigned, signed)</option>
-					<option meta_type="2i" type_bytes="2">2 byte signed int</option>
-					<option meta_type="2i" type_bytes="2">2 byte unsigned int</option>
-					<option meta_type="4i" type_bytes="4">4 byte int (unsigned, signed)</option>
-					<option meta_type="4i" type_bytes="4">4 byte signed int</option>
-					<option meta_type="4i" type_bytes="4">4 byte unsigned int</option>
-					<option meta_type="8i" type_bytes="8">8 byte int (unsigned, signed)</option>
-					<option meta_type="8i" type_bytes="8">8 byte signed int</option>
-					<option meta_type="8i" type_bytes="8">8 byte unsigned int</option>
+					<option id="nbyus">n byte int (unsigned, signed)</option>
+					<option id="nbys">n byte signed int</option>
+					<option id="nbyu">n byte unsigned int</option>
+					<option id="nbus">n bit int (unsigned, signed)</option>
+					<option id="nbs">n bit signed int</option>
+					<option id="nbu">n bit unsigned int</option>
 				</optgroup>
 				<optgroup label="Float">
-					<option meta_type="4f" type_bytes="4">Float</option>
-					<option meta_type="8f" type_bytes="8">Double</option>
+					<option id="flt">Float</option>
+					<option id="dbl">Double</option>
 				</optgroup>
-				<option meta_type="3x(1i)" type_bytes="3">RGB byte hex</option>
-				<option meta_type="4x(1i)" type_bytes="4">RGBA byte hex</option>
-				<option meta_type="b" type_bytes="1">Binary</option>
+				<option id="col">RGB(A) byte hex</option>
+				<option id="bin">Binary</option>
 			</select>
+		<section id="rgba_sel" style="display: none;">
+			<select  id="rgba_sel1" style="width: max-content;">
+				<option>R</option>
+				<option>A</option>
+				<option>G</option>
+				<option>B</option>
+			</select>
+			<select  id="rgba_sel2" style="width: max-content;">
+				<option>G</option>
+				<option>B</option>
+				<option>R</option>
+				<option>A</option>
+			</select>
+			<select  id="rgba_sel3" style="width: max-content;">
+				<option>B</option>
+				<option>R</option>
+				<option>G</option>
+				<option>A</option>
+			</select>
+			<select  id="rgba_sel4" style="width: max-content;">
+				<option></option>
+				<option>A</option>
+				<option>B</option>
+				<option>R</option>
+				<option>G</option>
+			</select>
+		</section>
 			<section id='be_box' style="display: contents; visibility: visible;	">
 				<input type="checkbox" id="big_end"></input>
 				<label for="big_end">Big endian</label>
 			</section>
+		<button id="conv">Convert hex</button>
 		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%; overflow-y: hidden;">
 		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;">
 			<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
@@ -427,6 +449,29 @@ function n_byte_unit8_to_int(a,u_only){
 		}
 }
 
+function n_bit_to_int(a, u_only){
+			let us=Number("0b"+a.join(''));
+			let out={s: us, u:us};
+
+		if(u_only===true){
+			return out;
+		}else{
+			let n=a.length;
+			let mxs='1'.repeat(n);
+            let mx=Number("0b"+mxs);
+			
+			let h=Math.floor(mx/2);
+			
+			if(out.u>h){
+				out.s=-mx+out.u-1;
+			}else{
+				out.s=out.u;
+			}
+			
+			return out;
+		}
+}
+
  function getNoDigits(n){
 		return Math.max(1, Math.floor(Math.log10(Math.abs(n))+1) );
 }
@@ -478,6 +523,7 @@ function absBoundingClientRect(el){
 var elems={};
 var hx_arr=[];
 var hx_arr_int=[];
+var bits_arr=[];
 var hx_arr_offs=[];
 var hovSpans=[];
 var hovSpans2=[];
@@ -488,12 +534,15 @@ var mxh=0;
 var mxw=0;
 
 elems.type_view = document.getElementById('type_view');
-elems.type_view.selectedIndex=17;
+elems.type_view.selectedIndex=8; //float
 
-var arrl=elems.type_view.length;
-const type_bytes=[...elems.type_view].map((e)=>{return parseInt(e.getAttribute('type_bytes'));});
-var hx_interps=Array.from(Array(arrl), () => []);
-var hx_interps_be=Array.from(Array(arrl), () => []);
+//const type_bytes=[...elems.type_view].map((e)=>{return parseInt(e.getAttribute('type_bytes'));});
+var hx_interps={};
+var hx_interps_be={};
+
+var bit_interps={};
+var bit_interps_be={};
+var bit_interps_hex=[];
 
 elems.hex_scts = document.getElementById('hex_scts');
 elems.hex_sct = document.getElementById('hex_sct');
@@ -505,16 +554,18 @@ elems.be_box = document.getElementById('be_box');
 elems.doc_CSS2 = document.getElementById('doc_CSS2');
 elems.ttl = document.getElementById('ttl');
 elems.offset_info = document.getElementById('offset_info');
+elems.conv = document.getElementById('conv');
+elems.rgba_sel=document.getElementById('rgba_sel');
+elems.n_count_div=document.getElementById('n_count_div');
+elems.n_count_div.title='Scroll over or type value (n bit/byte) here!';
+
 allLoadedSpans=false;
 var hexBoxRect=absBoundingClientRect(elems.hex);
-
-
 
 function doRsz(){
 	elems.hex.style.transform=`translateY(0px)`;
 	hexBoxRect=absBoundingClientRect(elems.hex);
 }
-
 
 elems.hex_scts = document.getElementById('hex_scts');
 
@@ -549,10 +600,19 @@ function p_enter(event,n){
 		if(n===1){
 			hovSpans=[t];
 			let t2=hexSpans2[ix];
-			t2.classList.add('isHovered');
-			elems.offset_info.innerHTML='Offset: '+t2.title;
-			hovSpans2=[t2];
-			
+			if(bit_interps_hex.length===0){
+				t2.classList.add('isHovered');
+				elems.offset_info.innerHTML='Offset: '+t2.title;
+				hovSpans2=[t2];
+			}else{
+					let bi=bit_interps_hex[ix];
+					for(let k=0, len_k=bi.length; k<len_k; ++k){
+						let bik=bi[k];
+						let s=hexSpans2[bik]
+						s.classList.add('isHovered');
+						hovSpans2.push(s);
+					}
+			}
 			let r2=absBoundingClientRect(hexSpans2[parseInt(t2.getAttribute('ix'))]);
 			let r=absBoundingClientRect(t);
 			let r20=absBoundingClientRect(hexSpans2[0]);
@@ -565,14 +625,15 @@ function p_enter(event,n){
 		}else{
 			hovSpans2=[t];
 			hovSpans=[];
-			let g=type_bytes[elems.type_view.selectedIndex];
-			let n=Math.min(hexSpans.length,ix+g)-1;
+			
+			let len=parseInt(t.getAttribute('byte_len'));
+			let n=Math.min(hexSpans.length,ix+len)-1;
 			for(let i=ix, len=n; i<=len; i++){
 				let s=hexSpans[i];
 				s.classList.add('isHovered');
 				hovSpans.push(s);
 			}
-			
+
 			let r=absBoundingClientRect(hexSpans[ix]); //first hovered span of hex div
 			let r2=absBoundingClientRect(t);
 			let r0=absBoundingClientRect(hexSpans[0]);
@@ -590,6 +651,43 @@ function p_enter(event,n){
 	}
 }
 
+function p_enter_bits(event,fr,to){
+	if(allLoadedSpans){
+		let t=event.target;
+		for(let i=0, len=hovSpans.length; i<len; i++){
+			hovSpans[i].classList.remove('isHovered');
+		}
+		for(let i=0, len=hovSpans2.length; i<len; i++){
+			hovSpans2[i].classList.remove('isHovered');
+		}
+			let ix=parseInt(t.getAttribute('ix'));
+			t.classList.add('isHovered');
+			elems.offset_info.innerHTML='Offset: '+t.title;
+			hovSpans2=[t];
+			hovSpans=[];
+
+			for(let i=fr; i<=to; ++i){
+				let s=hexSpans[i]
+				s.classList.add('isHovered');
+				hovSpans.push(s);
+			}
+			
+			let r=absBoundingClientRect(hexSpans[ix]); //first hovered span of hex div
+			let r2=absBoundingClientRect(t);
+			let r0=absBoundingClientRect(hexSpans[0]);
+			let r20=absBoundingClientRect(hexSpans2[0]);
+			let txb=-r.top-hexBoxRect.top+r0.top;
+			let tx=r2.top+txb; //put both hovered spans at same level
+			let tx0=Math.max(window.scrollY-hexBoxRect.top,0); //Place first byte at top
+			
+					if(r.top-r0.top > document.body.clientHeight){
+						elems.hex.style.transform=`translateY(${tx}px)`;
+					}else{
+						elems.hex.style.transform=`translateY(${tx0}px)`;
+				}
+	}
+}
+
 function p_leave(){
 	if(allLoadedSpans){
 		for(let i=0, len=hovSpans.length; i<len; i++){
@@ -604,14 +702,154 @@ function p_leave(){
 	}
 }
 
+function get_subarray(arr,f,t,rvrs){
+	let out=[];
+	for(i=f; i<=t; ++i){
+		if(rvrs===true){
+			out.unshift(arr[i]);
+		}else{
+			out.push(arr[i]);
+		}
+	}
+	return out;
+}
 
-async function get_interps(i){
+async function get_interps_bit(i, tp_id, be, bit_interps_curr, n, ns){
 	return new Promise(function(resolve) {
-		let tp=elems.type_view.selectedIndex;
-		let mt=elems.type_view[tp].getAttribute("meta_type");
-		let be=elems.big_end.checked;
-		let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-		if(tp===21){ //Binary
+		let df=bits_arr.length-i;
+			if(df>=n){
+				let rhx=[];
+				let to_bit=i+n-1;
+				let to_byte=Math.floor(i/8);
+				let to_byte2=Math.floor(to_bit/8);
+				if(!be){
+					rhx=get_subarray(bits_arr,i,to_bit);
+				}else{
+					rhx=get_subarray(bits_arr,i,to_bit,true);
+				}
+				let rhxb=rhx.map((b)=>{return b.bit;});
+				let b=n_bit_to_int(rhxb);
+				let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
+				bit_interps_curr['nbus__'+ns].push([p,to_byte,to_byte2]);
+				bit_interps_curr['nbs__'+ns].push([b.s,to_byte,to_byte2]);
+				bit_interps_curr['nbu__'+ns].push([b.u,to_byte,to_byte2]);
+			}else{
+				bit_interps_curr['nbus__'+ns].push(null);
+				bit_interps_curr['nbs__'+ns].push(null);
+				bit_interps_curr['nbu__'+ns].push(null);
+			}
+		resolve();
+	});
+}
+
+async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
+	return new Promise(function(resolve) {
+		if(tp_id==='nbc'){ // n byte char
+				let df=hx_arr_int.length-i;
+				if(df>=n){		   
+					let rhx=[];
+					if(!be){
+						rhx=get_subarray(hx_arr,i,i+n-1);
+					}else{
+						rhx=get_subarray(hx_arr,i,i+n-1,true);
+					}
+					let b=n_byte_unit8_to_int(rhx);
+					hx_interps_curr[tp_name].push([String.fromCharCode(b.u),n]);
+				}else{
+					hx_interps_curr[tp_name].push(null);
+				}
+		}else if(tp_id==='spc'){
+			let df=hx_arr_int.length-i;
+			if(df>=4){
+				let rhx=(be)?[hx_arr[i]+hx_arr[i+1], hx_arr[i+2]+hx_arr[i+3]]:[hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]];
+				let codePoint =rhx.reduce((acc, cur) => {
+					cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
+				}, 0);
+				try{
+					hx_interps_curr[tp_name].push([String.fromCodePoint(codePoint),4]);
+				}catch(e){
+					hx_interps_curr[tp_name].push(null);
+				}
+			}else{
+				hx_interps_curr[tp_name].push(null);
+			}
+		}else if(tp_id==='nbyus' || tp_id==='nbys' || tp_id==='nbyu'){ // n-byte (un)signed)
+			let df=hx_arr_int.length-i;
+			let ns=n.toString();
+			if(df>=n){
+				let rhx=[];
+				if(!be){
+					rhx=get_subarray(hx_arr,i,i+n-1);
+				}else{
+					rhx=get_subarray(hx_arr,i,i+n-1,true);
+				}
+				let b=n_byte_unit8_to_int(rhx);
+				let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
+				hx_interps_curr['nbyus__'+ns].push([p,n]);
+				hx_interps_curr['nbys__'+ns].push([b.s,n]);
+				hx_interps_curr['nbyu__'+ns].push([b.u,n]);
+			}else{
+				hx_interps_curr['nbyus__'+ns].push(null);
+				hx_interps_curr['nbys__'+ns].push(null);
+				hx_interps_curr['nbyu__'+ns].push(null);
+			}
+		}else if(tp_id==='flt'){ //float
+				let df=hx_arr_int.length-i;
+				if(df>=4){
+					let rhx=[];
+					if(!be){
+						rhx=get_subarray(hx_arr,i,i+3);
+					}else{
+						rhx=get_subarray(hx_arr,i,i+3,true);
+					}
+					let data = rhx;
+					let view = new DataView(new Uint8Array(data).buffer);
+					let f=view.getFloat32(0); //to be rounded
+					if( isNaN(f) ){
+						hx_interps_curr[tp_name].push(null);
+					}else{
+						let x=7;
+						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+						let d=getNoDigits(f);
+						if(d>=x){
+							hx_interps_curr[tp_name].push( [f.toExponential(x),4] );
+						}else{
+							opts.maximumFractionDigits=Math.max(0, x+1-d );
+							hx_interps_curr[tp_name].push( [f.toLocaleString('en-GB',opts),4] );
+						}
+					}
+				}else{
+					hx_interps_curr[tp_name].push(null);
+				}
+		}else if(tp_id==='dbl'){
+			let df=hx_arr_int.length-i;
+				if(df>=8){
+					let rhx=[];
+					if(!be){
+						rhx=get_subarray(hx_arr,i,i+7);
+					}else{
+						rhx=get_subarray(hx_arr,i,i+7,true);
+					}
+					let data = rhx;
+					let view = new DataView(new Uint8Array(data).buffer);
+					let f=view.getFloat64(0); //to be rounded
+					if( isNaN(f) ){
+						hx_interps_curr[tp_name].push(null);
+					}else{
+						let x=15;
+						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+						let d=getNoDigits(f);
+						if(d>=x){
+							hx_interps_curr[tp_name].push( [f.toExponential(x),8] );
+						}else{
+							opts.maximumFractionDigits=Math.max(0, x+1-d );
+							hx_interps_curr[tp_name].push( [f.toLocaleString('en-GB',opts), 8] );
+						}
+					}
+				}else{
+					hx_interps_curr[tp_name].push(null);
+				}
+		}else if(tp_id==='bin'){ //binary
 			let x=hx_arr[i];
 			let bx=lookup_hex_bin[x[0]];
 			if(x.length>1){
@@ -620,219 +858,44 @@ async function get_interps(i){
 			if(be){
 				bx=reverse_string(bx);
 			}	
-			hx_interps_curr[tp].push(bx);
-		}else if(tp===0){ //1 byte char
-				//let df=hx_arr_int.length-i;
-				let rhx=[hx_arr[i]];
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[tp].push(String.fromCharCode(b.u));
-		}else if(tp===1){ //2 byte char
+			hx_interps_curr[tp_name].push([bx,1]);
+		}else if(tp_id==='col'){ // RGB(A)
 				let df=hx_arr_int.length-i;
-				if(df>=2){
-					let rhx=[hx_arr[i+1],hx_arr[i]];
-					if(be){
-						rhx.reverse();
-					}
-					let b=n_byte_unit8_to_int(rhx);
-					hx_interps_curr[tp].push(String.fromCharCode(b.u));
-				}else{
-					hx_interps_curr[tp].push(null);
-				}
-		}else if(tp===2){ //3 byte char
-				let df=hx_arr_int.length-i;
-				if(df>=3){		   
-					let rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-					if(be){
-						rhx.reverse();
-					}
-					let b=n_byte_unit8_to_int(rhx);
-					hx_interps_curr[tp].push(String.fromCharCode(b.u));
-				}else{
-					hx_interps_curr[tp].push(null);
-				}
-  }else if(tp===19){ //RGB byte hex
-		  let df=hx_arr_int.length-i;
-				if(df>=3){		   
-					let rhx=[hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-					if(be){
-						rhx.reverse();
-					}
-					
-					let rhxi=[];
-					for (let k=0; k<3; k++){
-						let r=[rhx[k]];
-						let b=n_byte_unit8_to_int(r);
-						rhxi.push(b.u);
-		 		}
-					let rgbx='#'+rhx.join('')+' ('+rhxi.join(', ')+')';
-					
-					hx_interps_curr[tp].push(rgbx);
-				}else{
-					hx_interps_curr[tp].push(null);
-				}
-		}else if(tp===20){ //RGBA byte hex
-		  let df=hx_arr_int.length-i;
-				if(df>=4){		   
-					let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-					if(be){
-						rhx.reverse();
-					}
-					
-					let rhxi=[];
-					for (let k=0; k<4; k++){
-						let r=[rhx[k]];
-						let b=n_byte_unit8_to_int(r);
-						rhxi.push(b.u);
-		 		}
-					let rgbx='#'+rhx.join('')+' ('+rhxi.join(', ')+')';
-					
-					hx_interps_curr[tp].push(rgbx);
-				}else{
-					hx_interps_curr[tp].push(null);
-				}
-		}else if(tp===3){ //4 byte char
-				let df=hx_arr_int.length-i;
-				if(df>=4){
-					let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-					if(be){
-						rhx.reverse();
-					}
-					let b=n_byte_unit8_to_int(rhx);
-					hx_interps_curr[tp].push(String.fromCharCode(b.u));
-				}else{
-					hx_interps_curr[tp].push(null);
-				}
-		}else if(tp===4){ //4 byte surrogate pair char
-				let df=hx_arr_int.length-i;
-				if(df>=4){
-					let rhx=(be)?[hx_arr[i]+hx_arr[i+1], hx_arr[i+2]+hx_arr[i+3]]:[hx_arr[i+1]+hx_arr[i], hx_arr[i+3]+hx_arr[i+2]];
-					let codePoint =rhx.reduce((acc, cur) => {
-						cur = parseInt(cur, 16); return acc += cur<0xDC00 ? (cur-0xD7F7)<<10 : cur; //https://stackoverflow.com/posts/53882179/revisions | Mr Lister
-					}, 0);
-					try{
-						hx_interps_curr[tp].push(String.fromCodePoint(codePoint));
-					}catch(e){
-						hx_interps_curr[tp].push(null);
-					}
-				}else{
-					hx_interps_curr[tp].push(null);
-				}
-		}else if(mt==='1i'){ //1 byte int (unsigned, signed)
-		
-				let rhx=[hx_arr[i]];
-				let b=n_byte_unit8_to_int(rhx);
-				hx_interps_curr[6].push(b.s);
-				hx_interps_curr[7].push(hx_arr_int[i]);
-				let p=(hx_arr_int[i]===b.s)?b.s:`(${hx_arr_int[i]}, ${b.s})`;
-				hx_interps_curr[5].push(p);
-
-		}else if(mt==='2i'){ //2 byte int (unsigned, signed)
-
-				let df=hx_arr_int.length-i;
-					if(df>=2){
-					let rhx=[hx_arr[i+1],hx_arr[i]];
-					if(be){
-						rhx.reverse();
-					}
-					let b=n_byte_unit8_to_int(rhx);
-					hx_interps_curr[9].push(b.s);
-					hx_interps_curr[10].push(b.u);
-					let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
-					hx_interps_curr[8].push(p);
-				}else{
-					hx_interps_curr[9].push(null);
-					hx_interps_curr[10].push(null);
-					hx_interps_curr[8].push(null);
-				}
-			
-		}else if(mt==='4i'){ //4 byte int (unsigned, signed)
+				let rhxi=[]; // Force RGBA order
+				let col_ixs={R: 0, G: 1, B: 2, A:3};
+				let col_ixs_arr=[null, null, null, null];
+				let chd=elems.rgba_sel.children;
 				
-				let df=hx_arr_int.length-i;
-				if(df>=4){
-					let rhx=[hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-					if(be){
-							rhx.reverse();
+				for (let k=0; k<4; k++){
+					let ck=chd[k];
+					let kix=col_ixs[ck.value];
+					if(kix!==null){
+						col_ixs_arr[ kix ]=k; // BGR => [2, 1, 0, null]
 					}
-					let b=n_byte_unit8_to_int(rhx);
-					hx_interps_curr[12].push(b.s);
-					hx_interps_curr[13].push(b.u);
-					let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
-					hx_interps_curr[11].push(p);
-				}else{
-					hx_interps_curr[12].push(null);
-					hx_interps_curr[13].push(null);
-					hx_interps_curr[11].push(null);
 				}
-			
-		}else if(mt==='8i'){ //8 byte int (unsigned, signed)
-			
-				let df=hx_arr_int.length-i;
-				if(df>=8){
-					let rhx=[hx_arr[i+7],hx_arr[i+6],hx_arr[i+5],hx_arr[i+4],hx_arr[i+3],hx_arr[i+2],hx_arr[i+1],hx_arr[i]];
-					if(be){
-						rhx.reverse();
-					}
-					let b=n_byte_unit8_to_int(rhx);
-					hx_interps_curr[15].push(b.s);
-					hx_interps_curr[16].push(b.u);
-					let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
-					hx_interps_curr[14].push(p);
-				}else{
-					hx_interps_curr[15].push(null);
-					hx_interps_curr[16].push(null);
-					hx_interps_curr[14].push(null);
-				}
-		}else if(tp===17){ //Float
-				let df=hx_arr_int.length-i;
-				if(df>=4){
-					let rhx=[hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
-					if(be){
-						rhx.reverse();
-					}
-					let data = rhx;
-					let view = new DataView(new Uint8Array(data).buffer);
-					let f=view.getFloat32(0); //to be rounded
-					if( isNaN(f) ){
-						hx_interps_curr[tp].push(null);
+				
+				let n=(chd[3].value==='')?3:4;
+				if(df>=n){		   
+					let rhx=[];
+					if(!be){
+						rhx=get_subarray(hx_arr,i,i+n-1);
 					}else{
-						let x=7;
-						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
-						let d=getNoDigits(f);
-						if(d>=x){
-							hx_interps_curr[tp].push( f.toExponential(x) );
-						}else{
-							opts.maximumFractionDigits=Math.max(0, x+1-d );
-							hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
+						rhx=get_subarray(hx_arr,i,i+n-1,true);
+					}
+					
+					for (let k=0; k<n; k++){
+						let r=[rhx[k]];
+						let b=n_byte_unit8_to_int(r);
+						let kix=col_ixs_arr[k];
+						if(kix!==null){
+							rhxi[ kix ]=b.u;
 						}
 					}
+					let rgbx='#'+rhx.join('');
+					
+					hx_interps_curr[tp_name].push([rgbx,rhxi,col_ixs_arr,n]);
 				}else{
-					hx_interps_curr[tp].push(null);
-				}
-		}else{ //Double
-				let df=hx_arr_int.length-i;
-				if(df>=8){
-					let rhx=[hx_arr_int[i+7],hx_arr_int[i+6],hx_arr_int[i+5],hx_arr_int[i+4],hx_arr_int[i+3],hx_arr_int[i+2],hx_arr_int[i+1],hx_arr_int[i]];
-					if(be){
-						rhx.reverse();
-					}
-					let data = rhx;
-					let view = new DataView(new Uint8Array(data).buffer);
-					let f=view.getFloat64(0); //to be rounded
-					if( isNaN(f) ){
-						hx_interps_curr[tp].push(null);
-					}else{
-						let x=15;
-						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
-						let d=getNoDigits(f);
-						if(d>=x){
-							hx_interps_curr[tp].push( f.toExponential(x) );
-						}else{
-							opts.maximumFractionDigits=Math.max(0, x+1-d );
-							hx_interps_curr[tp].push( f.toLocaleString('en-GB',opts) );
-						}
-					}
-				}else{
-					hx_interps_curr[tp].push(null);
+					hx_interps_curr[tp_name].push(null);
 				}
 		}
 		resolve();
@@ -845,23 +908,65 @@ async function makeSpans(i){
 				let hxtm='';
 				let hxtm2='';
 				let tp=elems.type_view.selectedIndex;
+				let tp_id=elems.type_view[tp].id;
 				let be=elems.big_end.checked;
 				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-				let isFl=(tp===17||tp===18)?true:false;
-				let c=hx_interps_curr[tp][i];
-				let p=(c===null)?'':c;
+				let nt=elems.n_count_div.innerText;
+				let tp_name=tp_id+'__'+nt;
+				let isFl=(tp_id==='flt'||tp_id==='dbl')?true:false;
+				let cc=hx_interps_curr[tp_name][i];
 				let x=hx_arr_offs[i];
-				let isCol=(tp===19 || tp===20)?true:false;
-				let crgb=(isCol && c!==null)?c.split(' (')[0]:'';
-				let crgb_3=crgb;
-				if(tp===20 && crgb!==''){
-					crgb_3=crgb_3.slice(0,7);
+				let isCol=(tp_id==='col' )?true:false;
+				let crgb='';
+				let crgb_a='';
+				let crgb_3='';
+				let crgb_bg='';
+				let p=(cc===null)?'':cc[0];
+				let n=(cc===null)?'':cc[1];
+				if(isCol && cc!==null){
+					p=cc[0];
+					c=cc[1];
+					let aud=(c[3]===null || typeof c[3]==='undefined')?true:false;
+					crgb_txt=(aud)?`rgb(${c[0]},${c[1]},${c[2]})`:`rgba(${c[0]},${c[1]},${c[2]},${c[3]})`;
+					crgb=(aud)?`rgb(${c[0]},${c[1]},${c[2]})`:`rgba(${c[0]},${c[1]},${c[2]},${c[3]})`;
+					crgb_a=`rgba(${c[0]},${c[1]},${c[2]},0.31)`;
+					crgb_3=`rgb(${c[0]},${c[1]},${c[2]})`;
+					crgb_bg=(aud)?crgb_a:crgb;
+					let c2=cc[2];
+					p+=(aud)?` (${c[ c2[0] ]},${c[ c2[1] ]},${c[ c2[2] ]})`:` (${c[ c2[0] ]},${c[ c2[1] ]},${c[ c2[2] ]},${c[ c2[3] ]})`;
+					n=cc[3];
 				}
-				
-				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+( (isCol && crgb!=='')?`class="rgb" style="background: ${crgb+(tp==20?'':'4f')};border-color: ${crgb_3}; text-decoration: ${crgb} 3px underline;" `:'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
+				elems.hex2.innerHTML+='<span onpointerenter="p_enter(event,2);"  byte_len="'+n+'"' +( (isFl && !p.includes('e') && p!=='0' && p!=='-0' )?' class="foi" ':'')+( (isCol && crgb!=='')?`class="rgb" style="background:${crgb_bg} ;border-color: ${crgb_3}; text-decoration: ${crgb} 3px underline;" `:'')+'onpointerleave="p_leave();" title="'+x+'" ix="'+i+'">'+p+'</span>';
 		}else{
 			elems.hex2.innerHTML='';
 		}
+		resolve();
+	});
+}
+
+async function makeSpansBits(i, tp_id, be, bit_interps_curr, n, ns,tp_name){
+	return new Promise(function(resolve) {
+			if(bits_arr!== null && bits_arr.length>0){
+				let hxtm='';
+				let hxtm2='';
+				let be=elems.big_end.checked;
+				let bit_interps_curr=(be)?bit_interps_be:bit_interps;
+				let c=bit_interps_curr[tp_name][i];
+				if(c===null){
+					elems.hex2.innerHTML+='<span></span>';
+				}else{
+					elems.hex2.innerHTML+='<span onpointerenter="p_enter_bits(event,'+c[1]+','+c[2]+');" onpointerleave="p_leave();">'+c[0]+'</span>';
+					for(let k=c[1]; k<=c[2]; ++k){
+						if(typeof bit_interps_hex[k]==='undefined'){
+							bit_interps_hex[k]=[i]
+						}else{
+							bit_interps_hex[k].push(i);
+						}
+					}
+				}
+			}else{
+				elems.hex2.innerHTML='';
+			}
 		resolve();
 	});
 }
@@ -879,7 +984,7 @@ function makeSpansBytes(){
 	elems.hex.innerHTML=hxtm;
 	elems.hex.style.height = 'inherit';
 	elems.hex.style.height = (elems.hex.scrollHeight+4)+"px";
-	hexSpans=[...elems.hex.getElementsByTagName('SPAN')];
+	hexSpans=[...elems.hex.getElementsByTagName('SPAN')];	
 	
 	for(let i=0, len=hexSpans.length; i<len; i++){
 		let h=hexSpans[i].clientHeight;
@@ -890,19 +995,27 @@ function makeSpansBytes(){
 	elems.doc_CSS2.innerHTML=`#hex2 span{min-height: ${mxh}px !important; height: fit-content !important; min-width: ${mxw}px !important; width: fit-content !important;} #hex span{min-width: ${mxw}px !important; width: fit-content !important;}`;
 }
 
-async function interp_span(t){
+async function interp_span_bits(t){
 	return new Promise(function(resolve) {
+		let tp=elems.type_view.selectedIndex;
+		let tp_id=elems.type_view[tp].id;
 		let be=elems.big_end.checked;
-		let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-				for(let i=0, len=hx_arr.length; i<len; i++){
+		let bit_interps_curr=(be)?bit_interps_be:bit_interps;
+		let nt=elems.n_count_div.innerText;
+		let n=parseInt(nt);
+		let tp_name=tp_id+'__'+nt;
+		bit_interps_curr['nbus__'+nt]=[];
+		bit_interps_curr['nbs__'+nt]=[];
+		bit_interps_curr['nbu__'+nt]=[];
+		
+				for(let i=0, len=bits_arr.length; i<len; i++){
 					setTimeout( 
 												(async ()=>{
-														await get_interps(i);
-														await makeSpans(i);
+														await get_interps_bit(i, tp_id, be, bit_interps_curr, n,nt);
+														await makeSpansBits(i, tp_id, be, bit_interps_curr, n,nt, tp_name);
 														if(i===len-1){
 															elems.ttl.innerText="Hex viewer";
 															allLoadedSpans=true;
-															console.log(hx_interps_curr);
 															elems.hex2.style.height = 'inherit';
 															elems.hex2.style.height = (elems.hex2.scrollHeight+4)+"px";
 															hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];																	
@@ -917,18 +1030,62 @@ async function interp_span(t){
 		});
 }
 
-async function interp_span2(){
+async function interp_span(t){
+	return new Promise(function(resolve) {
+		let tp=elems.type_view.selectedIndex;
+		let tp_id=elems.type_view[tp].id;
+		let be=elems.big_end.checked;
+		let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+		let nt=elems.n_count_div.innerText;
+		let n=parseInt(nt);
+		let tp_name=tp_id+'__'+nt;
+		
+		if(tp_id==='nbyus' || tp_id==='nbys' || tp_id==='nbyu'){ // n-byte (un)signed)
+				hx_interps_curr['nbyus__'+nt]=[];
+				hx_interps_curr['nbys__'+nt]=[];
+				hx_interps_curr['nbyu__'+nt]=[];
+		}else{
+			hx_interps_curr[tp_name]=[];
+		}
+				for(let i=0, len=hx_arr.length; i<len; i++){
+					setTimeout( 
+												(async ()=>{
+														await get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name);
+														await makeSpans(i);
+														if(i===len-1){
+															elems.ttl.innerText="Hex viewer";
+															allLoadedSpans=true;
+															elems.hex2.style.height = 'inherit';
+															elems.hex2.style.height = (elems.hex2.scrollHeight+4)+"px";
+															hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];																	
+															selDivEditable(t);
+															resolve();
+														}else{
+															elems.ttl.innerText="Hex viewer - Loaded: "+(i+1)+"/"+len;
+														}
+												}),
+											0);
+			}
+		});
+}
+
+async function interp_span2_bits(){
 	return new Promise(function(resolve) {
 				let tp=elems.type_view.selectedIndex;
+				let tp_id=elems.type_view[tp].id;
 				let be=elems.big_end.checked;
-				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
-
-				let empty_interp=(hx_interps_curr[tp].length===0)?true:false;
-				for(let i=0, len=hx_arr.length; i<len; i++){
+				let bit_interps_curr=(be)?bit_interps_be:bit_interps;
+				let nt=elems.n_count_div.innerText;
+				let n=parseInt(nt);
+				let tp_name=tp_id+'__'+nt;		
+				let empty_interp=(typeof bit_interps_curr[tp_name]==='undefined')?true:false;
+				for(let i=0, len=bits_arr.length; i<len; i++){
 				setTimeout( 
 											(async ()=>{
 												if(empty_interp){
-													await get_interps(i);
+													await get_interps_bit(i, tp_id, be, bit_interps_curr, n, tp_name);
+												}else{
+													bit_interps_curr[tp_name]=[];
 												}
 												makeSpans(i);
 												if(i===len-1){
@@ -945,21 +1102,77 @@ async function interp_span2(){
 	});
 }
 
-elems.hex.oninput=(event)=>{
+async function interp_span2(){
+	return new Promise(function(resolve) {
+				let tp=elems.type_view.selectedIndex;
+				let tp_id=elems.type_view[tp].id;
+				let be=elems.big_end.checked;
+				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
+				let nt=elems.n_count_div.innerText;
+				let n=parseInt(nt);
+				let tp_name=tp_id+'__'+nt;		
+				let empty_interp=(typeof hx_interps_curr[tp_name]==='undefined')?true:false;
+				for(let i=0, len=hx_arr.length; i<len; i++){
+				setTimeout( 
+											(async ()=>{
+												if(empty_interp){
+													await get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name);
+												}else{
+													hx_interps_curr[tp_name]=[];
+												}
+												makeSpans(i);
+												if(i===len-1){
+													hexSpans2=[...elems.hex2.getElementsByTagName('SPAN')];
+													elems.ttl.innerText="Hex viewer";
+													allLoadedSpans=true;
+													resolve();
+												}else{
+													elems.ttl.innerText="Hex viewer - Loaded: "+(i+1)+"/"+len;
+												}
+											}),
+										0);
+		}	
+	});
+}
+
+elems.conv.onclick=(event)=>{
   elems.hex2.innerHTML='';
   elems.offset_info.innerHTML='Offset: ';
-	let t=event.target;
+	let t=elems.hex;
 	allLoadedSpans=false;
 	let hx_arr_chk=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
 	if(hx_arr_chk !==null && typeof hx_arr_chk!=='undefined' && hx_arr_chk.length>0){
 		hx_arr=hx_arr_chk;
 		hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
+		let tp=elems.type_view.selectedIndex;
+		let tp_id=elems.type_view[tp].id;
+		let isBit=(tp_id==='nbus' || tp_id==='nbs' || tp_id==='nbu')?true:false;
+		if(isBit){
+			bits_arr=[];
+			for (let i=0, len=hx_arr.length; i<len; ++i){
+				let x=hx_arr[i];
+				let bx=lookup_hex_bin[x[0]];
+				if(x.length>1){
+					bx+=lookup_hex_bin[x[1]];
+				}
+				for (let k=0, len_k=bx.length; k<len_k; ++k){
+					bits_arr.push({bit: parseInt(bx[k]), byte_hex: x, byte_ix: i });
+				}
+			}
+		}
 		makeSpansBytes();
-		hx_interps=Array.from(Array(arrl), () => []);
-		hx_interps_be=Array.from(Array(arrl), () => []);
+		hx_interps={};
+		hx_interps_be={};
+		bit_interps={};
+		bit_interps_hex=[];
+		bit_interps_be={};
 		hovSpans=[];
 		hovSpans2=[];
-		( async ()=>{ await interp_span(t); } )();
+		if(isBit){
+			( async ()=>{ await interp_span_bits(t); } )();
+		}else{
+			( async ()=>{ await interp_span(t); } )();
+		}
 	}else{
 		elems.hex2.innerHTML='';
 		elems.hex.innerHTML='';
@@ -969,22 +1182,62 @@ elems.hex.oninput=(event)=>{
 function type_change(event){
 	elems.hex2.innerHTML='';
 	allLoadedSpans=false;
-	( async ()=>{ await interp_span2(); } )();
+	let tp=elems.type_view.selectedIndex;
+	let tp_id=elems.type_view[tp].id;
+	let isBit=(tp_id==='nbus' || tp_id==='nbs' || tp_id==='nbu')?true:false;
+	let is_n=( isBit || tp_id==='nbyus' || tp_id==='nbys' || tp_id==='nbyu' || tp_id==='nbc' )?true:false
+	if(is_n){
+		elems.n_count_div.style.display='-webkit-inline-box';
+	}else{
+		elems.n_count_div.style.display='none';
+	}
+	if(tp_id==='col'){
+		elems.rgba_sel.style.display='-webkit-inline-box';
+	}else{
+		elems.rgba_sel.style.display='none';
+	}
+	
+	if(isBit){
+			( async ()=>{ await interp_span2_bits(); } )();
+		}else{
+			( async ()=>{ await interp_span2(); } )();
+		}
+}
+
+elems.n_count_div.oninput=(event)=>{
+	let t=elems.n_count_div;
+	let tni=parseInt(t.innerText);
+	let tn=(Number.isNaN(tni))?1:tni;
+	t.innerHTML=tn;
+}
+
+elems.n_count_div.onwheel=(event)=>{
+	let t=elems.n_count_div;
+	let tni=parseInt(t.innerText);
+	let tn=(Number.isNaN(tni))?4:tni;
+	if (event.deltaY < 0){
+		t.innerHTML=tn+1;
+	}else if (event.deltaY > 0){
+		t.innerHTML=(tn<=1)?1:tn-1;
+	}
+}
+
+elems.hex.oninput=(event)=>{
+	let t=elems.hex;
+	let sp=t.getElementsByTagName('SPAN');
+	if(sp.length>0){
+		t.innerHTML=t.innerText;
+		selDivEditable(t);
+	}
 }
 
 elems.type_view.oninput=(event)=>{
-	if( type_bytes[elems.type_view.selectedIndex]===1 ){
-		elems.be_box.style.visibility='hidden';
-	}else{
-		elems.be_box.style.visibility='visible';
-	}
 	type_change(event);
 }
 
 elems.big_end.oninput=(event)=>{
 	type_change(event);
 }
-
 
 </script>
 
