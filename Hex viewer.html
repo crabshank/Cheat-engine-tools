@@ -955,7 +955,7 @@ async function makeSpansBits(i, tp_id, be, bit_interps_curr, n, ns,tp_name){
 				if(c===null){
 					elems.hex2.innerHTML+='<span></span>';
 				}else{
-					elems.hex2.innerHTML+='<span onpointerenter="p_enter_bits(event,'+c[1]+','+c[2]+');" onpointerleave="p_leave();">'+c[0]+' ['+c[3]+']'+'</span>';
+					elems.hex2.innerHTML+='<span onpointerenter="p_enter_bits(event,'+c[1]+','+c[2]+');" onpointerleave="p_leave();">'+c[0]+' ('+c[3]+')'+'</span>';
 					for(let k=c[1]; k<=c[2]; ++k){
 						if(typeof bit_interps_hex[k]==='undefined'){
 							bit_interps_hex[k]=[i]
