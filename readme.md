@@ -340,6 +340,8 @@ Attach breakpoints to address with index **s** (if eligible, otherwise will be a
 
 If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
 
+Protip: use ```batchRW.attach(i*4+1,4)``` starting with i=1 and increment i by 1, to monitor addresses in batches of four. 
+
 * **printAddrs()** -> Print all attachable addresses in the address list, with their indexes for "batchRW.attach(…)".
 
 * **detachAll()** -> Remove all breakpoints set by this extension.
