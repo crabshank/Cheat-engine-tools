@@ -201,6 +201,33 @@ registers['list_regs']={
 	'SP'
 }
 
+registers['disp_aob']={
+	['XMM10']=true,
+	['XMM11']=true,
+	['XMM12']=true,
+	['XMM13']=true,
+	['XMM14']=true,
+	['XMM15']=true,
+	['XMM0']=true,
+	['XMM1']=true,
+	['XMM2']=true,
+	['XMM3']=true,
+	['XMM4']=true,
+	['XMM5']=true,
+	['XMM6']=true,
+	['XMM7']=true,
+	['XMM8']=true,
+	['XMM9']=true,
+	['FP0']=true,
+	['FP1']=true,
+	['FP2']=true,
+	['FP3']=true,
+	['FP4']=true,
+	['FP5']=true,
+	['FP6']=true,
+	['FP7']=true
+}
+
 registers['regs']={}
 
 registers['regs_args']={
@@ -1454,7 +1481,7 @@ local function onBp()
 							local fstx=asc[i][2]
 							local brkt=asc[i][1]
 							-- [2]= { --[[ full syntax "[...]" ]] }
-								local rep_with='[ '..brkt..' ('..rx..' || '..r..') ]'
+								local rep_with='[ '..brkt..' ('..rx..') ]'
 								reffed_opcode=plainReplace(reffed_opcode,fstx,rep_with)
 						end
 					end
@@ -1474,7 +1501,13 @@ local function onBp()
 									local regs_tbl={}
 									for i=1, prl do
 										local pi=present_r[i]
-										table.insert(regs_tbl,pi[1]..' = {'..pi[2]['aob_str']..'}')
+										local dsp=''
+										if registers['disp_aob'][pi[1]]~=nil then
+											dsp=' = {'..pi[2]['aob_str']..'}'
+										else
+											dsp='='..pi[2]['hex']
+										end
+										table.insert(regs_tbl,pi[1]..dsp)
 									end
 									local regs_str=table.concat(regs_tbl,', ')
 									prinfo=prinfo..'\t( '..regs_str..' )'
