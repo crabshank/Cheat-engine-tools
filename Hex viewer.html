@@ -612,7 +612,7 @@ function p_enter(event,n){
 						hovSpans2.push(s);
 					}
 			}
-			let r2=absBoundingClientRect(hexSpans2[parseInt(t2.getAttribute('ix'))]);
+			let r2=absBoundingClientRect(hovSpans2[0]);
 			let r=absBoundingClientRect(t);
 			let r20=absBoundingClientRect(hexSpans2[0]);
 			if((hexBoxRect.top+(r2.top-r20.top))>document.body.clientHeight){
@@ -671,7 +671,7 @@ function p_enter_bits(event,fr,to){
 				hovSpans.push(s);
 			}
 			
-			let r=absBoundingClientRect(hexSpans[ix]); //first hovered span of hex div
+			let r=absBoundingClientRect(hexSpans[fr]); //first hovered span of hex div
 			let r2=absBoundingClientRect(t);
 			let r0=absBoundingClientRect(hexSpans[0]);
 			let r20=absBoundingClientRect(hexSpans2[0]);
