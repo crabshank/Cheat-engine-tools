@@ -71,7 +71,7 @@
 					<option id="nbs">n bit signed int</option>
 					<option id="nbu">n bit unsigned int</option>
 				</optgroup>
-				<optgroup label="Float">
+				<optgroup label="Floating point">
 					<option id="flt">Float</option>
 					<option id="dbl">Double</option>
 				</optgroup>
@@ -734,9 +734,17 @@ async function get_interps_bit(i, tp_id, be, bit_interps_curr, n, ns){
 				bit_interps_curr['nbs__'+ns].push([b.s,to_byte,to_byte2,bs]);
 				bit_interps_curr['nbu__'+ns].push([b.u,to_byte,to_byte2,bs]);
 			}else{
-				bit_interps_curr['nbus__'+ns].push(null);
-				bit_interps_curr['nbs__'+ns].push(null);
-				bit_interps_curr['nbu__'+ns].push(null);
+				try{
+					let tp_names=['nbus__'+ns,'nbs__'+ns,'nbu__'+ns];
+					for(let k=0; k<3; ++k){
+						let tp_name=tp_names[k];
+						if(typeof bit_interps_curr[tp_name]==='undefined'){
+							bit_interps_curr[tp_name]=[null];
+						}else{
+							bit_interps_curr[tp_name].push(null);
+						}
+					}
+				}catch(e){;}
 			}
 		resolve();
 	});
@@ -756,7 +764,11 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 					let b=n_byte_unit8_to_int(rhx);
 					hx_interps_curr[tp_name].push([String.fromCharCode(b.u),n]);
 				}else{
-					hx_interps_curr[tp_name].push(null);
+					if(typeof hx_interps_curr[tp_name]==='undefined'){
+						hx_interps_curr[tp_name]=[null];
+					}else{
+						hx_interps_curr[tp_name].push(null);
+					}
 				}
 		}else if(tp_id==='spc'){
 			let df=hx_arr_int.length-i;
@@ -768,10 +780,18 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 				try{
 					hx_interps_curr[tp_name].push([String.fromCodePoint(codePoint),4]);
 				}catch(e){
-					hx_interps_curr[tp_name].push(null);
+					if(typeof hx_interps_curr[tp_name]==='undefined'){
+						hx_interps_curr[tp_name]=[null];
+					}else{
+						hx_interps_curr[tp_name].push(null);
+					}
 				}
 			}else{
-				hx_interps_curr[tp_name].push(null);
+				if(typeof hx_interps_curr[tp_name]==='undefined'){
+					hx_interps_curr[tp_name]=[null];
+				}else{
+					hx_interps_curr[tp_name].push(null);
+				}
 			}
 		}else if(tp_id==='nbyus' || tp_id==='nbys' || tp_id==='nbyu'){ // n-byte (un)signed)
 			let df=hx_arr_int.length-i;
@@ -789,9 +809,15 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 				hx_interps_curr['nbys__'+ns].push([b.s,n]);
 				hx_interps_curr['nbyu__'+ns].push([b.u,n]);
 			}else{
-				hx_interps_curr['nbyus__'+ns].push(null);
-				hx_interps_curr['nbys__'+ns].push(null);
-				hx_interps_curr['nbyu__'+ns].push(null);
+					let tp_names=['nbyus__'+ns,'nbys__'+ns,'nbyu__'+ns];
+					for(let k=0; k<3; ++k){
+						let tp_name=tp_names[k];
+						if(typeof hx_interps_curr[tp_name]==='undefined'){
+							hx_interps_curr[tp_name]=[null];
+						}else{
+							hx_interps_curr[tp_name].push(null);
+						}
+					}
 			}
 		}else if(tp_id==='flt'){ //float
 				let df=hx_arr_int.length-i;
@@ -806,7 +832,11 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 					let view = new DataView(new Uint8Array(data).buffer);
 					let f=view.getFloat32(0); //to be rounded
 					if( isNaN(f) ){
-						hx_interps_curr[tp_name].push(null);
+						if(typeof hx_interps_curr[tp_name]==='undefined'){
+							hx_interps_curr[tp_name]=[null];
+						}else{
+							hx_interps_curr[tp_name].push(null);
+						}
 					}else{
 						let x=7;
 						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
@@ -819,7 +849,11 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						}
 					}
 				}else{
-					hx_interps_curr[tp_name].push(null);
+					if(typeof hx_interps_curr[tp_name]==='undefined'){
+						hx_interps_curr[tp_name]=[null];
+					}else{
+						hx_interps_curr[tp_name].push(null);
+					}
 				}
 		}else if(tp_id==='dbl'){
 			let df=hx_arr_int.length-i;
@@ -847,7 +881,11 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						}
 					}
 				}else{
-					hx_interps_curr[tp_name].push(null);
+					if(typeof hx_interps_curr[tp_name]==='undefined'){
+						hx_interps_curr[tp_name]=[null];
+					}else{
+						hx_interps_curr[tp_name].push(null);
+					}
 				}
 		}else if(tp_id==='bin'){ //binary
 			let x=hx_arr[i];
@@ -895,7 +933,11 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 					
 					hx_interps_curr[tp_name].push([rgbx,rhxi,col_ixs_arr,n]);
 				}else{
-					hx_interps_curr[tp_name].push(null);
+					if(typeof hx_interps_curr[tp_name]==='undefined'){
+						hx_interps_curr[tp_name]=[null];
+					}else{
+						hx_interps_curr[tp_name].push(null);
+					}
 				}
 		}
 		resolve();
