@@ -55,7 +55,7 @@ local function attach(s,z,onWrite)
 							si=si+1
 				end
 				sic=sic+1
-				if (sic ==al.Count) or (si==z) then
+				if (sic >=al.Count) or (si==z) then
 					ed=true
 				end
 		end
