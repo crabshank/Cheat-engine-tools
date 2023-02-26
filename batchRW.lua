@@ -133,6 +133,7 @@ end
 
 local function end_loop()
 	timer.destroy()
+	print('Address list loop ended!')
 	detachAll()
 end
 
