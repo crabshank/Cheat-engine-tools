@@ -112,7 +112,7 @@
 		<button id="conv" style="margin-left: 0.16ch;">Convert hex</button>
 		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%; overflow-y: hidden;">
 		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;">
-			<div contenteditable id="hex" style="min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
+			<div contenteditable id="hex" style="height: max-content;min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
 	</section>
 	<section id="hex_sct2"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;min-height: 92%;">
 			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;min-height: 87vh;padding-left: 0.111em;"></div>
@@ -659,9 +659,8 @@ function p_enter_bits(event,fr,to){
 		for(let i=0, len=hovSpans2.length; i<len; i++){
 			hovSpans2[i].classList.remove('isHovered');
 		}
-			let ix=parseInt(t.getAttribute('ix'));
 			t.classList.add('isHovered');
-			elems.offset_info.innerHTML='Offset: '+t.title;
+			elems.offset_info.innerHTML='Offset: '+hexSpans[fr].title;
 			hovSpans2=[t];
 			hovSpans=[];
 
@@ -1024,8 +1023,8 @@ function makeSpansBytes(){
 	}
 	
 	elems.hex.innerHTML=hxtm;
-	elems.hex.style.height = 'inherit';
-	elems.hex.style.height = (elems.hex.scrollHeight+4)+"px";
+	//elems.hex.style.height = 'inherit';
+	//elems.hex.style.height = (elems.hex.scrollHeight+4)+"px";
 	hexSpans=[...elems.hex.getElementsByTagName('SPAN')];	
 	
 	for(let i=0, len=hexSpans.length; i<len; i++){
