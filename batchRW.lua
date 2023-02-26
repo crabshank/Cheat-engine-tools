@@ -77,7 +77,7 @@ local function do_attach(s,z,onWrite,t,alist)
 				end
 						
 				sic=sic+1
-				if errCount==z then
+				if errCount==z and t==true then
 					ed=true
 				elseif t~=true and ( (sic >=al.Count) or (si==z) ) then
 					ed=true
