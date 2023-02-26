@@ -342,6 +342,14 @@ If "onWrite"==true, then it breaks if the address is written to, otherwise it br
 
 Protip: use ```batchRW.attach(i*4,4)``` starting with i=0 and increment i by 1, to monitor addresses in batches of four. 
 
+* **attach_loop(z, t, onWrite --[[Optional]] )** -> 
+
+Attach breakpoints to the current address list, z entries at-a-time, cycling through them every t milliseconds. See "batchRW.attach(…)" to see what onWrite does.
+
+* **end_loop()** -> 
+
+Force end "batchRW.attach_loop(…)"
+
 * **printAddrs()** -> Print all attachable addresses in the address list, with their indexes for "batchRW.attach(…)".
 
 * **detachAll()** -> Remove all breakpoints set by this extension.
