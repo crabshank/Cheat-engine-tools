@@ -102,18 +102,18 @@ local function do_attach(s,z,onWrite,t,alist)
 			local b=bps[i]
 			debug_setBreakpoint(b[1], 1, trg, bpmInt3, function()
 						b[3].Color=65535 --yellow
-						
-						local dst = disassemble(RIP)
+						local lst=getPreviousOpcode(RIP)
+						local dst = disassemble(lst)
 						local extraField, opcode, bytes, address = splitDisassembledString(dst)
 						local a = getNameFromAddress(address) or ''
 						local pa=''
 						local bx=string.format('%X',b[1])
-						local RIPx=string.format('%X',RIP)
+						local lstx=string.format('%X',lst)
 						timer_attach.accessed[bx]=b[1]
 						if a=='' then
-							pa=RIPx
+							pa=lstx
 						else
-							pa=RIPx .. ' ( ' .. a .. ' )'
+							pa=lstx .. ' ( ' .. a .. ' )'
 						end
 						local prinfo=string.format('%s:\t%s  -  %s }', pa, bytes, opcode)
 						if b[4]=='' then
