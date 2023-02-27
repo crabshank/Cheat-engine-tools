@@ -558,6 +558,19 @@ elems.rgba_sel=document.getElementById('rgba_sel');
 elems.n_count_div=document.getElementById('n_count_div');
 elems.n_count_div.title='Scroll over or type value (n bit/byte) here!';
 
+function copy_hdl(event){
+  let selectedText = window.getSelection().toString(); 
+  selectedText = selectedText.split('\n').join(' ');
+
+  clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
+  clipboardData.setData('text/plain', selectedText);
+
+  event.preventDefault();
+}
+
+elems.hex.addEventListener("copy", (event) => { copy_hdl(event); });
+elems.hex2.addEventListener("copy", (event) => { copy_hdl(event); });
+
 allLoadedSpans=false;
 var hexBoxRect=absBoundingClientRect(elems.hex);
 
