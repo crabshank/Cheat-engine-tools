@@ -259,6 +259,20 @@ function n_byte_unit8_to_int(a,u_only){
 		}
 }
 
+const type_conv={
+	'Byte unsigned': 0,
+	'Byte signed': 1,
+	'2 Bytes unsigned': 3,
+	'2 Bytes signed': 4,
+	'4 Bytes unsigned': 6,
+	'4 Bytes signed': 7,
+	'8 Bytes unsigned': 9,
+	'8 Bytes signed': 10,
+	'Float': 12,
+	'Double': 13,
+	'Character': 14
+}
+
 const lookup_hex={
 										'00':0,
 										'01':1,
@@ -518,12 +532,26 @@ const lookup_hex={
 										'FF':255
 									};
 
+function copy_hdl(event){
+  let selectedText = window.getSelection().toString(); 
+  selectedText = selectedText.split('\n').join(' ');
+
+  clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
+  clipboardData.setData('text/plain', selectedText);
+
+  event.preventDefault();
+}
+
 let base_hx=null;	
 let base_hxi='';	
 let indnt=8;					
 let ttl=[...document.getElementsByTagName('h1')][0];
 let hsrch=document.getElementById('hex_search_AOB');
 let hx=document.getElementById('hex');
+
+hsrch.addEventListener("copy", (event) => { copy_hdl(event); });
+hx.addEventListener("copy", (event) => { copy_hdl(event); });
+
 let anlys=document.getElementById('anly');
 let sbse=document.getElementById('bse');
 let jmbs=document.getElementById('jmb');
@@ -1211,21 +1239,29 @@ function hl_sct(event){
 			lc2='afterend';
 		}
 		lc.insertAdjacentHTML(lc2,sc);
+		let hl_type=document.getElementById('auto_hl_slc0').value;
+		let hl_type_conv=type_conv[hl_type];
 		let slcs1=[...scls.outer.querySelectorAll('select.addr_type_bse')];
 		slcs1.forEach((slc)=>{
+			if(slc.getAttribute('og_type')===null){
+				slc.setAttribute('og_type',hl_type_conv);
+				slc.selectedIndex=hl_type_conv;
+			}
 			if(slc.getAttribute('chg')=='false'){
-				slc.selectedIndex=12;
 				addr_type_len(slc,slc.nextElementSibling,true);
 			}
 		});
 		let slcs=[...scls.outer.querySelectorAll('select.addr_type')];
 		slcs.forEach((slc)=>{
+			if(slc.getAttribute('og_type')===null){
+				slc.setAttribute('og_type',hl_type_conv);
+				slc.selectedIndex=hl_type_conv;
+			}
 			if(slc.getAttribute('chg')=='false'){
-				slc.selectedIndex=((typeof slcs1[0]!=='undefined')?slcs1[0].selectedIndex:12)
+				slc.selectedIndex=((typeof slcs1[0]!=='undefined')?slcs1[0].selectedIndex:parseInt(slc.getAttribute('og_type')))
 				addr_type_len(slc,slc.nextElementSibling);
 			}
 		});
-		
 		
 		let sbd=[...scls.hl.querySelectorAll('.offst_pn')];
 		let sb=sbd.map((d)=>{return [...d.children];});
