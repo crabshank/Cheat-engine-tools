@@ -852,6 +852,7 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 					}else{
 						let x=7;
 						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+						let d=getNoDigits(f);
 						let lb=Math.pow(10,-x);
 						if(d>=x || d<(lb-lb/2)){
 							hx_interps_curr[tp_name].push( [f.toExponential(x),4] );
@@ -976,8 +977,9 @@ async function makeSpans(i){
 				let crgb_a='';
 				let crgb_3='';
 				let crgb_bg='';
-				let p=(cc===null)?'':cc[0];
-				let n=(cc===null)?'':cc[1];
+				let ccn=(cc===null || typeof cc==='undefined')?true:false;
+				let p=(ccn)?'':cc[0];
+				let n=(ccn)?'':cc[1];
 				if(isCol && cc!==null){
 					p=cc[0];
 					c=cc[1];
