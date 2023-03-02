@@ -853,7 +853,7 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						let x=7;
 						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
 						let d=getNoDigits(f);
-						if(d>=x){
+						if(d>=x || d<Math.pow(10,-x)){
 							hx_interps_curr[tp_name].push( [f.toExponential(x),4] );
 						}else{
 							opts.maximumFractionDigits=Math.max(0, x+1-d );
@@ -885,7 +885,7 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						let x=15;
 						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
 						let d=getNoDigits(f);
-						if(d>=x){
+						if(d>=x || d<Math.pow(10,-x)){
 							hx_interps_curr[tp_name].push( [f.toExponential(x),8] );
 						}else{
 							opts.maximumFractionDigits=Math.max(0, x+1-d );

@@ -211,7 +211,7 @@ function getBarSepStr(a,m,x){
 				out+='❌';
 			}else if(typeof a[i]==='number'){
 				let d=getNoDigits(a[i]);
-				if(d>=x){
+				if(d>=x || d<Math.pow(10,-x)){
 					ot=a[i].toExponential(x);
 				}else{
 						opts.maximumFractionDigits=Math.max(0, x+1-d );
