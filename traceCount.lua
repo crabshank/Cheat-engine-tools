@@ -1582,9 +1582,9 @@ local function condBp(a, c)
 			end
 	elseif typa=='string' then
 		local as=getAddress(a)
-		ta={as,string.format('%X',as)}
+		ta={{as,string.format('%X',as)}}
 	elseif typa=='number' then
-		ta={a,string.format('%X',a)}
+		ta={{a,string.format('%X',a)}}
 	end
 	condBpAddr=ta
 		
