@@ -1016,7 +1016,6 @@ local function runStop(b)
 	if abp~= nil and #abp>1 then
 			debug_removeBreakpoint(abp[1][1])
 	end
-	debug_continueFromBreakpoint(co_run)
 	saveTrace()
 	if b==true then
 		print('Trace count limit reached')
@@ -1817,7 +1816,7 @@ local function onCondBp()
 	end
 	
 	if breakHere ==true then
-	
+		print('HIT!')
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
 		local asc=getAccessed(opcode) -- get memory "[...]" syntax matches
