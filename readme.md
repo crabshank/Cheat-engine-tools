@@ -334,17 +334,19 @@ If **n** is a specified, non-empty string, then it will query the saved trace sa
 
 ### Methods on (batchRW.…): 
 
-* **attach(s, z --[[Optional]] , onWrite --[[Optional]] )** -> 
+* **attach(s, z --[[Optional]] , onWrite --[[Optional]] , col --[[Optional]] )** -> 
  
 Attach breakpoints to address with index **s** (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and **z**-1 eligible addresses after it (**z** in total, probably will not work if >4). If **z** is not specified, it will be set to 1. 
 
-If "onWrite"==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
+If **onWrite**==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
+
+**col** is a RGB hex string like "FF0000". If **col** is unspecified, accessed addresses will turn yellow.
 
 Protip: use ```batchRW.attach(i*4,4)``` starting with i=0 and increment i by 1, to monitor addresses in batches of four. 
 
-* **attach_loop(z, t, onWrite --[[Optional]] )** -> 
+* **attach_loop(z, t, onWrite --[[Optional]]  , col --[[Optional]] )** -> 
 
-Attach breakpoints to the current address list, z entries at-a-time, cycling through them every t milliseconds. See "batchRW.attach(…)" to see what onWrite does.
+Attach breakpoints to the current address list, **z** entries at-a-time, cycling through them every **t** milliseconds. See "batchRW.attach(…)" to see what **onWrite** and **col** do.
 
 * **end_loop()** -> 
 
