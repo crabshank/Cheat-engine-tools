@@ -1,7 +1,14 @@
 local timer
+local lprog=false;
 local timer_attach={['accessed']={}}
 
 local bps={}
+
+function tableLen(t)
+  local count = 0
+  for _ in pairs(t) do count = count + 1 end
+  return count
+end
 
 local function printAddrs()
       local al = getAddressList()
@@ -24,7 +31,7 @@ local function detachAll()
 	bps={}
 end
 
-local function do_attach(s,z,onWrite,t,alist)
+local function do_attach(s,z,onWrite,col,t,alist,alc)
 		for i = 1, #bps do
 			local b=bps[i]
 			debug_removeBreakpoint(b[1])
@@ -37,9 +44,14 @@ local function do_attach(s,z,onWrite,t,alist)
 			return
 		end
 		local al=alist
-		if alist~=nil then
+
+		if alist~=nil or al==nil then
 			al = getAddressList()
+			alc=al.Count
+		elseif alc==nil then
+			alc=al.Count
 		end
+		
 		local trg=bptAccess		
 		if t~=true then
 			print('Attached to addresses:')
@@ -48,6 +60,10 @@ local function do_attach(s,z,onWrite,t,alist)
 		local si=0
 		local sic=s
 		local errCount=0
+		local colr=65535
+		if col~=nil then
+			colr=tonumber(col,16)
+		end
 		while ed==false do
 			local mr = al.getMemoryRecord(sic)
 				local attThis=true 
@@ -59,8 +75,9 @@ local function do_attach(s,z,onWrite,t,alist)
 				end
 				if (mr == nil) or (t==true and timer_attach.accessed[mhx]~=nil) then
 					attThis=false
+					errCount=errCount+1
 				end
-				 if attThis==true and mr.type<11 then --See defines.lua for "<11"	
+				 if attThis==true and mr.type<11 and (t~=true or (mr.Color~=colr and t==true) ) then --See defines.lua for "<11"	
 							local md=mr.description
 							local tb={ma,mhx,mr,md,sic}
 							table.insert(bps,tb)
@@ -72,12 +89,15 @@ local function do_attach(s,z,onWrite,t,alist)
 								end
 							end
 							si=si+1
+				elseif mr~=nil and mr.Color==colr and t==true then
+					timer_attach.accessed[mhx]=ma
+					errCount=errCount+1
 				else
 					errCount=errCount+1
 				end
 						
 				sic=sic+1
-				if errCount==z and t==true then
+				if errCount>=alc-1 and t==true then
 					ed=true
 				elseif t~=true and ( (sic >=al.Count) or (si==z) ) then
 					ed=true
@@ -101,7 +121,7 @@ local function do_attach(s,z,onWrite,t,alist)
 		for i = 1, #bps do
 			local b=bps[i]
 			debug_setBreakpoint(b[1], 1, trg, bpmInt3, function()
-						b[3].Color=65535 --yellow
+						b[3].Color=colr --yellow
 						local lst=getPreviousOpcode(RIP)
 						local dst = disassemble(lst)
 						local extraField, opcode, bytes, address = splitDisassembledString(dst)
@@ -126,18 +146,19 @@ local function do_attach(s,z,onWrite,t,alist)
 		end
 end
 
-local function attach(s,z,onWrite)
+local function attach(s,z,onWrite,col)
 	timer.destroy()
-	do_attach(s,z,onWrite)
+	do_attach(s,z,onWrite,col)
 end
 
 local function end_loop()
 	timer.destroy()
+	lprog=false
 	print('Address list loop ended!')
 	detachAll()
 end
 
-local function attach_loop(z,t,onWrite)
+local function attach_loop(z,t,onWrite,col)
 	timer_attach={['accessed']={}}
 	if timer~=nil then
 		end_loop()
@@ -148,23 +169,40 @@ local function attach_loop(z,t,onWrite)
 	timer_attach.z=z
 	timer_attach.onWrite=onWrite
 	print('\nLooping through address list...')
-	timer.OnTimer = function(timer)
-		local al=getAddressList()
-		if al~=nil then
-			local alc=al.Count
-			if #timer_attach.accessed<alc then
-				local al=getAddressList()
+	local ot
+	ot = function(timer)
+		if lprog==false then
+			lprog=true
+			local al=getAddressList()
+			if al~=nil then
 				local alc=al.Count
-				local za=timer_attach.z
-				local s=timer_attach.s_mult*za
-				timer_attach.s_mult=timer_attach.s_mult+1
-				local mod_s =math.fmod(s,alc)
-				do_attach(mod_s,za,timer_attach.onWrite,true,al)
-			else
-				end_loop()
+				if alc<=z then
+					end_loop()
+					print('\nAttached to remaining entries:')
+					attach(0,z,onWrite,col)
+					return
+				end
+				local taal=tableLen(timer_attach.accessed)
+				if alc-taal<=z then
+					end_loop()
+					print('\nAttached to remaining entries:')
+					attach(0,z,onWrite,col)
+				elseif taal<alc then
+					local za=timer_attach.z
+					local s=timer_attach.s_mult*za
+					timer_attach.s_mult=timer_attach.s_mult+1
+					local mod_s =math.fmod(s,alc)
+					do_attach(mod_s,za,timer_attach.onWrite,col,true,al,alc)
+				else
+					end_loop()
+				end
 			end
+			lprog=false
+		else
+			ot()
 		end
 	end
+	timer.OnTimer=ot
 end
 
 batchRW={
