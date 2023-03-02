@@ -1917,7 +1917,7 @@ end
 
 function debugger_onBreakpoint()
 	if prog==false and condBpProg==false then
-		debug_continueFromBreakpoint(co_run)
+		return
 	elseif condBpProg==true then
 		onCondBp()
 	elseif prog==true then
