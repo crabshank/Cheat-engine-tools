@@ -3,7 +3,20 @@ local upperc=string.upper
 local string_gmatch=string.gmatch
 local string_match=string.match
 
+local condBpProg=false
+local condBpAddr={}
+local condBpVals={['str']={},['num']={}}
+
 local present_r_last_lookup={}
+
+local function trim_str(s)
+	return string_match(s,'^()%s*$') and '' or string_match(s,'^%s*(.*%S)')
+end
+
+local function space_fix(s)
+	local s2 = s:gsub("%s+", " ")
+	return trim_str(s2)
+end
 
 local function str_allPosPlain(s,p)
 	local t={}
@@ -816,6 +829,7 @@ local function attach(a,c,n,s)
 	if s==true then
 		sio='step over'
 	end
+	condBpProg=false
 	prog=true
 	first=true
 	debug_setBreakpoint(abp[1][1], 1, bptExecute)
@@ -997,10 +1011,12 @@ local function saveTrace()
 end
 
 local function runStop(b)
+	condBpProg=false
 	prog=false
 	if abp~= nil and #abp>1 then
 			debug_removeBreakpoint(abp[1][1])
 	end
+	debug_continueFromBreakpoint(co_run)
 	saveTrace()
 	if b==true then
 		print('Trace count limit reached')
@@ -1223,9 +1239,6 @@ local function getSubRegDecBytes(x,g,a,b,n)
 end
 
 local function onBp()
-	if prog==false then
-		return
-	end
 
 	debug_getContext(true)
 	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
@@ -1554,8 +1567,362 @@ local function onBp()
 		end
 end
 
+local function condBp(a, c)
+
+	local ta={}
+	local typa=type(a)
+	if typa=='table' then
+			for i=1, #a do
+				if type(a[i])=='string' then
+					local as=getAddress(a[i])
+					table.insert(ta, {as,string.format('%X',as)})
+				else
+					table.insert(ta, {a[i], string.format('%X',a[i])})
+				end
+			end
+	elseif typa=='string' then
+		local as=getAddress(a)
+		ta={as,string.format('%X',as)}
+	elseif typa=='number' then
+		ta={a,string.format('%X',a)}
+	end
+	condBpAddr=ta
+		
+	local tc={['str']={},['num']={}}
+	local typc=type(c)
+	if typc=='table' then
+			for i=1, #c do
+				if type(c[i])=='string' then
+					local cs=space_fix(c[i])
+					table.insert(tc.str, cs)
+				elseif typc=='number' then
+					table.insert(tc.num, c[i])
+				end
+			end
+	elseif typc=='string' then
+		tc.str={space_fix(c)}
+	elseif typc=='number' then
+		tc.num={c}
+	end
+	condBpVals=tc
+	
+	first=true
+	present_r_last_lookup={}
+	condBpProg=true
+	debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
+end
+
+local function onCondBp()
+
+	debug_getContext(true)
+	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
+	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
+	registers['regs']['R10G']=getSubRegDecBytes(string.format("%X", R10), 8,1,8)
+	registers['regs']['R11G']=getSubRegDecBytes(string.format("%X", R11), 8,1,8)
+	registers['regs']['R12G']=getSubRegDecBytes(string.format("%X", R12), 8,1,8)
+	registers['regs']['R13G']=getSubRegDecBytes(string.format("%X", R13), 8,1,8)
+	registers['regs']['R14G']=getSubRegDecBytes(string.format("%X", R14), 8,1,8)
+	registers['regs']['R15G']=getSubRegDecBytes(string.format("%X", R15), 8,1,8)
+	registers['regs']['RAX']=RAX
+	registers['regs']['RBX']=RBX
+	registers['regs']['RCX']=RCX
+	registers['regs']['RDX']=RDX
+	registers['regs']['RDI']=RDI
+	registers['regs']['RSI']=RSI
+	registers['regs']['RBP']=RBP
+	registers['regs']['RSP']=RSP
+	registers['regs']['R8']=R8
+	registers['regs']['R9']=R9
+	registers['regs']['R10']=R10
+	registers['regs']['R11']=R11
+	registers['regs']['R12']=R12
+	registers['regs']['R13']=R13
+	registers['regs']['R14']=R14
+	registers['regs']['R15']=R15
+	registers['regs']['EAX']=EAX
+	registers['regs']['EBX']=EBX
+	registers['regs']['ECX']=ECX
+	registers['regs']['EDX']=EDX
+	registers['regs']['EDI']=EDI
+	registers['regs']['ESI']=ESI
+	registers['regs']['EBP']=EBP
+	registers['regs']['ESP']=ESP
+	registers['regs']['EIP']=EIP
+	registers['regs']['FP0']=FP0
+	registers['regs']['FP1']=FP1
+	registers['regs']['FP2']=FP2
+	registers['regs']['FP3']=FP3
+	registers['regs']['FP4']=FP4
+	registers['regs']['FP5']=FP5
+	registers['regs']['FP6']=FP6
+	registers['regs']['FP7']=FP7
+	registers['regs']['XMM0']=XMM0
+	registers['regs']['XMM1']=XMM1
+	registers['regs']['XMM2']=XMM2
+	registers['regs']['XMM3']=XMM3
+	registers['regs']['XMM4']=XMM4
+	registers['regs']['XMM5']=XMM5
+	registers['regs']['XMM6']=XMM6
+	registers['regs']['XMM7']=XMM7
+	registers['regs']['XMM8']=XMM8
+	registers['regs']['XMM9']=XMM9
+	registers['regs']['XMM10']=XMM10
+	registers['regs']['XMM11']=XMM11
+	registers['regs']['XMM12']=XMM12
+	registers['regs']['XMM13']=XMM13
+	registers['regs']['XMM14']=XMM14
+	registers['regs']['XMM15']=XMM15
+
+	local ai1=0
+	local ai1_hx=''
+		if condBpAddr[1]~=nil then
+			ai1=condBpAddr[1][1]
+			ai1_hx=condBpAddr[1][2]
+		end
+		if #condBpAddr>1 and RIP==ai1 then
+			print('Breakpoint at ' .. ai1_hx .. ' hit!')
+			debug_removeBreakpoint(ai1)
+			table.remove(condBpAddr,1)
+			debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
+			debug_continueFromBreakpoint(co_run)
+		else
+				if first ==true then
+					debug_removeBreakpoint(ai1)
+					first=false
+					print('Breakpoint at ' .. ai1_hx .. ' hit!')
+				end
+	end
+	
+	local RIPx=string.format('%X',RIP)
+	local dst = disassemble(RIP)
+	local extraField, opcode, bytes, address = splitDisassembledString(dst)
+	
+		-- EXTRA SUB-REGISTERS
+	local opcode_r=upperc(string_match(opcode,'[^%s]+%s*(.*)'))
+	local s=opcode_r  -- substitute register names for their spaces
+	--local sd=opcode_r -- substitute register names for their decimals
+	local present_r={}
+	local present_r_lookup={}
+	
+	for i=1, #registers['list_regs'] do
+		local regs_pos={}
+		if string.find(s,'%u')~=nil then
+			local fnd=false
+			local ri=registers['list_regs'][i] --check for presence of register
+			local ri_fnd=ri
+			local ri_alt=registers['alt_names'][ri]
+			local ri_pos=str_allPosPlain(s,ri)
+			if ri~=ri_alt and ri_alt~=nil then
+				local ri_alt_pos=str_allPosPlain(s,ri_alt)
+				if #ri_pos>0 then
+					fnd=true
+					regs_pos=ri_pos
+				elseif  #ri_alt_pos>0 then
+					fnd=true
+					ri_fnd=ri_alt
+					regs_pos=ri_alt_pos
+				end
+			else
+				if #ri_pos>0 then
+					fnd=true
+					regs_pos=ri_pos
+				end
+			end
+			
+			if  fnd==true then
+				local rgs=registers['regs'][ri]
+				local arg_n=registers['regs_args'][ri]
+				local rg={}
+				if arg_n~=nil then
+					rg=registers['get_regs'][ri](registers['regs'][arg_n])
+				else
+					rg['dec']=rgs
+					local hx=string.format('%X',rgs)
+					rg['hex']=hx
+					rg['aob']=hexToAOB(hx)
+				end
+				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
+				--[[if rg['dec']~=nil then
+					sd=plainReplace(sd,ri_fnd,rg['dec'])
+				end]]
+				if rg['aob']~=nil then
+					rg['aob_str']=table.concat(rg['aob'],' ')
+				end
+				table.insert(present_r,{ri_fnd,rg,regs_pos,ri})
+				present_r_lookup[ri_fnd]={#present_r,rg,regs_pos}
+			end
+		else
+			break
+		end
+	end
+	
+	local og_present_r=deepcopy(present_r)
+	local breakHere=false
+	for key, value in pairs(present_r_last_lookup) do
+		if present_r_lookup[key] == nil then
+				local insrt=true
+				local ri=value[4]
+				local rgs=registers['regs'][ri]
+				local arg_n=registers['regs_args'][ri]
+				local rg={}
+				if arg_n~=nil then
+					rg=registers['get_regs'][ri](registers['regs'][arg_n])
+				else
+					rg['dec']=rgs
+					
+					local cvn=#condBpVals.num
+					if cvn>0 then
+						for k=1, cvn do
+							local vk=condBpVals.num[k]
+							if rgs==vk then
+								breakHere=true
+								break
+							end		
+						end
+					end
+					
+					local hx=string.format('%X',rgs)
+					rg['hex']=hx
+					rg['aob']=hexToAOB(hx)
+				end
+			if rg['aob']~=nil then
+					rg['aob_str']=table.concat(rg['aob'],' ')
+					local cvs=#condBpVals.str
+					if cvs>0 then
+						for k=1, cvs do
+							local vk=condBpVals.str[k]
+							if string.find(rg['aob_str'],vk,1,true)~=nil then
+								breakHere=true
+								break
+							end		
+						end
+					end
+					if rg['aob_str']==value[2]['aob_str'] then
+						insrt=false
+					end
+			end
+			if insrt==true then
+				table.insert(present_r,{value[1],rg,value[3],ri})
+			end
+		end
+	end
+	
+	present_r_last_lookup={}
+
+	local prl=#present_r
+	
+	for k=1, #og_present_r do --reintroduce decimal registers
+		rk=og_present_r[k]
+		present_r_last_lookup[ rk[1] ]=rk
+	end
+	
+	if breakHere ==true then
+	
+		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
+		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
+		local asc=getAccessed(opcode) -- get memory "[...]" syntax matches
+		local reffed_opcode=opcode
+		local accessed_addrs={}
+
+		for i=1, #asc do
+			local ai=asc_nr[i]
+			local sa=string_arr(s)
+			local c=1
+			local mtc_hex="%x+"
+			local brk=false
+
+			while brk==false do
+				  local fa,fb=string.find(s,mtc_hex,c)
+				  if fa~=nil then
+					 sa[fa]='0x'..sa[fa]
+					 c=fb+1
+				  else
+					  brk=true
+				  end
+			end
+			
+			local ai3=ai[3]  -- pos of syntax
+			local ai3_1, ai3_2=ai3[1], ai3[2]
+			
+			for k=1, prl do --reintroduce decimal registers
+				rk=present_r[k]
+				local rkd=rk[2]['dec']
+				local rk3=rk[3]
+				local rk3l=#rk3
+				if rkd~=nil and #rk3>0 then	
+				for m=1, rk3l do
+						rk3_1=rk3[m][1]
+						rk3_2=rk3[m][2]
+						if rk3_1>=ai3_1 and rk3_2<=ai3_2 then
+							sa[ rk3_1 ]=rkd
+								for j=rk3_1+1, rk3_2 do
+									sa[j]=''
+								end
+						end
+					end
+				end
+			end
+
+			local a_dec=get_substring_tbl(sa,ai3_1,ai3_2)
+			local func= load("return ".. a_dec)
+			local b,r=pcall(func) -- r=calculated address
+
+			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then				
+				local rx=string.format('%X',r)
+				table.insert(accessed_addrs,rx)
+				local fstx=asc[i][2]
+				local brkt=asc[i][1]
+				-- [2]= { --[[ full syntax "[...]" ]] }
+					local rep_with='[ '..brkt..' ('..rx..') ]'
+					reffed_opcode=plainReplace(reffed_opcode,fstx,rep_with)
+			end
+		end
+					local a = getNameFromAddress(address) or ''
+					local pa=''
+					if a=='' then
+						pa=RIPx
+					else
+						pa=RIPx .. ' ( ' .. a .. ' )'
+					end
+
+					local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
+					
+					if prl>0 then
+						local regs_tbl={}
+						for i=1, prl do
+							local pi=present_r[i]
+							local dsp=''
+							if registers['disp_aob'][pi[1]]~=nil then
+								dsp=' = {'..pi[2]['aob_str']..'}'
+							else
+								dsp='='..pi[2]['hex']
+							end
+							table.insert(regs_tbl,pi[1]..dsp)
+						end
+						local regs_str=table.concat(regs_tbl,', ')
+						prinfo=prinfo..'\t( '..regs_str..' )'
+					end
+
+					if extraField~='' then
+						prinfo=prinfo .. ' (' .. extraField .. ')'
+					end
+				
+				print(prinfo)
+				return 1
+			else
+				debug_continueFromBreakpoint(co_stepinto)
+			end
+		
+end
+
 function debugger_onBreakpoint()
-	onBp()
+	if prog==false and condBpProg==false then
+		debug_continueFromBreakpoint(co_run)
+	elseif condBpProg==true then
+		onCondBp()
+	elseif prog==true then
+		onBp()
+	end
 end
 
 traceCount={}
@@ -1567,3 +1934,4 @@ traceCount.saved=saved
 traceCount.compare=compare
 traceCount.delete=delete
 traceCount.query=query
+traceCount.condBp=condBp
