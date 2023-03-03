@@ -147,12 +147,16 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 end
 
 local function attach(s,z,onWrite,col)
-	timer.destroy()
+	if timer~=nil then
+		timer.destroy()
+	end
 	do_attach(s,z,onWrite,col)
 end
 
 local function end_loop()
-	timer.destroy()
+	if timer~=nil then
+		timer.destroy()
+	end
 	lprog=false
 	print('Address list loop ended!')
 	detachAll()
