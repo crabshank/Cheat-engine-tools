@@ -6,8 +6,12 @@ local string_match=string.match
 local condBpProg=false
 local condBpAddr={}
 local condBpVals={['str']={},['num']={}}
+local condBp_bk=0
+local condBp_fw=0
 
 local present_r_last_lookup={}
+local present_m_last_lookup={}
+
 
 local function trim_str(s)
 	return string_match(s,'^()%s*$') and '' or string_match(s,'^%s*(.*%S)')
@@ -823,6 +827,7 @@ local function attach(a,c,n,s)
 	hpp={}
 	currTraceDss={}
 	present_r_last_lookup={}
+	present_m_last_lookup={}
 	count=c
 	stp=s
 	sio='step into'
@@ -1566,8 +1571,17 @@ local function onBp()
 		end
 end
 
-local function condBp(a, c)
-
+local function condBp(a, c, b, f)
+	condBp_bk=0
+	condBp_fw=0
+	if b~=nil then
+		condBp_bk=b
+	end
+	
+	if f~=nil then
+		condBp_fw=f
+	end
+	condBp_fw=f
 	local ta={}
 	local typa=type(a)
 	if typa=='table' then
@@ -1607,6 +1621,7 @@ local function condBp(a, c)
 	
 	first=true
 	present_r_last_lookup={}
+	present_m_last_lookup={}
 	condBpProg=true
 	debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
 end
@@ -1691,7 +1706,7 @@ local function onCondBp()
 					print('Breakpoint at ' .. ai1_hx .. ' hit!')
 				end
 	end
-	
+	local breakHere={false,''}
 	local RIPx=string.format('%X',RIP)
 	local dst = disassemble(RIP)
 	local extraField, opcode, bytes, address = splitDisassembledString(dst)
@@ -1756,7 +1771,7 @@ local function onCondBp()
 	end
 	
 	local og_present_r=deepcopy(present_r)
-	local breakHere=false
+
 	for key, value in pairs(present_r_last_lookup) do
 		if present_r_lookup[key] == nil then
 				local insrt=true
@@ -1774,7 +1789,7 @@ local function onCondBp()
 						for k=1, cvn do
 							local vk=condBpVals.num[k]
 							if rgs==vk then
-								breakHere=true
+								breakHere={true, 'Number match in register ('..ri..') '}
 								break
 							end		
 						end
@@ -1791,7 +1806,7 @@ local function onCondBp()
 						for k=1, cvs do
 							local vk=condBpVals.str[k]
 							if string.find(rg['aob_str'],vk,1,true)~=nil then
-								breakHere=true
+								breakHere={true, 'AOB match in register ('..ri..') '}
 								break
 							end		
 						end
@@ -1807,7 +1822,7 @@ local function onCondBp()
 	end
 	
 	present_r_last_lookup={}
-
+	
 	local prl=#present_r
 	
 	for k=1, #og_present_r do --reintroduce decimal registers
@@ -1815,13 +1830,21 @@ local function onCondBp()
 		present_r_last_lookup[ rk[1] ]=rk
 	end
 	
-	if breakHere ==true then
-		print('HIT!')
+	local chkMem={}
+	local chkMem_last={}
+	for key, value in pairs(present_m_last_lookup) do
+		chkMem[key]=value
+		chkMem_last[key]=value
+	end
+	present_m_last_lookup={}
+	
+	
+	
+		--print('HIT!')
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
 		local asc=getAccessed(opcode) -- get memory "[...]" syntax matches
 		local reffed_opcode=opcode
-		local accessed_addrs={}
 
 		for i=1, #asc do
 			local ai=asc_nr[i]
@@ -1829,7 +1852,6 @@ local function onCondBp()
 			local c=1
 			local mtc_hex="%x+"
 			local brk=false
-
 			while brk==false do
 				  local fa,fb=string.find(s,mtc_hex,c)
 				  if fa~=nil then
@@ -1868,7 +1890,30 @@ local function onCondBp()
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then				
 				local rx=string.format('%X',r)
-				table.insert(accessed_addrs,rx)
+				local rb=r+condBp_bk
+				local rf=r+condBp_fw
+				local rg=rf-rb+1
+				local byt=readBytes(rb,rg,true)
+				local tb={r,rx}
+				if type(byt) =='table' then
+								local aobt={}
+								local aobt_le={}
+								local bytl=#byt
+								for j=1, bytl do
+									table.insert(aobt,string.format('%X',byt[j]))
+								end
+								
+								for j=bytl, 1, -1 do
+									table.insert(aobt_le,string.format('%X',byt[j]))
+								end
+								local aob=table.concat(aobt, ' ')
+								local dec = tonumber(table.concat(aobt_le, ''),16)
+								chk=true
+								tb[3]=dec
+								tb[4]=aob
+				end
+				present_m_last_lookup[rx]=tb -- all present addresses added
+				chkMem[rx]=tb
 				local fstx=asc[i][2]
 				local brkt=asc[i][1]
 				-- [2]= { --[[ full syntax "[...]" ]] }
@@ -1876,41 +1921,88 @@ local function onCondBp()
 					reffed_opcode=plainReplace(reffed_opcode,fstx,rep_with)
 			end
 		end
-					local a = getNameFromAddress(address) or ''
-					local pa=''
-					if a=='' then
-						pa=RIPx
-					else
-						pa=RIPx .. ' ( ' .. a .. ' )'
-					end
 
-					local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
-					
-					if prl>0 then
-						local regs_tbl={}
-						for i=1, prl do
-							local pi=present_r[i]
-							local dsp=''
-							if registers['disp_aob'][pi[1]]~=nil then
-								dsp=' = {'..pi[2]['aob_str']..'}'
-							else
-								dsp='='..pi[2]['hex']
-							end
-							table.insert(regs_tbl,pi[1]..dsp)
+	for key, v in pairs(chkMem) do
+		if breakHere[1]==true then
+			break
+		end
+		if v[3]~=nil then
+				local cvn=#condBpVals.num
+					if cvn>0 then
+						for k=1, cvn do
+							local vk=condBpVals.num[k]
+							if v[3]==vk then
+								if chkMem_last[key]~=nil then
+									if chkMem_last[key][3]~=v[3] then
+										breakHere={true, 'Number match at memory address'}
+										break
+									end
+								else
+									breakHere={true, 'Number match at memory address'}
+									break
+								end
+							end		
 						end
-						local regs_str=table.concat(regs_tbl,', ')
-						prinfo=prinfo..'\t( '..regs_str..' )'
 					end
+		end
+		
+		if v[4]~=nil then
+					local cvs=#condBpVals.str
+					if cvs>0 then
+						for k=1, cvs do
+							local vk=condBpVals.str[k]
+							if string.find(v[4],vk,1,true)~=nil then
+							if chkMem_last[key]~=nil then
+								if chkMem_last[key][4]~=v[4] then
+									breakHere={true, 'AOB match at memory address'}
+									break
+								end
+							else
+								breakHere={true, 'AOB match at memory address'}
+								break
+							end
+							end	
+						end
+					end
+		end
+	end
 
-					if extraField~='' then
-						prinfo=prinfo .. ' (' .. extraField .. ')'
+					if breakHere[1]==true then
+						local a = getNameFromAddress(address) or ''
+						local pa=''
+						if a=='' then
+							pa=RIPx
+						else
+							pa=RIPx .. ' ( ' .. a .. ' )'
+						end
+
+						local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)		
+						if prl>0 then
+							local regs_tbl={}
+							for i=1, prl do
+								local pi=present_r[i]
+								local dsp=''
+								if registers['disp_aob'][pi[1]]~=nil then
+									dsp=' = {'..pi[2]['aob_str']..'}'
+								else
+									dsp='='..pi[2]['hex']
+								end
+								table.insert(regs_tbl,pi[1]..dsp)
+							end
+							local regs_str=table.concat(regs_tbl,', ')
+							prinfo=prinfo..'\t( '..regs_str..' )'
+						end
+
+						if extraField~='' then
+							prinfo=prinfo .. ' (' .. extraField .. ')'
+						end
+						prinfo=prinfo ..'\t〈'..breakHere[2]..'〉'
+					
+						print(prinfo)
+						return 1
+					else
+						debug_continueFromBreakpoint(co_stepinto)
 					end
-				
-				print(prinfo)
-				return 1
-			else
-				debug_continueFromBreakpoint(co_stepinto)
-			end
 		
 end
 
