@@ -454,6 +454,9 @@ local function attach(...)
 		end
 		
 		local a=v[1]
+		if type(a)=='string' then
+			a=getAddress(a)
+		end
 		local c=v[2]
 		local p=v[3]
 		local bh=v[4]
@@ -465,13 +468,13 @@ local function attach(...)
 			return
 		end
 				
-		if bh~=nil and bh>=0 then
-			print('Argument "bh", in table #'..i..', if specified, must be <0')
+		if bh~=nil and bh>0 then
+			print('Argument "bh", in table #'..i..', if specified, must be <=0')
 			return
 		end
 		
-		if fw~=nil and fw<=0 then
-			print('Argument "fw", in table #'..i..', if specified, must be >0')
+		if fw~=nil and fw<0 then
+			print('Argument "fw", in table #'..i..', if specified, must be >=0')
 			return
 		end
 		tybt=type(bpt)
