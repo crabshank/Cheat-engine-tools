@@ -1996,7 +1996,7 @@ local function onCondBp()
 						if extraField~='' then
 							prinfo=prinfo .. ' (' .. extraField .. ')'
 						end
-						prinfo=prinfo ..'\t〈'..breakHere[2]..'〉'
+						prinfo=prinfo ..'\t〈 '..breakHere[2]..'〉'
 					
 						print(prinfo)
 						return 1
