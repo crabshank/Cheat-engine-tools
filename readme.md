@@ -301,7 +301,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 * **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to **a**: address or table of addresses (either in number [Use '0x…' for addresses in hexadecimal] or string, e.g. 'example.exe+7AE', form) (**If a table of addresses, then it will attach a breakpoint to the 1st element, then when it is hit it will attach one to the 2nd and so on until the last breakpoint is hit and then it will start the trace. This is useful for when the trace cannot escape system modules.**), and keep logging for **c** steps afterwards ("step into/over"). If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **s** is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
 
 
-* **condBp(a, c)** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these.
+* **condBp(a, c, b --[[Optional]], f --[[Optional]])** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. **b** and **f** are offsets from the referenced memory addresses to search for **c**, e.g. **b**=0 and **f**=15 searches 16 bytes from the base address. **b** and **f** are both set to 0 if unspecified.
 
 This method breaks when a register in an opcode, or one changed by an opcode, matches any AOB string or number in **c**.
 
