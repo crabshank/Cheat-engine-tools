@@ -1239,8 +1239,6 @@ elems.conv.onclick=(event)=>{
 }
 
 function type_change(event){
-	elems.hex2.innerHTML='';
-	allLoadedSpans=false;
 	let tp=elems.type_view.selectedIndex;
 	let tp_id=elems.type_view[tp].id;
 	let isBit=(tp_id==='nbus' || tp_id==='nbs' || tp_id==='nbu')?true:false;
@@ -1255,12 +1253,6 @@ function type_change(event){
 	}else{
 		elems.rgba_sel.style.display='none';
 	}
-	
-	if(isBit){
-			( async ()=>{ await interp_span2_bits(); } )();
-		}else{
-			( async ()=>{ await interp_span2(); } )();
-		}
 }
 
 elems.n_count_div.oninput=(event)=>{
