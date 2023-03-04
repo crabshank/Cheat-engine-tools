@@ -1581,7 +1581,7 @@ local function condBp(a, c, b, f)
 	if f~=nil then
 		condBp_fw=f
 	end
-	condBp_fw=f
+
 	local ta={}
 	local typa=type(a)
 	if typa=='table' then
