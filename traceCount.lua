@@ -5,7 +5,7 @@ local string_match=string.match
 
 local condBpProg=false
 local condBpAddr={}
-local condBpVals={['str']={},['num']={}}
+local condBpVals={['str']={},['num']={},['opc']={}}
 local condBp_bk=0
 local condBp_fw=0
 
@@ -1601,15 +1601,20 @@ local function condBp(a, c, b, f)
 	end
 	condBpAddr=ta
 		
-	local tc={['str']={},['num']={}}
+	local tc={['str']={},['num']={},['opc']={}}
 	local typc=type(c)
 	if typc=='table' then
 			for i=1, #c do
-				if type(c[i])=='string' then
-					local cs=space_fix(c[i])
+				local ci=c[i]
+				if type(ci)=='string' then
+					local cs=space_fix(ci)
 					table.insert(tc.str, cs)
+				elseif typc=='table' then
+					for j=1, #ci do
+						table.insert(tc.opc, ci[j])
+					end
 				elseif typc=='number' then
-					table.insert(tc.num, c[i])
+					table.insert(tc.num, ci)
 				end
 			end
 	elseif typc=='string' then
@@ -1711,6 +1716,17 @@ local function onCondBp()
 	local dst = disassemble(RIP)
 	local extraField, opcode, bytes, address = splitDisassembledString(dst)
 	
+					local cvp=#condBpVals.opc
+					if cvp>0 then
+						for k=1, cvp do
+							local pk=condBpVals.opc[k]
+							if string.find(opcode,pk)~=nil then
+								breakHere={true, 'Opcode pattern match'}
+								break
+							end		
+						end
+					end
+	
 		-- EXTRA SUB-REGISTERS
 	local opcode_r=upperc(string_match(opcode,'[^%s]+%s*(.*)'))
 	local s=opcode_r  -- substitute register names for their spaces
@@ -1784,14 +1800,16 @@ local function onCondBp()
 				else
 					rg['dec']=rgs
 					
-					local cvn=#condBpVals.num
-					if cvn>0 then
-						for k=1, cvn do
-							local vk=condBpVals.num[k]
-							if rgs==vk then
-								breakHere={true, 'Number match in register ('..ri..') '}
-								break
-							end		
+					if breakHere[1]~=true then
+						local cvn=#condBpVals.num
+						if cvn>0 then
+							for k=1, cvn do
+								local vk=condBpVals.num[k]
+								if rgs==vk then
+									breakHere={true, 'Number match in register ('..ri..') '}
+									break
+								end		
+							end
 						end
 					end
 					
@@ -1801,14 +1819,16 @@ local function onCondBp()
 				end
 			if rg['aob']~=nil then
 					rg['aob_str']=table.concat(rg['aob'],' ')
-					local cvs=#condBpVals.str
-					if cvs>0 then
-						for k=1, cvs do
-							local vk=condBpVals.str[k]
-							if string.find(rg['aob_str'],vk,1,true)~=nil then
-								breakHere={true, 'AOB match in register ('..ri..') '}
-								break
-							end		
+					if breakHere[1]~=true then
+						local cvs=#condBpVals.str
+						if cvs>0 then
+							for k=1, cvs do
+								local vk=condBpVals.str[k]
+								if string.find(rg['aob_str'],vk,1,true)~=nil then
+									breakHere={true, 'AOB match in register ('..ri..') '}
+									break
+								end		
+							end
 						end
 					end
 					if rg['aob_str']==value[2]['aob_str'] then
@@ -1921,7 +1941,7 @@ local function onCondBp()
 					reffed_opcode=plainReplace(reffed_opcode,fstx,rep_with)
 			end
 		end
-
+if breakHere[1]~=true then
 	for key, v in pairs(chkMem) do
 		if breakHere[1]==true then
 			break
@@ -1966,6 +1986,7 @@ local function onCondBp()
 					end
 		end
 	end
+end
 
 					if breakHere[1]==true then
 						local a = getNameFromAddress(address) or ''
