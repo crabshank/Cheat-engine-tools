@@ -205,6 +205,25 @@ local function add(f,t,s,n)
 	end
 	
 end
+
+local function keepCol(c)
+	local kc=65535
+	if c~=nil then
+		kc=tonumber(c,16)
+	end
+	local al = getAddressList()
+	local vt={}
+	  for i = 0, al.Count - 1 do
+		  local mr = al.getMemoryRecord(i)
+		  if mr ~= nil and mr.Type<11 and mr.Color~=kc then --See defines.lua for "<11"
+			  table.insert(vt,mr)
+		 end
+	 end
+	  for i = 1, #vt do
+		  vt[i].destroy()
+	 end
+end
+
 local function attach_loop(z,t,onWrite,col)
 	timer_attach={['accessed']={}}
 	if timer~=nil then
@@ -256,5 +275,6 @@ batchRW={
 	end_loop=end_loop,
 	printAddrs=printAddrs,
 	detachAll=detachAll,
-	add=add
+	add=add,
+	keepCol=keepCol
 }
