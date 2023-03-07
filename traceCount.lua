@@ -1609,7 +1609,7 @@ local function condBp(a, c, b, f)
 				if type(ci)=='string' then
 					local cs=space_fix(ci)
 					table.insert(tc.str, cs)
-				elseif typc=='table' then
+				elseif type(ci)=='table' then
 					for j=1, #ci do
 						table.insert(tc.opc, ci[j])
 					end
