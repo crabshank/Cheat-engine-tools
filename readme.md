@@ -355,6 +355,9 @@ Protip: use ```batchRW.attach(i*4,4)``` starting with i=0 and increment i by 1, 
 
 Attach breakpoints to the current address list, **z** entries at-a-time, cycling through them every **t** milliseconds. See "batchRW.attach(…)" to see what **onWrite** and **col** do.
 
+* **add(f, t, s --[[Optional]] , n --[[Optional]] )** -> Add **t** addresses from **f**, every **n** bytes, to the address list as byte hex.
+**f** is a numeric or string address. **t** is a number >=1 that specifies how many addresses to add. **n** specifies the number of bytes between the addresses of each byte added to the address list. **s** is 'base' if not specified or an empty string, and it is the prefix to the addresses' desccriptions.
+
 * **end_loop()** -> Force end "batchRW.attach_loop(…)"
 
 * **printAddrs()** -> Print all attachable addresses in the address list, with their indexes for "batchRW.attach(…)".
