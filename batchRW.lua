@@ -162,6 +162,49 @@ local function end_loop()
 	detachAll()
 end
 
+local function add(f,t,s,n)
+	local fn, tn
+	local bse='base'
+	local nn=1
+	if s~=nil and type(s)=='string' and bse~='' then
+		bse=s
+	end
+	if n~=nil and type(n)=='number' then
+		nn=n
+	end
+	if type(f)=='string' then
+		fn=getAddress(f)
+	else
+		fn=f
+	end
+	if type(t)=='number' then
+		if t<1 then
+			print("Argument 't' must be >=1")
+			return
+		else
+			tn=t
+		end
+	else
+		print("Argument 't' must be >=1")
+		return
+	end
+	local al = getAddressList()
+	
+	for i=fn, fn+tn-1, nn do
+		local rec = al.createMemoryRecord()
+		rec.setAddress(i)
+		local d=i-fn;
+		local sgn='+'
+		if i<fn then
+			sgn='-'
+		end
+		local hx=string.format('bse%s%X',sgn,d)
+		rec.setDescription(hx)
+		rec.ShowAsHex=true
+		rec.Type=0
+	end
+	
+end
 local function attach_loop(z,t,onWrite,col)
 	timer_attach={['accessed']={}}
 	if timer~=nil then
@@ -214,5 +257,6 @@ batchRW={
 	attach_loop=attach_loop,
 	end_loop=end_loop,
 	printAddrs=printAddrs,
-	detachAll=detachAll
+	detachAll=detachAll,
+	add=add
 }
