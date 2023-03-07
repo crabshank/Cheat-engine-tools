@@ -245,8 +245,6 @@ local function attach_loop(z,t,onWrite,col)
 				end
 			end
 			lprog=false
-		else
-			ot()
 		end
 	end
 	timer.OnTimer=ot
