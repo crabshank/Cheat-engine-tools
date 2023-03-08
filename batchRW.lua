@@ -4,6 +4,15 @@ local timer_attach={['accessed']={}}
 
 local bps={}
 
+function reverseHex(h)
+	local rht={}
+	local sl=string.len(h)
+	for i=sl, 1, -2 do
+		table.insert(rht,string.sub(h,i-1,i))
+	end
+	return table.concat(rht,'')
+end
+
 function tableLen(t)
   local count = 0
   for _ in pairs(t) do count = count + 1 end
@@ -61,9 +70,24 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 		local sic=s
 		local errCount=0
 		local colr=65535
+		local xclc={}
 		if col~=nil then
-			colr=tonumber(col,16)
+			if type(col)=='table' then
+				colr=tonumber(reverseHex(col[1]),16)
+				xclc[string.format('%d',colr)]=true
+				local colL=#col
+				if colL>1 then
+					for i = 2, colL do
+						xclc[string.format('%d',tonumber(reverseHex(col[i]),16))]=true
+					end
+				end
+			else
+				xclc[string.format('%d',reverseHex(col))]=true
+			end
+		else
+			xclc['65535']=true
 		end
+
 		while ed==false do
 			local mr = al.getMemoryRecord(sic)
 				local attThis=true 
@@ -77,7 +101,8 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 					attThis=false
 					errCount=errCount+1
 				end
-				 if attThis==true and mr.type<11 and (t~=true or (mr.Color~=colr and t==true) ) then --See defines.lua for "<11"	
+				local scol=string.format('%d',mr.Color)
+				 if attThis==true and mr.type<11 and (t~=true or (xclc[scol]==nil and t==true) ) then --See defines.lua for "<11"	
 							local md=mr.description
 							local tb={ma,mhx,mr,md,sic}
 							table.insert(bps,tb)
@@ -89,7 +114,7 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 								end
 							end
 							si=si+1
-				elseif mr~=nil and mr.Color==colr and t==true then
+				elseif mr~=nil and xclc[scol]==true and t==true then
 					timer_attach.accessed[mhx]=ma
 					errCount=errCount+1
 				else
@@ -207,15 +232,25 @@ local function add(f,t,s,n)
 end
 
 local function keepCol(c)
-	local kc=65535
-	if c~=nil then
-		kc=tonumber(c,16)
-	end
+		local keepc={}
+		if c~=nil then
+			if type(c)=='table' then
+					for i = 1, #c do
+						keepc[string.format('%d',tonumber(reverseHex(c[i]),16))]=true
+					end
+			else
+				keepc[string.format('%d',reverseHex(c))]=true
+			end
+		else
+			keepc['65535']=true
+		end
+
 	local al = getAddressList()
 	local vt={}
 	  for i = 0, al.Count - 1 do
 		  local mr = al.getMemoryRecord(i)
-		  if mr ~= nil and mr.Type<11 and mr.Color~=kc then --See defines.lua for "<11"
+		  local scol=string.format('%d',mr.Color)
+		  if mr ~= nil and mr.Type<11 and keepc[scol]==nil then --See defines.lua for "<11"
 			  table.insert(vt,mr)
 		 end
 	 end
