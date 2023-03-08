@@ -347,7 +347,7 @@ Attach breakpoints to address with index **s** (if eligible, otherwise will be a
 
 If **onWrite**==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
 
-**col** is a RGB hex string like "FF0000". If **col** is unspecified, accessed addresses will turn yellow.
+**col** is a RGB hex string, or table of strings, like "FF0000". If **col** is unspecified, accessed addresses will turn yellow. If **col** is a table of strings, then it will change the colour of the address to the 1st element's colour and duing scanning, will ignore the addresses that are any colour represented in the table. If **col** is a string, then it will change the colour of the address string's colour and duing scanning, will ignore the addresses that are that string's colour.
 
 Protip: use ```batchRW.attach(i*4,4)``` starting with i=0 and increment i by 1, to monitor addresses in batches of four. 
 
@@ -358,7 +358,7 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 * **add(f, t, s --[[Optional]] , n --[[Optional]] )** -> Add **t** addresses from **f**, every **n** bytes, to the address list as byte hex.
 **f** is a numeric or string address. **t** is a number >=1 that specifies how many addresses to add. **n** specifies the number of bytes between the addresses of each byte added to the address list. **s** is 'base' if not specified or an empty string, and it is the prefix to the addresses' desccriptions.
 
-* **keepCol( c --[[Optional]] )** ->  If **c** is not specified, it will be yellow. Deletes entries in the address list that are not the colour **c**.
+* **keepCol( c --[[Optional]] )** ->  If **c** is not specified, it will be yellow. Deletes entries in the address list that are not the colour **c** (if string), or any colour not in **c** (if table).
 
 * **end_loop()** -> Force end "batchRW.attach_loop(…)"
 
