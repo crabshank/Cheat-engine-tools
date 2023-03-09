@@ -225,7 +225,7 @@ local function add(f,t,s,n)
 		end
 		local hx=string.format('%s%s%X',bse,sgn,d)
 		rec.setDescription(hx)
-		rec.ShowAsHex=true
+		--rec.ShowAsHex=true
 		rec.Type=0
 	end
 	
