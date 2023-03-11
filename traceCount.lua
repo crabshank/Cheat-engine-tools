@@ -1607,7 +1607,7 @@ local function condBp(a, c, b, f)
 			for i=1, #c do
 				local ci=c[i]
 				if type(ci)=='string' then
-					local cs=space_fix(ci)
+					local cs=upperc(space_fix(ci))
 					table.insert(tc.str, cs)
 				elseif type(ci)=='table' then
 					for j=1, #ci do
@@ -1618,7 +1618,7 @@ local function condBp(a, c, b, f)
 				end
 			end
 	elseif typc=='string' then
-		tc.str={space_fix(c)}
+		tc.str={upperc(space_fix(c))}
 	elseif typc=='number' then
 		tc.num={c}
 	end
@@ -1806,7 +1806,7 @@ local function onCondBp()
 							for k=1, cvn do
 								local vk=condBpVals.num[k]
 								if rgs==vk then
-									breakHere={true, 'Number match in register ('..ri..') '}
+									breakHere={true, 'Number match in register ('..ri..')'}
 									break
 								end		
 							end
@@ -1825,7 +1825,7 @@ local function onCondBp()
 							for k=1, cvs do
 								local vk=condBpVals.str[k]
 								if string.find(rg['aob_str'],vk,1,true)~=nil then
-									breakHere={true, 'AOB match in register ('..ri..') '}
+									breakHere={true, 'AOB match in register ('..ri..')'}
 									break
 								end		
 							end
@@ -2017,7 +2017,7 @@ end
 						if extraField~='' then
 							prinfo=prinfo .. ' (' .. extraField .. ')'
 						end
-						prinfo=prinfo ..'\t〈 '..breakHere[2]..'〉'
+						prinfo=prinfo ..'\t〈'..breakHere[2]..'〉'
 					
 						print(prinfo)
 						return 1
