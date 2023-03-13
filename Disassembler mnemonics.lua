@@ -5,7 +5,7 @@ local function displayMnemonics()
 
   function f(sender, address, LastDisassembleData, result, description)
     if not sender.syntaxHighlighting then return end
-	local s=string.match(getComment(LastDisassembleData.address),".*%s*〈" )
+	local s=string.match(getComment(LastDisassembleData.address),"[^〈]*%s*〈" )
 	if s ==nil then
 		s="〈"
 	end
