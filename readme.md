@@ -1,3 +1,7 @@
+## tprint.lua
+
+Allows you to print whole lua tables.
+
 ## maxScan.lua
 
 Change the "Memory Scan Options" to search over the maximum area by default.
