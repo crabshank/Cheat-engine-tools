@@ -1,6 +1,6 @@
 ## tprint.lua
 
-Allows you to print whole lua tables.
+Allows you to print whole lua tables. Credit to ripter.
 
 ## maxScan.lua
 
