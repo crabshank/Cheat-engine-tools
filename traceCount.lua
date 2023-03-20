@@ -12,6 +12,7 @@ local condBp_fw=0
 local present_r_last_lookup={}
 local present_m_last_lookup={}
 
+local jmpFirst=true
 
 local function trim_str(s)
 	return string_match(s,'^()%s*$') and '' or string_match(s,'^%s*(.*%S)')
