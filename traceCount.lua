@@ -12,7 +12,7 @@ local condBp_fw=0
 local present_r_last_lookup={}
 local present_m_last_lookup={}
 
-local jmpFirst=true
+local jmpFirst=false
 
 local function trim_str(s)
 	return string_match(s,'^()%s*$') and '' or string_match(s,'^%s*(.*%S)')
@@ -2150,13 +2150,13 @@ local opcode_r=upperc(string_match(opcode,'[^%s]+%s*(.*)'))
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
 		local asc=getAccessed(opcode) -- get memory "[...]" syntax matches
 		local ascl=#asc
-		local ja=1
-		local jb=ascl
-		local jc=1
-		if jmpFirst==false then
-			ja=ascl
-			jb=1
-			jc=-1
+		ja=ascl
+		jb=1
+		jc=-1
+		if jmpFirst==true then
+			local ja=1
+			local jb=ascl
+			local jc=1
 		end
 		for i=ja, jb, jc do
 			local ai=asc_nr[i]
