@@ -1918,7 +1918,8 @@ local function onCondBp()
 				local rf=r+condBp_fw
 				local rg=rf-rb+1
 				local byt=readBytes(rb,rg,true)
-				local tb={r,rx}
+				local tb={r,rx,nil,nil,r}
+				
 				if type(byt) =='table' then
 								local aobt={}
 								local aobt_le={}
@@ -1973,16 +1974,25 @@ if breakHere[1]~=true then
 		if v[4]~=nil then
 					local cvs=#condBpVals.str
 					if cvs>0 then
-						for k=1, cvs do
+						local ja=cvs
+						local jb=1
+						local jc=-1
+					if jmpFirst==true then
+						ja=1
+						jb=cvs
+						jc=1
+					end
+					
+						for k=ja, jb, jc do
 							local vk=condBpVals.str[k]
 							if string.find(v[4],vk,1,true)~=nil then
 							if chkMem_last[key]~=nil then
 								if chkMem_last[key][4]~=v[4] then
-									breakHere={true, 'AOB match at memory address'}
+									breakHere={true, 'AOB match at memory address',v[5]}
 									break
 								end
 							else
-								breakHere={true, 'AOB match at memory address'}
+								breakHere={true, 'AOB match at memory address',v[5]}
 								break
 							end
 							end	
@@ -2024,6 +2034,10 @@ end
 						prinfo=prinfo ..'\t〈 '..breakHere[2]..' 〉'
 					
 						print(prinfo)
+						
+						if breakHere[3]~=nil then
+							getMemoryViewForm().HexadecimalView.address=breakHere[3]
+						end
 						return 1
 					else
 						debug_continueFromBreakpoint(co_stepinto)
