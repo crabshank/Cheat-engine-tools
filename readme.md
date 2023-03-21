@@ -339,7 +339,7 @@ If **n** is a specified, non-empty string, then it will query the saved trace sa
 
 * **delete( n --[[Optional]] )** -> If n is a string matching the name of a saved trace, it will delete that trace. If n is unspecified, it will delete all saved traces.
 
-N.B. When not in a trace: When a breakpoint is hit, the extension will make the main memory view's hex view jump to the last (or first if jmpFirst==true) memory address ('[…]') in the broken opcode. This will make it much easier to see what's around read memory addresses when stepping through the code.
+N.B. When not in a trace, or when using traceCount.condBp(…): When a breakpoint is hit, the extension will make the main memory view's hex view jump to the last (or first if jmpFirst==true) (matching in .condBp(…)) memory address ('[…]') in the broken opcode. This will make it much easier to see what's around read memory addresses when stepping through the code.
 
 ## batchRW.lua
 
