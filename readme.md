@@ -26,7 +26,7 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 [ overlap: number of instructions overwritten by jmp (set by extension) ]
 [ ['lookaheads'](['offsets']/['instructions']): data ahead of the found instruction, to help with nops and overwites to help keep the execution flow the same (set by extension) ]
 [ nopped_instruction: instruction nopped by the method 'disable_nop(…)' (set by extension) ]
-[ instruction: the found instruction (at injection point) (set by extension) ]
+[ og_instruction: the found instruction (at injection point) (set by extension) ]
 [ og_bytes_dec: byte decimal table of matched instruction (set by extension) ]
 [ og_hex: byte hex table of matched instruction (set by extension) ]
 [ address_dec: address of found instruction in decimal (set by extension) ]
@@ -220,7 +220,7 @@ local inj_script=[[
     pop rax
     pop rbx
     pop rcx
-    ${instruction}
+    ${og_instruction}
 
     ${overwritten}
     jmp return
