@@ -413,7 +413,7 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
       table.sort( fnd_it, function(a, b) return a[3] > b[3] end ) -- Converted results array now sorted by count (descending);
       local f1=fnd_it[1]
 
-      local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['instruction']=f1[7]}
+      local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['og_instruction']=f1[7]}
 	  if parts~=nil then
 		  -- Spread parts arry
 		  for i=1, #f1[5] do
@@ -689,7 +689,7 @@ local function do_nop()
 
 	vars.nops=vars.instruction_size
 	vars.nop_text=str_concat_rep('nop',vars.nops,'\n')
-	vars.nopped_instruction=vars.instruction
+	vars.nopped_instruction=vars.og_instruction
 	local enb_jmp_size=[[
 		registersymbol(${inj_name})
 		define(${inj_name},${address_string})
