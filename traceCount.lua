@@ -744,9 +744,9 @@ local function get_substring_tbl(t, strt, ed)
 	return table.concat(ss,'')
 end
 
-local function getAccessed(opcode)
+local function getAccessed(instruction)
 	local t={}
-	local opcode_arr=string_arr(opcode)
+	local instruction_arr=string_arr(instruction)
 	
 	local mtc="%[%s*[^%]]+%s*%]" -- [...]
 	local mtc2="%[%s*([^%]]+)%s*%]" -- [(...)]
@@ -754,9 +754,9 @@ local function getAccessed(opcode)
 	local c=1
 	local brk=false
 	while brk==false do
-		  local fa,fb=string.find(opcode,mtc,c)
+		  local fa,fb=string.find(instruction,mtc,c)
 		  if fa~=nil then
-			local curr=get_substring_tbl(opcode_arr, fa, fb)
+			local curr=get_substring_tbl(instruction_arr, fa, fb)
 			local og_fa=fa
 			local og_fb=fb
 			fa,fb=string.find(curr,mtc2,1)
@@ -852,7 +852,7 @@ local function get_disassembly(hi,i)
 	local hdi_dss=hdi['disassembly']
 	local hdi_dss_m=hdi['mem_accesses']
 	local extraField = hdi_dss_m['extraField']
-	local opcode = hdi_dss_m['opcode']
+	local instruction = hdi_dss_m['instruction']
 	local bytes = hdi_dss_m['bytes']
 	local address = hdi_dss_m['address']
 	local pa = hdi_dss_m['address_string']
@@ -860,13 +860,13 @@ local function get_disassembly(hi,i)
 	local prinfo = hdi_dss_m['prinfo']
 
 	if i==1 or h==nil then
-		h={1,hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
+		h={1,hi,hisx,prinfo,pa,bytes,instruction,extraField,prinfo_cnt}
 	elseif h~=nil then
-		h={(h[1]+1),hi,hisx,prinfo,pa,bytes,opcode,extraField,prinfo_cnt}
+		h={(h[1]+1),hi,hisx,prinfo,pa,bytes,instruction,extraField,prinfo_cnt}
 	end
 	hp[hisx]=h --overwritten
 
-	return { ['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['prinfo_cnt']=h[9], ['address_str']=h[5], ['bytes']=h[6], ['opcode']=h[7], ['extraField']=h[8] }
+	return { ['order']=i, ['count']=h[1], ['address']=h[2], ['address_hex_str']=h[3], ['prinfo']=h[4], ['prinfo_cnt']=h[9], ['address_str']=h[5], ['bytes']=h[6], ['instruction']=h[7], ['extraField']=h[8] }
 
 end
 
@@ -1345,14 +1345,14 @@ local function onBp()
 
 					local deref={['hit_address']=RIPx}
 					local dst = disassemble(RIP)
-					local extraField, opcode, bytes, address = splitDisassembledString(dst)
-					deref['disassembly']={opcode,address,bytes,extraField}
+					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					deref['disassembly']={instruction,address,bytes,extraField}
 					--Get accessed memory addresses
 
 					-- EXTRA SUB-REGISTERS
-					local opcode_r=upperc(string_match(opcode,'[^%s]+%s*(.*)'))
-					local s=opcode_r  -- substitute register names for their spaces
-					--local sd=opcode_r -- substitute register names for their decimals
+					local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+					local s=instruction_r  -- substitute register names for their spaces
+					--local sd=instruction_r -- substitute register names for their decimals
 					local present_r={}
 					local present_r_lookup={}
 					
@@ -1448,9 +1448,9 @@ local function onBp()
 					
 					local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 					--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-					local asc=getAccessed(opcode) -- get memory "[...]" syntax matches
+					local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
 					local m_acc={}
-					local reffed_opcode=opcode
+					local reffed_instruction=instruction
 					local accessed_addrs={}
 
 					for i=1, #asc do
@@ -1503,7 +1503,7 @@ local function onBp()
 							local brkt=asc[i][1]
 							-- [2]= { --[[ full syntax "[...]" ]] }
 								local rep_with='[ '..brkt..' ('..rx..') ]'
-								reffed_opcode=plainReplace(reffed_opcode,fstx,rep_with)
+								reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
 						end
 					end
 								local a = getNameFromAddress(address) or ''
@@ -1516,7 +1516,7 @@ local function onBp()
 									pa=RIPx .. ' ( ' .. a .. ' )'
 								end
 
-								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)
+								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_instruction)
 								
 								if prl>0 then
 									local regs_tbl={}
@@ -1534,13 +1534,13 @@ local function onBp()
 									prinfo=prinfo..'\t( '..regs_str..' )'
 								end
 								
-								local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, opcode)
+								local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
 
 								if extraField~='' then
 									prinfo=prinfo .. ' (' .. extraField .. ')'
 								end
 								m_acc['extraField']=extraField
-								m_acc['opcode']=opcode
+								m_acc['instruction']=instruction
 								m_acc['bytes']=bytes
 								m_acc['address']=address
 								m_acc['prinfo']=prinfo
@@ -1718,23 +1718,23 @@ local function onCondBp()
 	local breakHere={false,''}
 	local RIPx=string.format('%X',RIP)
 	local dst = disassemble(RIP)
-	local extraField, opcode, bytes, address = splitDisassembledString(dst)
+	local extraField, instruction, bytes, address = splitDisassembledString(dst)
 	
 					local cvp=#condBpVals.opc
 					if cvp>0 then
 						for k=1, cvp do
 							local pk=condBpVals.opc[k]
-							if string.find(opcode,pk)~=nil then
-								breakHere={true, 'Opcode pattern match'}
+							if string.find(instruction,pk)~=nil then
+								breakHere={true, 'Instruction pattern match'}
 								break
 							end		
 						end
 					end
 	
 		-- EXTRA SUB-REGISTERS
-	local opcode_r=upperc(string_match(opcode,'[^%s]+%s*(.*)'))
-	local s=opcode_r  -- substitute register names for their spaces
-	--local sd=opcode_r -- substitute register names for their decimals
+	local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+	local s=instruction_r  -- substitute register names for their spaces
+	--local sd=instruction_r -- substitute register names for their decimals
 	local present_r={}
 	local present_r_lookup={}
 	
@@ -1867,8 +1867,8 @@ local function onCondBp()
 		--print('HIT!')
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(opcode) -- get memory "[...]" syntax matches
-		local reffed_opcode=opcode
+		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
+		local reffed_instruction=instruction
 
 		for i=1, #asc do
 			local ai=asc_nr[i]
@@ -1943,7 +1943,7 @@ local function onCondBp()
 				local brkt=asc[i][1]
 				-- [2]= { --[[ full syntax "[...]" ]] }
 					local rep_with='[ '..brkt..' ('..rx..') ]'
-					reffed_opcode=plainReplace(reffed_opcode,fstx,rep_with)
+					reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
 			end
 		end
 if breakHere[1]~=true then
@@ -2011,7 +2011,7 @@ end
 							pa=RIPx .. ' ( ' .. a .. ' )'
 						end
 
-						local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_opcode)		
+						local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_instruction)		
 						if prl>0 then
 							local regs_tbl={}
 							for i=1, prl do
@@ -2107,11 +2107,11 @@ local function jumpMem()
 	
 	local RIPx=string.format('%X',RIP)
 	local dst = disassemble(RIP)
-	local extraField, opcode, bytes, address = splitDisassembledString(dst)
+	local extraField, instruction, bytes, address = splitDisassembledString(dst)
 	
-local opcode_r=upperc(string_match(opcode,'[^%s]+%s*(.*)'))
-	local s=opcode_r  -- substitute register names for their spaces
-	--local sd=opcode_r -- substitute register names for their decimals
+local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+	local s=instruction_r  -- substitute register names for their spaces
+	--local sd=instruction_r -- substitute register names for their decimals
 	local present_r={}
 	local present_r_lookup={}
 	
@@ -2162,7 +2162,7 @@ local opcode_r=upperc(string_match(opcode,'[^%s]+%s*(.*)'))
 		local prl=#present_r
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(opcode) -- get memory "[...]" syntax matches
+		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
 		local ascl=#asc
 		ja=ascl
 		jb=1

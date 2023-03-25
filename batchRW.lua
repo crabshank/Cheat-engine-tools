@@ -149,7 +149,7 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 						b[3].Color=colr --yellow
 						local lst=getPreviousOpcode(RIP)
 						local dst = disassemble(lst)
-						local extraField, opcode, bytes, address = splitDisassembledString(dst)
+						local extraField, instruction, bytes, address = splitDisassembledString(dst)
 						local a = getNameFromAddress(address) or ''
 						local pa=''
 						local bx=string.format('%X',b[1])
@@ -160,7 +160,7 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 						else
 							pa=lstx .. ' ( ' .. a .. ' )'
 						end
-						local prinfo=string.format('%s:\t%s  -  %s }', pa, bytes, opcode)
+						local prinfo=string.format('%s:\t%s  -  %s }', pa, bytes, instruction)
 						if b[4]=='' then
 								print(b[2] .. ' (#' .. b[5] .. ')\t{ '..prinfo)
 							else

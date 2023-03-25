@@ -296,20 +296,20 @@ local function str_concat_rep(s,n,p)
 	return table.concat(out,p)
 end
 
-local function getLookaheads(k,lookahead_n,opcode)
-		local lookaheads={['offsets']={0},['opcodes']={opcode}}
+local function getLookaheads(k,lookahead_n,instruction)
+		local lookaheads={['offsets']={0},['instructions']={instruction}}
 		local szk=getInstructionSize(k)
 
 		local lbc=szk -- running byte count
 		local offset_inst=k+szk --running byte count + address
 		while lbc<lookahead_n+1 do
-			table.insert(lookaheads['offsets'],lbc) --start (offset) of next opcode
+			table.insert(lookaheads['offsets'],lbc) --start (offset) of next instruction
 
-			szk=getInstructionSize(offset_inst) -- size of next opcode
+			szk=getInstructionSize(offset_inst) -- size of next instruction
 
 			local dsk_off = disassemble(offset_inst)
-			local extraField_off, opcode_off, bytes_off, address_off = splitDisassembledString(dsk_off)
-			table.insert(lookaheads['opcodes'],opcode_off) -- insert next opcode
+			local extraField_off, instruction_off, bytes_off, address_off = splitDisassembledString(dsk_off)
+			table.insert(lookaheads['instructions'],instruction_off) -- insert next instruction
 
 			lbc=lbc+szk -- running byte count
 			offset_inst=offset_inst+szk --running byte count + address
@@ -318,7 +318,7 @@ local function getLookaheads(k,lookahead_n,opcode)
 		return lookaheads
 end
 
-local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
+local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
       local aob_tt=tbl_ception(aobs)
 
 	  local parts_tt={}
@@ -353,7 +353,7 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
 	    local rf=dec_res+bi[3]
             for k=rb, rf do
                 local dsk = disassemble(k)
-				local extraField, opcode, bytes, address = splitDisassembledString(dsk)
+				local extraField, instruction, bytes, address = splitDisassembledString(dsk)
 				local a = checkAdressOffset_ret_string(k,address)
                 local mb=true
                 local mdn={}
@@ -374,12 +374,12 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
                        end
                    end
                 end
-                if string.match(opcode,pattern)~=nil and mb==true then
+                if string.match(instruction,pattern)~=nil and mb==true then
 					local pt={}
 					if parts~=nil then
 						for p=1,parts_tt_l do
 						   local pttp=parts_tt[p]
-						   table.insert(pt,{pttp[3],string.match(opcode, pttp[4])})
+						   table.insert(pt,{pttp[3],string.match(instruction, pttp[4])})
 						end
 					end
 
@@ -391,11 +391,11 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
                                            end
 					end
 
-				   local lookaheads=getLookaheads(k,lookahead_n,opcode)
+				   local lookaheads=getLookaheads(k,lookahead_n,instruction)
 
                    local fda=fnd[a]
                    if fda==nil then
-						fnd[a]={dec_res,res,1,a,pt,lookaheads,opcode,hexByteTable,byt} -- {decimal address, numeric address, counter, lookup string, parts table of strings, lookahead hex, matched opcode}
+						fnd[a]={dec_res,res,1,a,pt,lookaheads,instruction,hexByteTable,byt} -- {decimal address, numeric address, counter, lookup string, parts table of strings, lookahead hex, matched instruction}
                    else
 						fnd[a][3]=fda[3]+1 -- counter
                    end
@@ -413,7 +413,7 @@ local function opcode_address(pattern,aobs,lookahead_n,parts,module_names)
       table.sort( fnd_it, function(a, b) return a[3] > b[3] end ) -- Converted results array now sorted by count (descending);
       local f1=fnd_it[1]
 
-      local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['opcode']=f1[7]}
+      local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['instruction']=f1[7]}
 	  if parts~=nil then
 		  -- Spread parts arry
 		  for i=1, #f1[5] do
@@ -451,7 +451,7 @@ local function do_disable()
 			${unregsy_txt}
 			define(${inj_name},${address_string})
 			${inj_name}:
-			${all_og_opcodes}
+			${all_og_instructions}
 			]]
 
 	dedollar=string_Dollar(rst_aa,vars)
@@ -481,7 +481,7 @@ local function do_disable_nop()
 		unregistersymbol(${inj_name})
 		define(${inj_name},${address_string})
 		${inj_name}:
-		  ${nopped_opcode}
+		  ${nopped_instruction}
 	]]
 	local dedollar=string_Dollar(inj_script,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
@@ -507,7 +507,7 @@ end
 
 local function do_inject()
 
-	local opa=opcode_address(pattern,aobs,lookahead_n,parts,module_names)
+	local opa=instruction_address(pattern,aobs,lookahead_n,parts,module_names)
 	for k, v in pairs(opa) do
 		vars[k]=v
 	end
@@ -537,8 +537,8 @@ local function do_inject()
 	autoAssemble(enb_jmp_size_ntk)
 
         local jmp_dss=disassemble(vars.address_string)
-	local extraField_ci, opcode_ci, bytes_ci, addr_ci = splitDisassembledString(jmp_dss)
-        vars['opcode_jmp']=opcode_ci
+	local extraField_ci, instruction_ci, bytes_ci, addr_ci = splitDisassembledString(jmp_dss)
+        vars['instruction_jmp']=instruction_ci
         local ad=tonumber(addr_ci,16)
         vars['address_dec']=ad
         vars['address_string']=checkAdressOffset_ret_string(ad,addr_ci)
@@ -561,7 +561,7 @@ local function do_inject()
 		 end
 	  end
 	  if vars.overlap > 0 then
-		 local offs_opc=vars['lookaheads']['opcodes']
+		 local offs_opc=vars['lookaheads']['instructions']
 		 local ovps={}
 		 for i=1,vars.overlap do
 			 table.insert(ovps,offs_opc[i+1])
@@ -586,13 +586,13 @@ local function check_inj()
         if vars==nil or vars['address_dec']==nil then
            return
         end
-	local curr_lookahead=getLookaheads(vars['address_dec'],vars['lookahead_n'],vars['opcode_jmp'])
+	local curr_lookahead=getLookaheads(vars['address_dec'],vars['lookahead_n'],vars['instruction_jmp'])
 	local rst=false
 	local c=1
-	local clp=curr_lookahead['opcodes']
-	local ogl=vars['lookaheads']['opcodes']
+	local clp=curr_lookahead['instructions']
+	local ogl=vars['lookaheads']['instructions']
         local ogll=#ogl
-	vars['all_og_opcodes']=table.concat(ogl,'\n')
+	vars['all_og_instructions']=table.concat(ogl,'\n')
         local farl1=false
 	for i=1, #clp do
 		local opc=clp[i]
@@ -679,7 +679,7 @@ local function dump_vars(ref)
 end
 
 local function do_nop()
-	local opa=opcode_address(pattern,aobs,0,{},module_names)
+	local opa=instruction_address(pattern,aobs,0,{},module_names)
 	for k, v in pairs(opa) do
 		vars[k]=v
 	end
@@ -689,7 +689,7 @@ local function do_nop()
 
 	vars.nops=vars.instruction_size
 	vars.nop_text=str_concat_rep('nop',vars.nops,'\n')
-	vars.nopped_opcode=vars.opcode
+	vars.nopped_instruction=vars.instruction
 	local enb_jmp_size=[[
 		registersymbol(${inj_name})
 		define(${inj_name},${address_string})

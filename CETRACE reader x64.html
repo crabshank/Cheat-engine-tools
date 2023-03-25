@@ -487,7 +487,7 @@ function hexProc(b_ints){
 	var txt_len_b=[b_ints[4],b_ints[5],b_ints[6],b_ints[7]];
 	var txt_len=n_byte_unit8_to_int(txt_len_b).u;
 	var cnt=0;
-	// Got opcodes list length
+	// Got instructions list length
 	let sub_instr=[];
 	for(let i=8, len=8+txt_len; i<len; i++){
 		if(b_ints[i]==13 && b_ints[i+1]==10){
@@ -507,7 +507,7 @@ function hexProc(b_ints){
 		}
 	}
 	
-	//b_ints[8+txt_len] is one element past the "0A" in "0D 0A" at the end of the opcodes list
+	//b_ints[8+txt_len] is one element past the "0A" in "0D 0A" at the end of the instructions list
 	let strt=-1;
 	
 	for(let i=8+txt_len, len=b_ints.length-3; i<len; i++){

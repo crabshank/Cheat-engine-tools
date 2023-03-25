@@ -17,23 +17,23 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 ```
 [ post[…]: use numeric indexes here to run functions assigned to them to run before the "${…}/$%s{…}" syntax is first processed. You can write a whole list of instructions as one token (see example script below!) (set by user) ]
 
-[ instruction_size: the size of the found opcode in bytes (decimal) (set by extension) ]
-[ address_string: a string representing the address of the found opcode, usually "module.…+offset" (set by extension) ]
-[ jmp_size: size of the jmp instruction, placed at the location of the found opcode, that diverts the code to your injected code in bytes (decimal) (set by extension) ]
-[ post_jmp: assembler text to be inserted after the injected jmp to avoid undesired opcodes appearing (set by extension) ]
+[ instruction_size: the size of the found instruction in bytes (decimal) (set by extension) ]
+[ address_string: a string representing the address of the found instruction, usually "module.…+offset" (set by extension) ]
+[ jmp_size: size of the jmp instruction, placed at the location of the found instruction, that diverts the code to your injected code in bytes (decimal) (set by extension) ]
+[ post_jmp: assembler text to be inserted after the injected jmp to avoid undesired instructions appearing (set by extension) ]
 [ overwritten: if the jmp instruction overwrites other instructions, this will replace them after your injected code (set by extension) ]
 [ nops: number of nops required to keep the execution flow the same after injection (set by extension)]
-[ overlap: number of opcodes overwritten by jmp (set by extension) ]
-[ ['lookaheads'](['offsets']/['opcodes']): data ahead of the found opcode, to help with nops and overwites to help keep the execution flow the same (set by extension) ]
-[ nopped_opcode: opcode nopped by the method 'disable_nop(…)' (set by extension) ]
-[ opcode: the found opcode (at injection point) (set by extension) ]
-[ og_bytes_dec: byte decimal table of matched opcode (set by extension) ]
-[ og_hex: byte hex table of matched opcode (set by extension) ]
-[ address_dec: address of found opcode in decimal (set by extension) ]
+[ overlap: number of instructions overwritten by jmp (set by extension) ]
+[ ['lookaheads'](['offsets']/['instructions']): data ahead of the found instruction, to help with nops and overwites to help keep the execution flow the same (set by extension) ]
+[ nopped_instruction: instruction nopped by the method 'disable_nop(…)' (set by extension) ]
+[ instruction: the found instruction (at injection point) (set by extension) ]
+[ og_bytes_dec: byte decimal table of matched instruction (set by extension) ]
+[ og_hex: byte hex table of matched instruction (set by extension) ]
+[ address_dec: address of found instruction in decimal (set by extension) ]
 [ unregsy_txt: text containing code to unregister all symbols registered by the cheat table (set by extension) ]
 [ deallc_txt: text containing code to dealloc all memory allocated by the cheat table (set by extension) ]
-[ opcode_jmp: the opcode of the jmp that redirects execution flow towards the injected code (set by extension) ]
-[ all_og_opcodes: all orginal opcodes, pre-injection (set by extension) ]
+[ instruction_jmp: the instruction of the jmp that redirects execution flow towards the injected code (set by extension) ]
+[ all_og_instructions: all orginal instructions, pre-injection (set by extension) ]
 [ nop_text: text containing number of nop instructions required to keep the execution flow the same after injection (set by extension) ]
 
 [ THE BELOW ARE THE SAME AS THE ARGUMENTS FOR ".inject(…)": ]
@@ -60,9 +60,9 @@ N.B. Functions assigned on vars are run for every token, whereas functions on "v
   * **newmem_size**: size of the memory that stores the injected (redirected to) code (STRING!: "${newmem_size}" or "$%s{newmem_size}"; INTEGER!: "$%d{newmem_size}")
   * **vars**: put data that you want to be accessible using the ```${…}/$%s{…}``` syntax here
   * **inj_script**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```${key} OR $%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.). Note that ```${…}``` is the same as ```$%s{…}```, because string is the most comnon type.
-  * **pattern**: a LUA string with a pattern that opcodes are checked against for matches.
+  * **pattern**: a LUA string with a pattern that instructions are checked against for matches.
   * **aobs**: a table or, table of tables, that contain `{'aob string', search from (string + this number), until (string + this number) }`
-  * **lookahead_n**: at least this many bytes worth of opcodes will be stored, ahead of the found opcode.
+  * **lookahead_n**: at least this many bytes worth of instructions will be stored, ahead of the found instruction.
   * **parts**: a table or, table of tables, that contain `{ a substring from your pattern , nth occurrence of this substring will be matched , name given to this part }`
   * **module_names**: a table or, table of tables: match only addresses with address strings (usually containing module name) that contain one of these strings.
   
@@ -220,7 +220,7 @@ local inj_script=[[
     pop rax
     pop rbx
     pop rcx
-    ${opcode}
+    ${instruction}
 
     ${overwritten}
     jmp return
@@ -270,7 +270,7 @@ opcode_inj[script_ref]=nil
 
 ## logpoint.lua
 
-#### Log specified registers at a breakpoint. Useful for shared opcodes.
+#### Log specified registers at a breakpoint. Useful for shared instructions.
 
 To use: place the the file into your autorun folder, open the LUA Engine and type in 'logpoint.' (without quotes), and then it will show you the methods listed below: 
 
@@ -298,16 +298,16 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 ## traceCount.lua
 
-#### Attach a breakpoint to an address ("traceCount.attach(…)") and: print opcodes that are executed afterwards, sorted by the number of times they are executed or in the order in which they were executed. This is useful for finding repeating code e.g. single animations.
+#### Attach a breakpoint to an address ("traceCount.attach(…)") and: print instructions that are executed afterwards, sorted by the number of times they are executed or in the order in which they were executed. This is useful for finding repeating code e.g. single animations.
 
 ### Methods on (traceCount.…): 
 
 * **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to **a**: address or table of addresses (either in number [Use '0x…' for addresses in hexadecimal] or string, e.g. 'example.exe+7AE', form) (**If a table of addresses, then it will attach a breakpoint to the 1st element, then when it is hit it will attach one to the 2nd and so on until the last breakpoint is hit and then it will start the trace. This is useful for when the trace cannot escape system modules.**), and keep logging for **c** steps afterwards ("step into/over"). If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **s** is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
 
 
-* **condBp(a, c, b --[[Optional]], f --[[Optional]])** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. if **c** is a table, and element of c is a table, then all strings inside that table will be opcode patterns which will be compared against the opcode. **b** and **f** are offsets from the referenced memory addresses to search for **c**, e.g. **b**=0 and **f**=15 searches 16 bytes from the base address. **b** and **f** are both set to 0 if unspecified. If a memory address has a match, the memory view's hex view will jump to the address of the match.
+* **condBp(a, c, b --[[Optional]], f --[[Optional]])** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. if **c** is a table, and element of c is a table, then all strings inside that table will be instruction patterns which will be compared against the instruction. **b** and **f** are offsets from the referenced memory addresses to search for **c**, e.g. **b**=0 and **f**=15 searches 16 bytes from the base address. **b** and **f** are both set to 0 if unspecified. If a memory address has a match, the memory view's hex view will jump to the address of the match.
 
-This method breaks when a register in an opcode, or one changed by an opcode, matches any AOB string or number in **c**.
+This method breaks when a register in an instruction, or one changed by an instruction, matches any AOB string or number in **c**.
 
 N.B. To continue detection after a break, press "Step Into" in the Memory Viewer.
 
@@ -315,11 +315,11 @@ N.B. To continue detection after a break, press "Step Into" in the Memory Viewer
 
 * **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> 
 
-If **m**==1: Prints all executed opcodes in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. 
+If **m**==1: Prints all executed instructions in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. 
 
 If **n** is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. 
 
-If **l** (integer) if specified, the extension will only print opcodes that have been executed >=**l** times, unless printing in the order of execution. 
+If **l** (integer) if specified, the extension will only print instructions that have been executed >=**l** times, unless printing in the order of execution. 
 
 If ***m**==1*, then **f** and **t**, if specified prints from the *f*th breakpoint hit to the **t**th.
 
@@ -339,7 +339,7 @@ If **n** is a specified, non-empty string, then it will query the saved trace sa
 
 * **delete( n --[[Optional]] )** -> If n is a string matching the name of a saved trace, it will delete that trace. If n is unspecified, it will delete all saved traces.
 
-N.B. When not in a trace, or when using traceCount.condBp(…): When a breakpoint is hit, the extension will make the main memory view's hex view jump to the last (or first if jmpFirst==true) (matching in .condBp(…)) memory address ('[…]') in the broken opcode. This will make it much easier to see what's around read memory addresses when stepping through the code.
+N.B. When not in a trace, or when using traceCount.condBp(…): When a breakpoint is hit, the extension will make the main memory view's hex view jump to the last (or first if jmpFirst==true) (matching in .condBp(…)) memory address ('[…]') in the broken instruction. This will make it much easier to see what's around read memory addresses when stepping through the code.
 
 ## batchRW.lua
 
@@ -374,7 +374,7 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 ## attachBpLog.lua
 
-#### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared opcodes.
+#### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared instructions.
 
 #### Currently only outputs 64-bit raw hex data.
 
@@ -426,7 +426,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 Load a .cetrace file, wait, and it will finish loading.
 
-Clicking on the opcode line (above RAX) in different places (check the tooltip), will highlight the current all latter instances and the same goes for the registers.
+Clicking on the instruction line (above RAX) in different places (check the tooltip), will highlight the current all latter instances and the same goes for the registers.
 
 The "Jump to..." buttons allow the user the jump to the next time a highlighted value changes.
 
