@@ -7,6 +7,35 @@ local function trim_str(s)
 end
 local upperc=string.upper
 
+local function tprint(tbl, indent)
+  local function do_tprint(tbl, indent) -- https://gist.github.com/ripter/4270799
+	if not indent then indent = 0 end
+	for k, v in pairs(tbl) do
+	  formatting = string.rep("	", indent) .. k .. ": "
+	  local typv=type(v)
+	  if typv == "table" then
+		print(formatting)
+		do_tprint(v, indent+1)
+	  elseif typv == 'boolean' then
+		print(formatting .. tostring(v))
+	  elseif typv == 'string' then
+		local la, lb=string.find(v, "\n")
+		if la==nil then
+			print(formatting .. '"'.. v ..'"')
+		else
+			print(formatting .. '[['.. v ..']]')
+		end
+	  elseif typv == 'function' then
+		print(formatting .. 'function () … end')
+	  else
+		print(formatting .. v)
+	  end
+	end
+  end
+  do_tprint(tbl,indent)
+  print('\n')
+end
+
 local R8D_bak, R8W_bak, R8B_bak, R8L_bak, R9D_bak, R9W_bak, R9B_bak, R9L_bak, R10D_bak, R10W_bak, R10B_bak, R10L_bak, R11D_bak, R11W_bak, R11B_bak, R11L_bak, R12D_bak, R12W_bak, R12B_bak,  R12L_bak, R13D_bak, R13W_bak, R13B_bak, R13L_bak, R14D_bak, R14W_bak, R14B_bak, R14L_bak, R15D_bak, R15W_bak, R15B_bak,  R15L_bak, SIL_bak, DIL_bak, BPL_bak, SPL_bak, AX_bak, AL_bak, AH_bak, BX_bak, BL_bak, BH_bak, CX_bak, CL_bak, CH_bak, DX_bak, DL_bak, DH_bak, SI_bak, DI_bak, BP_bak, SP_bak
 
 local function backupGlobals()
@@ -184,14 +213,26 @@ local function printAttached()
 		end
 end
 
+local function count_dumpRegisters(akc)
+			tprint(akc)
+end
+
 local function dumpRegisters(k)
 	local c=false
 	local ks={#abp}
 	if k~=nil then 
 		ks[1]=k
 	end
+	
 		for j=1, #ks do
 			local ak=abp[j]
+			if ak['count']==true then
+				if j==1 then
+					print('Counts (#'..j..'):')
+				end
+				count_dumpRegisters(ak.regs.counts)
+			else
+			
 			local riv=ak.regs
 			local rivl=#riv
 				print('regs length = ' .. rivl)
@@ -208,6 +249,8 @@ local function dumpRegisters(k)
 				end
 			end
 	end
+	end
+	
 end
 
 local function rem_abp(i,b)
@@ -279,6 +322,7 @@ local function onBp()
 	local chk=false
 	local abpx=0
 	local ar={}
+	local arc={}
 	local fres={}
 	local abpl=#abp
 	if abpl >0 then
@@ -286,6 +330,7 @@ local function onBp()
 			if ix>=0 then
 				abpx=abp[ix]
 				local abpxc=abpx['calc']
+				local abp_cnt=abpx['count']
 
 				debug_getContext(true)
 				
@@ -362,19 +407,11 @@ local function onBp()
 				SP=getSubRegDecBytes(ESP,4,3,4,true)
 				
 				-- EXTRA SUB-REGISTERS
-
-				local clc={} 
-				if abpx['c_type']=='table' then
-					for j=1, #abpxc do
-						table.insert(clc,upperc(abpxc[j]))
-					end
-				else
-					table.insert(clc,upperc(abpxc))
-				end
 			
 			ar=abpx.regs
-				for j=1, #clc do
-						local func= load("return function() return ".. clc[j] .." end")
+			arc=ar.counts
+				for j=1, #abpxc do
+						local func= load("return function() return ".. abpxc[j] .." end")
 						local b,r=pcall(func())
 						restoreGlobals()
 						if abpx['ptr']==true then
@@ -385,22 +422,58 @@ local function onBp()
 							if type(byt) =='table' then
 								local decByteString = table.concat(byt, ' ')
 								local hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
-								table.insert(ar,hexByteString)
-								table.insert(fres,hexByteString)
+								if abp_cnt==true then
+									if hexByteString~=nil then
+										if arc[hexByteString]==nil then
+											arc[hexByteString]={}
+											arc[hexByteString]['Count']=1
+										else
+											arc[hexByteString]['Count']=arc[hexByteString]['Count']+1
+										end
+									end
+								else
+									table.insert(ar,hexByteString)
+									table.insert(fres,hexByteString)
+								end
 								chk=true
 							end
 						else
 							if type(r)=='table' then
 								local rx=table.concat(r, ' '):gsub('%S+',function (c) return string.format('%02X',c) end)
-								table.insert(ar,rx)
-								table.insert(fres,rx)
+								
+								if abp_cnt==true then
+									if rx~=nil then
+										if arc[rx]==nil then
+											arc[rx]={}
+											arc[rx]['Count']=1
+										else
+											arc[rx]['Count']=arc[rx]['Count']+1
+										end
+									end
+								else
+									table.insert(ar,rx)
+									table.insert(fres,rx)
+								end
 								chk=true
 							else
 								local rx=string.format('%X',r)
 								local rxb=hexToAOB(rx)
 								rxbt=table.concat(rxb," ") 
-								table.insert(ar,rxbt)
-								table.insert(fres,rxbt)
+								
+								if abp_cnt==true then
+									if rx~=nil then
+										if arc[rx]==nil then
+											arc[rx]={}
+											arc[rx]['Decimal value']=r
+											arc[rx]['Count']=1
+										else
+											arc[rx]['Count']=arc[rx]['Count']+1
+										end
+									end
+								else
+									table.insert(ar,rxbt)
+									table.insert(fres,rxbt)
+								end
 								chk=true
 							end
 						end
@@ -413,8 +486,9 @@ local function onBp()
 			end
 	end
 							local bpst=abpx['bpst']
-							local brl=#bpst
-							if chk==true and brl>0 then
+							
+							if chk==true and bpst~=nil and #bpst>0 then
+								local brl=#bpst
 								local fnd=false
 								local frl=#fres
 								for k=1, frl do
@@ -439,10 +513,25 @@ local function onBp()
 			
 end
 
-local function attachLpAddr(a,c,p,bh,fw,bpst)
+local function attachLpAddr(a,c,p,bh,fw,bpst,cnt)
 	abp=rem_abp(a)
-	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']={},['ptr']=p,['calc']=c,['c_type']=type(c),['bh']=bh,['fw']=fw,['bpst']=bpst})
-	debug_setBreakpoint(a,onBp)
+	local tyc=type(c)
+	local cu={}
+			if tyc=='table' then
+				for j=1, #c do
+						table.insert(cu,upperc(c[j]))
+					end
+			else
+					cu[1]=upperc(c)
+			end
+	if cnt==true then
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['c_type']=tyc,['count']=cnt})
+		debug_setBreakpoint(a,onBp)
+	else
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']={},['ptr']=p,['calc']=cu,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt})
+		debug_setBreakpoint(a,onBp)
+	end
+	
 end
 
 local function attach(...)
@@ -498,12 +587,33 @@ local function attach(...)
 	end
 end
 
-function debugger_onBreakpoint()
-	print('BP!')
+local function count(...)
+   local args = {...}
+   for i,v in ipairs(args) do
+		if type(v)~='table' then
+			print('Arguments to this function are tables!')
+			return
+		end
+		
+		local a=v[1]
+		if type(a)=='string' then
+			a=getAddress(a)
+		end
+		local c=v[2]
+
+		if type(c)~='string' and type(c)~='table' then
+			print('Argument "c", must be specified!')
+			return
+		end
+		
+		stopped=false
+		attachLpAddr(a,c,nil,nil,nil,nil,true)
+	end
 end
 
 logpoint={
 	attach=attach,
+	count=count,
 	dumpRegisters=dumpRegisters,
 	removeAttached=removeAttached,
 	stop=stop,
