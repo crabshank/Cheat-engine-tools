@@ -250,7 +250,7 @@ local function dumpRegisters(k)
 			end
 	end
 	end
-	
+	removeAttached()
 end
 
 local function rem_abp(i,b)
@@ -581,7 +581,7 @@ local function attach(...)
 				end
 			end
 		end
-		--removeAttached()
+		removeAttached()
 		stopped=false
 		attachLpAddr(a,c,p,bh,fw,bpst)
 	end
@@ -605,7 +605,7 @@ local function count(...)
 			print('Argument "c", must be specified!')
 			return
 		end
-		
+		removeAttached()
 		stopped=false
 		attachLpAddr(a,c,nil,nil,nil,nil,true)
 	end
