@@ -286,6 +286,8 @@ Also, the float registers are interpreted as byte tables, so using them with arg
 
 **bpt** is a string or table of strings containing AOBs, that when any of the strings specified by **c** is present, the debugger will pause on the logpoint.
  
+ * **count( {a, c}, {…}, … )** -> Takes a series of tables, one for each address. See ".attach(…)" for explanations of **a** and **c**. Use ".dumpRegisters(…)" to print counts of all values taken by **c**.
+ 
 * **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output. Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
 
 * **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address **i**, or, if b==true: the index **i** printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
