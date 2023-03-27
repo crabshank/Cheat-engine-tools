@@ -282,7 +282,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are interpreted as a memory address(es) and the bytes from there will be logged.
 
-**bh** and **fw** extend the range of what is captured, e.g `logpoint.attach(0x14022E56F,'RCX',true,-0x40,0x60)` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). 
+**bh** and **fw** extend the range of what is captured, e.g `logpoint.attach({0x14022E56F,'RCX',true,-0x40,0x60})` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). 
 
 **bpt** is a string or table of strings containing AOBs, that when any of the strings specified by **c** is present, the debugger will pause on the logpoint.
  
@@ -363,7 +363,7 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **add(f, t, s --[[Optional]] , n --[[Optional]] )** -> Add **t** addresses from **f**, every **n** bytes, to the address list as type byte.
 **f** is a numeric or string address. **t** is a number >=1 that specifies how many addresses to add. **n** specifies the number of bytes between the addresses of each byte added to the address list. **s** is 'base' if not specified or an empty string, and it is the prefix to the addresses' desccriptions.
-
+ 
 * **keepCol( c --[[Optional]] )** ->  If **c** is not specified, it will be yellow. Deletes entries in the address list that are not the colour **c** (if string), or any colour not in **c** (if table).
 
 * **end_loop()** -> Force end "batchRW.attach_loop(…)"
