@@ -363,7 +363,7 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **add(f, t, s --[[Optional]] , n --[[Optional]] )** -> Add **t** addresses from **f**, every **n** bytes, to the address list as type byte.
 **f** is a numeric or string address. **t** is a number >=1 that specifies how many addresses to add. **n** specifies the number of bytes between the addresses of each byte added to the address list. **s** is 'base' if not specified or an empty string, and it is the prefix to the addresses' desccriptions.
- 
+
 * **keepCol( c --[[Optional]] )** ->  If **c** is not specified, it will be yellow. Deletes entries in the address list that are not the colour **c** (if string), or any colour not in **c** (if table).
 
 * **end_loop()** -> Force end "batchRW.attach_loop(…)"
