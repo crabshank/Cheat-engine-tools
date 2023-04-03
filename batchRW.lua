@@ -1,10 +1,24 @@
 local timer
 local lprog=false;
 local timer_attach={['accessed']={}}
-
+local addr_stack=nil
+local rets_lookup={}
 local bps={}
 
-function reverseHex(h)
+local function isInModule(address,name) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
+  local modulesTable,size = enumModules(),0
+  for i,v in pairs(modulesTable) do
+	if v.Name==name or name==nil or name=='' then
+		size = getModuleSize(v.Name)
+		if address>=v.Address and address<=(v.Address+size) then
+			return true
+		end
+     end
+  end
+  return false
+end
+
+local function reverseHex(h)
 	local rht={}
 	local sl=string.len(h)
 	for i=sl, 1, -2 do
@@ -13,7 +27,7 @@ function reverseHex(h)
 	return table.concat(rht,'')
 end
 
-function tableLen(t)
+local function tableLen(t)
   local count = 0
   for _ in pairs(t) do count = count + 1 end
   return count
@@ -146,6 +160,7 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 		for i = 1, #bps do
 			local b=bps[i]
 			debug_setBreakpoint(b[1], 1, trg, bpmInt3, function()
+						debug_getContext(true)
 						b[3].Color=colr --yellow
 						local lst=getPreviousOpcode(RIP)
 						local dst = disassemble(lst)
@@ -304,6 +319,69 @@ local function attach_loop(z,t,onWrite,col)
 	timer.OnTimer=ot
 end
 
+local function end_stack()
+	if addr_stack~=nil then
+		debug_removeBreakpoint(addr_stack)
+local t2={}
+
+for key, value in pairs(rets_lookup) do
+		table.insert(t2,{['address']=key,['count']=value['count'],['RSP+…']=value['RSP+…']})
+	end
+	
+	table.sort( t2, function(a, b) return a['count'] > b['count'] end )
+		tprint(t2)
+	end
+end
+
+local function stack(d,b,m)
+
+	if addr_stack~=nil then
+		end_stack()
+	end
+
+	local tyd=type(d)
+	if tyd=='string' then
+		addr_stack=getAddress(d)
+	elseif tyd=='number' then
+		addr_stack=d
+	else
+		print("Argument 'd' must be a number or string")
+	end
+	rets_lookup={}
+	
+	debug_setBreakpoint(addr_stack, 1, bptExecute, bpmDebugRegister, function()
+		debug_getContext(true)
+		local bp=math.max(RBP-7,RSP)
+		if b~=nil and b>=0 then
+			bp=math.min(RSP+b,bp)
+		end
+		--local p=1
+		local f=0
+		local fs='0'
+		for i=RSP, bp do
+			local d=readQword(i)
+			local dx=string.format('%X',d)
+			local isRet=isInModule(d,m)
+			if isRet==true then
+				if rets_lookup[dx]==nil then
+					rets_lookup[dx]={}
+					rets_lookup[dx]['count']=1
+					rets_lookup[dx]['address_dec']=d
+					rets_lookup[dx]['RSP+…']={}
+					rets_lookup[dx]['RSP+…'][fs]=1
+				else
+					rets_lookup[dx]['count']=rets_lookup[dx]['count']+1
+					rets_lookup[dx]['RSP+…'][fs]=rets_lookup[dx]['RSP+…'][fs]+1
+				end
+				--p=p+1
+			end
+			f=f+1
+			fs=tostring(f)
+		end
+	end)
+
+end
+
 batchRW={
 	attach=attach,
 	attach_loop=attach_loop,
@@ -311,5 +389,7 @@ batchRW={
 	printAddrs=printAddrs,
 	detachAll=detachAll,
 	add=add,
-	keepCol=keepCol
+	keepCol=keepCol,
+	end_stack=end_stack,
+	stack=stack
 }
