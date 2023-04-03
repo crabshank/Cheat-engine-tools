@@ -374,6 +374,10 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **detachAll()** -> Remove all breakpoints set by this extension.
 
+* **stack(d, b --[[Optional]] , m --[[Optional]] )** -> Break on address **d** and attempt to find return addresses in the stack. **b** how deep (RSP+**b**) to probe the stack, if unspecified the function will probe the full stack. **m** is a string containing a module name; only addresses in module **m** will be logged. N.B. if **d** is executed very frequently, this function will be very slow, to counteract this, set **b** to a low number
+
+* **end_stack()** -> End logging by "batchRW.stack(…)", and print its output.
+
 ## attachBpLog.lua
 
 #### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared instructions.
