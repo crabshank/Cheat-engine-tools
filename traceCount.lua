@@ -11,8 +11,36 @@ local condBp_fw=0
 
 local present_r_last_lookup={}
 local present_m_last_lookup={}
-
+local currModule=nil
+local currRegsAddr=nil
 local jmpFirst=false
+
+local function alloc(name,size,module_name)
+  local scrp=''
+  if module_name==nil or module_name=='' then
+      scrp=string.format('alloc(%s,%d)\nregistersymbol(%s)',name,size,name)
+  else
+      scrp=string.format('alloc(%s,%d,%s)\nregistersymbol(%s)',name,size,module_name,name)
+  end
+  autoAssemble(scrp)
+  return getAddress(name)
+end
+
+local function dealloc(name)
+  local scrp=string.format('dealloc(%s)\nunregistersymbol(%s)',name,name)
+  autoAssemble(scrp)
+end
+
+local function getModuleName(address) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
+  local modulesTable,size = enumModules(),0
+  for i,v in pairs(modulesTable) do
+      size = getModuleSize(v.Name)
+      if address>=v.Address and address<=(v.Address+size) then
+        return v.Name
+      end
+  end
+  return string.format('%X',address)
+end
 
 local function trim_str(s)
 	return string_match(s,'^()%s*$') and '' or string_match(s,'^%s*(.*%S)')
@@ -216,7 +244,8 @@ registers['list_regs']={
 	'SI',
 	'DI',
 	'BP',
-	'SP'
+	'SP',
+	'IP',
 }
 
 registers['disp_aob']={
@@ -285,6 +314,7 @@ registers['regs_args']={
 	['DIL']='EDI',
 	['BPL']='EBP',
 	['SPL']='ESP',
+	['IP']='EIP',
 	['AX']='EAX',
 	['AL']='EAX',
 	['AH']='EAX',
@@ -629,6 +659,10 @@ end
 
 registers['get_regs']['SP']=function(ESP)
 	return getSubRegDecBytes(ESP,4,3,4,true)
+end
+
+registers['get_regs']['IP']=function(EIP)
+	return getSubRegDecBytes(EIP,4,4,4,true)
 end
 
 local function tprint(tbl, indent)
@@ -1273,6 +1307,7 @@ local function onBp()
 	registers['regs']['R13']=R13
 	registers['regs']['R14']=R14
 	registers['regs']['R15']=R15
+	registers['regs']['RIP']=RIP
 	registers['regs']['EAX']=EAX
 	registers['regs']['EBX']=EBX
 	registers['regs']['ECX']=ECX
@@ -2172,6 +2207,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			local jb=ascl
 			local jc=1
 		end
+		local memJmp=false
 		for i=ja, jb, jc do
 			local ai=asc_nr[i]
 			local sa=string_arr(s)
@@ -2216,8 +2252,229 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
 				getMemoryViewForm().HexadecimalView.address=r
+				memJmp=true
 				break
 			end
+		end
+		if memJmp==false then
+			local mn=getModuleName(RIP)
+			if currModule==nil then
+				currModule=mn
+				currRegsAddr=alloc('traceCount_registers',1024,mn)
+			elseif mn~=currModule then
+				dealloc('traceCount_registers')
+				currModule=mn
+				currRegsAddr=alloc('traceCount_registers',1024,mn)
+			end
+			
+			local rc=0
+
+			writeString(currRegsAddr+( rc ),'RAX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RAX)
+			rc=rc+12
+			
+			writeString(currRegsAddr+( rc ),'RBX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RBX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RCX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RCX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RDX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RDX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RBX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RBP')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBP)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RSI')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RSI)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RDI')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RDI)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RSP')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RSP)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'R8')
+			writeBytes(currRegsAddr+( rc+2),0,0)
+			writeQword(currRegsAddr+( rc+4 ),RSI)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'R9')
+			writeBytes(currRegsAddr+( rc+2),0,0)
+			writeQword(currRegsAddr+( rc+4 ),R9)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R10')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R10)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R11')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R11)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R12')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R12)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R13')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R13)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R14')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R14)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R15')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R15)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'XMM0')
+			writeBytes(currRegsAddr+( rc+4 ),XMM0)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM1')
+			writeBytes(currRegsAddr+( rc+4 ),XMM1)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM2')
+			writeBytes(currRegsAddr+( rc+4 ),XMM2)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM3')
+			writeBytes(currRegsAddr+( rc+4 ),XMM3)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM4')
+			writeBytes(currRegsAddr+( rc+4 ),XMM4)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM5')
+			writeBytes(currRegsAddr+( rc+4 ),XMM5)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM6')
+			writeBytes(currRegsAddr+( rc+4 ),XMM6)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM7')
+			writeBytes(currRegsAddr+( rc+4 ),XMM7)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM8')
+			writeBytes(currRegsAddr+( rc+4 ),XMM8)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM9')
+			writeBytes(currRegsAddr+( rc+4 ),XMM9)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM10')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM10)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM11')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM11)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM12')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM12)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM13')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM13)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM14')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM14)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM15')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM15)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'FP0')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP0)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP1')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP1)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP1')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP1)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP2')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP2)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP3')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP3)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP4')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP4)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP5')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP5)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP6')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP6)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP7')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP7)
+			rc=rc+14
+
+			getMemoryViewForm().HexadecimalView.address=currRegsAddr
 		end
 		return
 end
