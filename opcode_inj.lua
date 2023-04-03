@@ -318,7 +318,63 @@ local function getLookaheads(k,lookahead_n,instruction)
 		return lookaheads
 end
 
+local function instruction_address_spec(addr,lookahead_n,parts,module_names)
+	  local parts_tt={}
+	  local parts_tt_l=0
+
+	local dsk = disassemble(addr)
+	local extraField, instruction, bytes, address = splitDisassembledString(dsk)
+	local a = checkAdressOffset_ret_string(addr,address)
+	
+	local pt={}
+	if parts~=nil then
+		parts_tt=tbl_ception(parts)
+		parts_tt_l=#parts_tt
+		for i=1, parts_tt_l do
+			local pi=parts_tt[i]
+			local mc=1
+			for mt in string.gmatch (instruction, pi[1]) do
+				if mc==pi[2] then
+					table.insert(pt,{pi[3],mt})
+					break
+				else
+					mc=mc+1
+				end
+			end
+		end
+	end
+
+	local byt=readBytes(addr,lookahead_n+1,true)
+	local hexByteTable={}
+	if type(byt) =='table' then
+	   for i=1,#byt do
+			table.insert(hexByteTable,string.format('%02X',byt[i]))
+	   end
+	end
+	
+	local lookaheads=getLookaheads(addr,lookahead_n,instruction)
+	
+      local outp= {['og_bytes_dec']=byt,['og_hex']=hexByteTable,['address_dec']=addr, ['address_string']=a ,['lookaheads']=lookaheads,['og_instruction']=instruction}
+	  local ptl=#pt
+	  if parts~=nil and ptl>0 then
+		  -- Spread parts array
+		  for i=1, ptl do
+			  outp[ pt[i][1] ]= pt[i][2]
+		  end
+	  end
+      return outp
+end
+
 local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
+
+	local type_aobs=type(aobs)
+	
+	if type_aobs=='string' then
+		return instruction_address_spec(getAddress(aobs),lookahead_n,parts,module_names)
+	elseif type_aobs=='number' then
+		return instruction_address_spec(aobs,lookahead_n,parts,module_names)
+	end
+	
       local aob_tt=tbl_ception(aobs)
 
 	  local parts_tt={}
@@ -414,9 +470,10 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
       local f1=fnd_it[1]
 
       local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['og_instruction']=f1[7]}
-	  if parts~=nil then
-		  -- Spread parts arry
-		  for i=1, #f1[5] do
+	  local ptl=#pt
+	  if parts~=nil and ptl>0 then
+		  -- Spread parts array
+		  for i=1, ptl do
 			  outp[ f1[5][i][1] ]= f1[5][i][2]
 		  end
 	  end
