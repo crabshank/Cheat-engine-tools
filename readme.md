@@ -60,8 +60,8 @@ N.B. Functions assigned on vars are run for every token, whereas functions on "v
   * **newmem_size**: size of the memory that stores the injected (redirected to) code (STRING!: "${newmem_size}" or "$%s{newmem_size}"; INTEGER!: "$%d{newmem_size}")
   * **vars**: put data that you want to be accessible using the ```${…}/$%s{…}``` syntax here
   * **inj_script**: like Cheat engine's auto-assembler script, but it can also access the top level keys of the 'vars' table using the syntax e.g. ```${key} OR $%s{key}``` for a string value in `vars[key]` (see LUA pattern notation: %s, %d, etc.). Note that ```${…}``` is the same as ```$%s{…}```, because string is the most comnon type.
-  * **pattern**: a LUA string with a pattern that instructions are checked against for matches.
-  * **aobs**: a table or, table of tables, that contain `{'aob string', search from (string + this number), until (string + this number) }`
+  * **pattern**: a LUA string with a pattern that instructions are checked against for matches. Ignored if **aobs** is a number or string.
+  * **aobs**: a table or, table of tables, that contain `{'aob string', search from (string + this number), until (string + this number) }`; or a number or string denoting the address of the injection point. 
   * **lookahead_n**: at least this many bytes worth of instructions will be stored, ahead of the found instruction.
   * **parts**: a table or, table of tables, that contain `{ a substring from your pattern , nth occurrence of this substring will be matched , name given to this part }`
   * **module_names**: a table or, table of tables: match only addresses with address strings (usually containing module name) that contain one of these strings.
