@@ -470,7 +470,7 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
       local f1=fnd_it[1]
 
       local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['og_instruction']=f1[7]}
-	  local ptl=#pt
+	  local ptl=#f1[5]
 	  if parts~=nil and ptl>0 then
 		  -- Spread parts array
 		  for i=1, ptl do
