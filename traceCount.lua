@@ -2258,7 +2258,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 		local frm = getMemoryViewForm()
 		local hv = frm.DisassemblerView
                 local hx=frm.HexadecimalView
-		hv.SelectedAddress2 = r
+		hv.SelectedAddress2 = lst
                 hx.address=r 
 				memJmp=true
 				break
@@ -2482,7 +2482,11 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			writeBytes(currRegsAddr+( rc+4 ),FP7)
 			rc=rc+14
 
-			getMemoryViewForm().HexadecimalView.address=currRegsAddr
+	        local frm = getMemoryViewForm()
+		local hv = frm.DisassemblerView
+                local hx=frm.HexadecimalView
+		hv.SelectedAddress2 = lst
+                hx.address=currRegsAddr
 		end
 		return
 end
