@@ -2255,7 +2255,11 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			local b,r=pcall(func) -- r=calculated address
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
-				getMemoryViewForm().HexadecimalView.address=r
+		local frm = getMemoryViewForm()
+		local hv = frm.DisassemblerView
+                local hx=frm.HexadecimalView
+		hv.SelectedAddress2 = r
+                hx.address=r 
 				memJmp=true
 				break
 			end
