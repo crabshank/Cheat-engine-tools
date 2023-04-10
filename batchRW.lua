@@ -3,19 +3,17 @@ local lprog=false;
 local timer_attach={['accessed']={}}
 local addr_stack=nil
 local rets_lookup={}
+local modulesList={}
 local bps={}
 
-local function isInModule(address,name) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
-  local modulesTable,size = enumModules(),0
-  for i,v in pairs(modulesTable) do
-	if v.Name==name or name==nil or name=='' then
-		size = getModuleSize(v.Name)
-		if address>=v.Address and address<=(v.Address+size) then
-			return true
+local function isInModule(address,address_hex,name) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
+	for i=1, #modulesList do
+	local v=modulesList[i]
+		if address>=v.Address and address<=(v.Address+v.Size) then
+			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
 		end
-     end
-  end
-  return false
+	end
+	return {false,address_hex}
 end
 
 local function reverseHex(h)
@@ -325,7 +323,7 @@ local function end_stack()
 local t2={}
 
 for key, value in pairs(rets_lookup) do
-		table.insert(t2,{['address']=key,['count']=value['count'],['RSP+…']=value['RSP+…']})
+		table.insert(t2,{['Symbolic address']=value,['Symbolic_address']['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
 	end
 	
 	table.sort( t2, function(a, b) return a['count'] > b['count'] end )
@@ -348,6 +346,19 @@ local function stack(d,b,m)
 		print("Argument 'd' must be a number or string")
 	end
 	rets_lookup={}
+	modulesList={}
+	
+	local modulesTable= enumModules()
+  for i,v in pairs(modulesTable) do
+	if v.Name==m or m==nil or m=='' then
+		local tm={
+			['Size']=getModuleSize(v.Name),
+			['Name']=v.Name,
+			['Address']=v.Address
+		}
+		table.insert(modulesList,tm)
+	end
+  end
 	
 	debug_setBreakpoint(addr_stack, 1, bptExecute, bpmDebugRegister, function()
 		debug_getContext(true)
@@ -361,12 +372,13 @@ local function stack(d,b,m)
 		for i=RSP, bp do
 			local d=readQword(i)
 			local dx=string.format('%X',d)
-			local isRet=isInModule(d,m)
-			if isRet==true then
+			local isRet=isInModule(d,dx,m)
+			if isRet[1]==true then
 				if rets_lookup[dx]==nil then
 					rets_lookup[dx]={}
 					rets_lookup[dx]['count']=1
 					rets_lookup[dx]['address_dec']=d
+					rets_lookup[dx]['Symbolic_address']=isRet[2]
 					rets_lookup[dx]['RSP+…']={}
 					rets_lookup[dx]['RSP+…'][fs]=1
 				else
