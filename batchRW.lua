@@ -323,7 +323,7 @@ local function end_stack()
 local t2={}
 
 for key, value in pairs(rets_lookup) do
-		table.insert(t2,{['Symbolic address']=value,['Symbolic_address']['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
+		table.insert(t2,{['Symbolic address']=value['Symbolic_address'],['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
 	end
 	
 	table.sort( t2, function(a, b) return a['count'] > b['count'] end )
