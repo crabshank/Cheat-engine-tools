@@ -13,6 +13,15 @@ local function giveModuleAndOffset(address) -- https://github.com/cheat-engine/c
   return {address,''}
 end
 
+local function spaceSepBytes(b)
+	local bs = string.gsub(b, "%s+", "")
+	local out={}
+	for i=1,#bs, 2 do
+		table.insert(out,string.sub(bs,i,i+1))
+	end
+	return table.concat(out,' ')
+end
+
 local function checkAdressOffset_ret_string(address,hex_address_string) -- decimal
 	local cea=getNameFromAddress(address)
 	local mfa= giveModuleAndOffset(address)
@@ -296,8 +305,8 @@ local function str_concat_rep(s,n,p)
 	return table.concat(out,p)
 end
 
-local function getLookaheads(k,lookahead_n,instruction)
-		local lookaheads={['offsets']={0},['instructions']={instruction}}
+local function getLookaheads(k,lookahead_n,instruction,bytes)
+		local lookaheads={['offsets']={0},['instructions']={instruction},['bytes']={bytes}}
 		local szk=getInstructionSize(k)
 
 		local lbc=szk -- running byte count
@@ -310,6 +319,7 @@ local function getLookaheads(k,lookahead_n,instruction)
 			local dsk_off = disassemble(offset_inst)
 			local extraField_off, instruction_off, bytes_off, address_off = splitDisassembledString(dsk_off)
 			table.insert(lookaheads['instructions'],instruction_off) -- insert next instruction
+			table.insert(lookaheads['bytes'],spaceSepBytes(bytes_off)) -- insert next instruction
 
 			lbc=lbc+szk -- running byte count
 			offset_inst=offset_inst+szk --running byte count + address
@@ -352,7 +362,7 @@ local function instruction_address_spec(addr,lookahead_n,parts,module_names)
 	   end
 	end
 	
-	local lookaheads=getLookaheads(addr,lookahead_n,instruction)
+	local lookaheads=getLookaheads(addr,lookahead_n,instruction,spaceSepBytes(bytes))
 	
       local outp= {['og_bytes_dec']=byt,['og_hex']=hexByteTable,['address_dec']=addr, ['address_string']=a ,['lookaheads']=lookaheads,['og_instruction']=instruction}
 	  local ptl=#pt
@@ -447,7 +457,7 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
                                            end
 					end
 
-				   local lookaheads=getLookaheads(k,lookahead_n,instruction)
+				   local lookaheads=getLookaheads(k,lookahead_n,instruction,spaceSepBytes(bytes))
 
                    local fda=fnd[a]
                    if fda==nil then
@@ -596,6 +606,7 @@ local function do_inject()
         local jmp_dss=disassemble(vars.address_string)
 	local extraField_ci, instruction_ci, bytes_ci, addr_ci = splitDisassembledString(jmp_dss)
         vars['instruction_jmp']=instruction_ci
+        vars['instruction_jmp_bytes']=spaceSepBytes(bytes_ci)
         local ad=tonumber(addr_ci,16)
         vars['address_dec']=ad
         vars['address_string']=checkAdressOffset_ret_string(ad,addr_ci)
@@ -643,7 +654,7 @@ local function check_inj()
         if vars==nil or vars['address_dec']==nil then
            return
         end
-	local curr_lookahead=getLookaheads(vars['address_dec'],vars['lookahead_n'],vars['instruction_jmp'])
+	local curr_lookahead=getLookaheads(vars['address_dec'],vars['lookahead_n'],vars['instruction_jmp'],vars['instruction_jmp_bytes'])
 	local rst=false
 	local c=1
 	local clp=curr_lookahead['instructions']
