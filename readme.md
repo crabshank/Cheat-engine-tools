@@ -24,7 +24,7 @@ Change the "Memory Scan Options" to search over the maximum area by default.
 [ overwritten: if the jmp instruction overwrites other instructions, this will replace them after your injected code (set by extension) ]
 [ nops: number of nops required to keep the execution flow the same after injection (set by extension)]
 [ overlap: number of instructions overwritten by jmp (set by extension) ]
-[ ['lookaheads'](['offsets']/['instructions']): data ahead of the found instruction, to help with nops and overwites to help keep the execution flow the same (set by extension) ]
+[ ['lookaheads'](['offsets']/['instructions']/['bytes']): data ahead of the found instruction, to help with nops and overwites to help keep the execution flow the same (set by extension) ]
 [ nopped_instruction: instruction nopped by the method 'disable_nop(…)' (set by extension) ]
 [ og_instruction: the found instruction (at injection point) (set by extension) ]
 [ og_bytes_dec: byte decimal table of matched instruction (set by extension) ]
