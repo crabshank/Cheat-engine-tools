@@ -361,7 +361,7 @@ local function stack(d,b,m)
   end
 	
 	debug_setBreakpoint(addr_stack, 1, bptExecute, bpmDebugRegister, function()
-		debug_getContext(true)
+		debug_getContext()
 		local bp=math.max(RBP-7,RSP)
 		if b~=nil and b>=0 then
 			bp=math.min(RSP+b,bp)
@@ -396,7 +396,7 @@ end
 
 local function rsp(b,m)
 
-	debug_getContext(true)
+	debug_getContext()
 	local rets_lookup2={}
 	local modulesList2={}
 	
