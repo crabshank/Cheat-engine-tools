@@ -6,9 +6,9 @@ local rets_lookup={}
 local modulesList={}
 local bps={}
 
-local function isInModule(address,address_hex,name) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
-	for i=1, #modulesList do
-	local v=modulesList[i]
+local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
+	for i=1, #list do
+	local v=list[i]
 		if address>=v.Address and address<=(v.Address+v.Size) then
 			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
 		end
@@ -368,30 +368,81 @@ local function stack(d,b,m)
 		end
 		--local p=1
 		local f=0
-		local fs='0'
+		local fsx='0'
 		for i=RSP, bp do
-			local d=readQword(i)
-			local dx=string.format('%X',d)
-			local isRet=isInModule(d,dx,m)
+			local rd=readQword(i)
+			local dx=string.format('%X',rd)
+			local isRet=isInModule(rd,dx,modulesList)
 			if isRet[1]==true then
 				if rets_lookup[dx]==nil then
 					rets_lookup[dx]={}
 					rets_lookup[dx]['count']=1
-					rets_lookup[dx]['address_dec']=d
+					rets_lookup[dx]['address_dec']=rd
 					rets_lookup[dx]['Symbolic_address']=isRet[2]
 					rets_lookup[dx]['RSP+…']={}
-					rets_lookup[dx]['RSP+…'][fs]=1
+					rets_lookup[dx]['RSP+…'][fsx]=1
 				else
 					rets_lookup[dx]['count']=rets_lookup[dx]['count']+1
-					rets_lookup[dx]['RSP+…'][fs]=rets_lookup[dx]['RSP+…'][fs]+1
+					rets_lookup[dx]['RSP+…'][fsx]=rets_lookup[dx]['RSP+…'][fsx]+1
 				end
 				--p=p+1
 			end
 			f=f+1
-			fs=tostring(f)
+			fsx=string.format('%X',f)
 		end
 	end)
 
+end
+
+local function rsp(b,m)
+
+	debug_getContext(true)
+	local rets_lookup2={}
+	local modulesList2={}
+	
+	local modulesTable= enumModules()
+  for i,v in pairs(modulesTable) do
+	if v.Name==m or m==nil or m=='' then
+		local tm={
+			['Size']=getModuleSize(v.Name),
+			['Name']=v.Name,
+			['Address']=v.Address
+		}
+		table.insert(modulesList2,tm)
+	end
+  end
+
+		local bp=math.max(RBP-7,RSP)
+		if b~=nil and b>=0 then
+			bp=math.min(RSP+b,bp)
+		end
+		--local p=1
+		local f=0
+		local fsx='0'
+		for i=RSP, bp do
+			local rd=readQword(i)
+			local dx=string.format('%X',rd)
+			print(dx)
+			local isRet=isInModule(rd,dx,modulesList2)
+			if isRet[1]==true then
+				if rets_lookup2[dx]==nil then
+					rets_lookup2[dx]={}
+					rets_lookup2[dx]['Count']=1
+					--rets_lookup2[dx]['address_dec']=rd
+					rets_lookup2[dx]['Address']=dx
+					rets_lookup2[dx]['Symbolic address']=isRet[2]
+					rets_lookup2[dx]['RSP+… ']={}
+					rets_lookup2[dx]['RSP+… '][fsx]=1
+				else
+					rets_lookup2[dx]['Count']=rets_lookup2[dx]['Count']+1
+					rets_lookup2[dx]['RSP+… '][fsx]=rets_lookup2[dx]['RSP+… '][fsx]+1
+				end
+				--p=p+1
+			end
+			f=f+1
+			fsx=string.format('%X',f)
+		end
+	tprint(rets_lookup2)
 end
 
 batchRW={
@@ -403,5 +454,6 @@ batchRW={
 	add=add,
 	keepCol=keepCol,
 	end_stack=end_stack,
-	stack=stack
+	stack=stack,
+	rsp=rsp
 }
