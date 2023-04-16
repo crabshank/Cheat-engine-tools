@@ -378,6 +378,8 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **end_stack()** -> End logging by "batchRW.stack(…)", and print its output.
 
+* **rsp( b --[[Optional]] , m --[[Optional]] )** -> Same as "batchRW.stack(…)", except it only works when the game is currently paused at a breakpoint. 
+
 ## attachBpLog.lua
 
 #### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared instructions.
