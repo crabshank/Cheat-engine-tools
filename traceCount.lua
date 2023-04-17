@@ -711,6 +711,18 @@ local trace_info=''
 local forceSave=''
 local sio=''
 
+local liteAddr=0
+local liteAbp={}
+local liteIx=1
+local liteCount=0
+local liteBp=true
+local litePrint=true
+local liteFirst=true
+local liteFileName=''
+local liteStepOver=false
+local liteTrace={}
+local liteFormattedCount={}
+
 local function string_arr(s)
 	local spl={}
 	local sl=string.len(s)
@@ -1280,6 +1292,161 @@ local function getSubRegDecBytes(x,g,a,b,n)
 	end
 end
 
+local function do_litePrint(fileHdl)
+	if fileHdl~=nil then
+		print('Saving trace…')
+		for i=1, #liteFormattedCount do
+			fileHdl:write(liteFormattedCount[i]..'\n')
+		end
+		fileHdl:close()
+		print('Trace saved!')
+	else
+		for i=1, #liteFormattedCount do
+			print(liteFormattedCount[i])
+		end
+	end
+end
+
+local function litePrint()
+	do_litePrint()
+end
+
+local function getLiteCounts()
+	local countInts={}
+	local out={}
+	
+	for i=1, #liteTrace do
+		local ti=liteTrace[i]
+		local tix=string.format('%X',ti)
+		if countInts[tix]==nil then
+			local dsti=disassemble(ti)
+			local extraField, instruction, bytes, address=splitDisassembledString(dsti)
+			local a = getNameFromAddress(address) or ''
+			local pa=''
+			if a=='' then
+				pa=tix
+			else
+				pa=tix .. ' ( ' .. a .. ' )'
+			end
+
+			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
+			
+			if extraField~='' then
+				prinfo=prinfo .. ' (' .. extraField .. ')'
+			end
+
+			countInts[tix]={dsti,1,prinfo}
+			out[i]=string.format('#%d (1):\t%s',i,prinfo)
+		else
+			local cit=countInts[tix]
+			countInts[tix][2]=cit[2]+1
+			out[i]=string.format('#%d (%d):\t%s',i,cit[2],cit[3])
+		end
+	end
+	return out
+end
+
+local function onLiteBp()
+
+	debug_getContext()
+
+	local ai1=0
+	local ai1_hx=''
+		if liteAbp[1]~=nil then
+			ai1=liteAbp[1][1]
+			ai1_hx=liteAbp[1][2]
+		end
+		if #liteAbp>1 and RIP==ai1 then
+			print('Breakpoint at ' .. ai1_hx .. ' hit!')
+			debug_removeBreakpoint(ai1)
+			table.remove(liteAbp,1)
+			debug_setBreakpoint(liteAbp[1][1], 1, bptExecute)
+			debug_continueFromBreakpoint(co_run)
+			return 0
+		else
+				if liteFirst==true then
+					debug_removeBreakpoint(ai1)
+					liteFirst=false
+					print('Breakpoint at ' .. ai1_hx .. ' hit!')
+				end
+				
+				liteTrace[liteIx]=RIP
+				liteIx=liteIx+1
+				
+				if liteIx>liteCount then
+					liteBp=false
+					print('Trace count limit reached!\n')
+					liteFormattedCount=getLiteCounts()
+					if litePrint==false then
+						local f=io.open(liteFileName,'w')
+						do_litePrint(f)
+					else
+						do_litePrint()
+					end
+					debug_continueFromBreakpoint(co_run)
+				elseif liteStepOver==false then
+					debug_continueFromBreakpoint(co_stepinto)
+				else
+					debug_continueFromBreakpoint(co_stepover)
+				end
+				
+		end
+end
+
+local function lite(a,c,f,s)
+	debug_removeBreakpoint(liteAddr)
+	if c==nil or c<0 then
+		print('Argument "c" must be >=0')
+		return
+	end
+	if a==nil then
+		print('Argument "a" must be specified')
+		return
+	end
+
+	local tya=type(a)
+	if tya=='number' then
+		local addr_hx=string.format('%X',a)
+		liteAbp={{a,addr_hx}}
+	elseif tya=='string' then
+		local as=getAddress(a)
+		local addr_hx=string.format('%X',as)
+		liteAbp={{as,addr_hx}}
+	else
+			liteAbp={}
+			for i=1, #a do
+				if type(a[i])=='string' then
+					local as=getAddress(a[i])
+					table.insert(liteAbp, {as,string.format('%X',as)} )
+				else
+					table.insert(liteAbp,{a[i],string.format('%X',a[i])})
+				end
+			end
+	end
+	
+	liteIx=1
+	liteCount=c
+	liteBp=true
+	litePrint=true
+	liteFileName=''
+	liteFirst=true
+	
+	if f~=nil and f~='' then
+		litePrint=false
+		liteFileName=f
+	end
+	
+	if s==true then
+		liteStepOver=true
+	else
+		liteStepOver=false
+	end
+	liteTrace={}
+	liteFormattedCount={}
+	
+	debug_setBreakpoint(liteAbp[1][1], 1, bptExecute)
+end
+
 local function onBp()
 
 	debug_getContext(true)
@@ -1483,7 +1650,7 @@ local function onBp()
 					
 					local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 					--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-					local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
+					local asc=getAccessed(instruction) -- get memory "[...]	" syntax matches
 					local m_acc={}
 					local reffed_instruction=instruction
 					local accessed_addrs={}
@@ -2492,7 +2659,9 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 end
 
 function debugger_onBreakpoint()
-	if prog==false and condBpProg==false then
+	if liteBp==true then
+		onLiteBp()
+	elseif prog==false and condBpProg==false then
 		jumpMem()
 	elseif condBpProg==true then
 		onCondBp()
@@ -2511,3 +2680,5 @@ traceCount.compare=compare
 traceCount.delete=delete
 traceCount.query=query
 traceCount.condBp=condBp
+traceCount.lite=lite
+traceCount.litePrint=litePrint
