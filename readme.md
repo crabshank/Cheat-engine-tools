@@ -306,7 +306,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 * **attach( a, c, n --[[Optional]] , s --[[Optional]] )** -> Attach breakpoints to **a**: address or table of addresses (either in number [Use '0x…' for addresses in hexadecimal] or string, e.g. 'example.exe+7AE', form) (**If a table of addresses, then it will attach a breakpoint to the 1st element, then when it is hit it will attach one to the 2nd and so on until the last breakpoint is hit and then it will start the trace. This is useful for when the trace cannot escape system modules.**), and keep logging for **c** steps afterwards ("step into/over"). If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **s** is set to **true**, then the extension will "step over" (calls), otherwise it will "step into".
 
-* **lite( a, c, f --[[Optional]] , s --[[Optional]] )** -> Like "traceCount.attach(…)" but only the instructions are logged, so it's quicker. **f** is a (full path to a) file name, where the trace will be saved; if unspecified, the trace will be printed to the console (Use double backslashes instead on single ones). **a**, **c**, and **s** are the same as in "traceCount.attach(…)".
+* **lite( a, c, f --[[Optional]] , s --[[Optional]] )** -> Like "traceCount.attach(…)" but only the instructions are logged, so it's quicker. **f** is a (full path to a) file name, where the trace will be saved; if unspecified or nil or `''`, the trace will be printed to the console (Use double backslashes instead on single ones). **a**, **c**, and **s** are the same as in "traceCount.attach(…)".
 
 * **litePrint()** -> Prints the last trace captured by "traceCount.lite(…)" to the console.
 
@@ -318,9 +318,11 @@ N.B. To continue detection after a break, press "Step Into" in the Memory Viewer
 
 * **stop()** -> End the trace and print in ascending order of times executed. Or it ends "traceCount.condBp(…)".
 
-* **printHits( m --[[Optional]] , n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> 
+* **printHits( m --[[Optional]], p --[[Optional]],  n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> 
 
 If **m**==1: Prints all executed instructions in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. 
+
+**p** is a (full path to a) file name, where the trace will be saved; if unspecified or nil or `''`, the trace will be printed to the console (Use double backslashes instead on single ones).
 
 If **n** is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. 
 
