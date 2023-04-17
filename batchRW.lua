@@ -374,21 +374,23 @@ local function stack(d,b,m,f)
 		local fsx='0'
 		for i=RSP, bp do
 			local rd=readQword(i)
-			local dx=string.format('%X',rd)
-			local isRet=isInModule(rd,dx,modulesList)
-			if isRet[1]==true then
-				if rets_lookup[dx]==nil then
-					rets_lookup[dx]={}
-					rets_lookup[dx]['count']=1
-					rets_lookup[dx]['address_dec']=rd
-					rets_lookup[dx]['Symbolic_address']=isRet[2]
-					rets_lookup[dx]['RSP+…']={}
-					rets_lookup[dx]['RSP+…'][fsx]=1
-				else
-					rets_lookup[dx]['count']=rets_lookup[dx]['count']+1
-					rets_lookup[dx]['RSP+…'][fsx]=rets_lookup[dx]['RSP+…'][fsx]+1
+			if type(rd)=='number' and rd>=0 then
+				local dx=string.format('%X',rd)
+				local isRet=isInModule(rd,dx,modulesList)
+				if isRet[1]==true and dx~=nil then
+					if rets_lookup[dx]==nil then
+						rets_lookup[dx]={}
+						rets_lookup[dx]['count']=1
+						rets_lookup[dx]['address_dec']=rd
+						rets_lookup[dx]['Symbolic_address']=isRet[2]
+						rets_lookup[dx]['RSP+…']={}
+						rets_lookup[dx]['RSP+…'][fsx]=1
+					else
+						rets_lookup[dx]['count']=rets_lookup[dx]['count']+1
+						rets_lookup[dx]['RSP+…'][fsx]=rets_lookup[dx]['RSP+…'][fsx]+1
+					end
+					--p=p+1
 				end
-				--p=p+1
 			end
 			f=f+1
 			fsx=string.format('%X',f)
@@ -426,23 +428,24 @@ local function rsp(b,m,f)
 		local fsx='0'
 		for i=RSP, bp do
 			local rd=readQword(i)
-			local dx=string.format('%X',rd)
-			print(dx)
-			local isRet=isInModule(rd,dx,modulesList2)
-			if isRet[1]==true then
-				if rets_lookup2[dx]==nil then
-					rets_lookup2[dx]={}
-					rets_lookup2[dx]['Count']=1
-					--rets_lookup2[dx]['address_dec']=rd
-					rets_lookup2[dx]['Address']=dx
-					rets_lookup2[dx]['Symbolic address']=isRet[2]
-					rets_lookup2[dx]['RSP+… ']={}
-					rets_lookup2[dx]['RSP+… '][fsx]=1
-				else
-					rets_lookup2[dx]['Count']=rets_lookup2[dx]['Count']+1
-					rets_lookup2[dx]['RSP+… '][fsx]=rets_lookup2[dx]['RSP+… '][fsx]+1
+			if type(rd)=='number' and rd>=0 then
+				local dx=string.format('%X',rd)
+				local isRet=isInModule(rd,dx,modulesList2)
+				if isRet[1]==true then
+					if rets_lookup2[dx]==nil then
+						rets_lookup2[dx]={}
+						rets_lookup2[dx]['Count']=1
+						--rets_lookup2[dx]['address_dec']=rd
+						rets_lookup2[dx]['Address']=dx
+						rets_lookup2[dx]['Symbolic address']=isRet[2]
+						rets_lookup2[dx]['RSP+… ']={}
+						rets_lookup2[dx]['RSP+… '][fsx]=1
+					else
+						rets_lookup2[dx]['Count']=rets_lookup2[dx]['Count']+1
+						rets_lookup2[dx]['RSP+… '][fsx]=rets_lookup2[dx]['RSP+… '][fsx]+1
+					end
+					--p=p+1
 				end
-				--p=p+1
 			end
 			f=f+1
 			fsx=string.format('%X',f)
