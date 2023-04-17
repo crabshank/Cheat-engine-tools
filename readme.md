@@ -379,11 +379,11 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **detachAll()** -> Remove all breakpoints set by this extension.
 
-* **stack(d, b --[[Optional]] , m --[[Optional]] )** -> Break on address **d** and attempt to find return addresses in the stack. **b** how deep (RSP+**b**) to probe the stack, if unspecified the function will probe the full stack. **m** is a string containing a module name; only addresses in module **m** will be logged.
+* **stack(d, b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Break on address **d** and attempt to find return addresses in the stack. **b** how deep (RSP+**b**) to probe the stack, if unspecified the function will probe the full stack. **m** is a string containing a module name; only addresses in module **m** will be logged. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
 * **end_stack()** -> End logging by "batchRW.stack(…)", and print its output.
 
-* **rsp( b --[[Optional]] , m --[[Optional]] )** -> Same as "batchRW.stack(…)", except it only works when the game is currently paused at a breakpoint. 
+* **rsp( b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Same as "batchRW.stack(…)", except it only works when the game is currently paused at a breakpoint. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
 ## attachBpLog.lua
 
