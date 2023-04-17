@@ -1389,7 +1389,6 @@ local function onLiteBp()
 				if liteFirst==true then
 					debug_removeBreakpoint(ai1)
 					liteFirst=false
-					liteBp=true
 					print('Breakpoint at ' .. ai1_hx .. ' hit!')
 				end
 				
@@ -1450,6 +1449,7 @@ local function lite(a,c,f,s)
 	liteIx=1
 	liteCount=c
 	litePrint=true
+	liteBp=true
 	liteFileName=''
 	liteFirst=true
 	
