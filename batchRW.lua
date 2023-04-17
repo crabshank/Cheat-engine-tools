@@ -377,7 +377,7 @@ local function stack(d,b,m,f)
 			if type(rd)=='number' and rd>=0 then
 				local dx=string.format('%X',rd)
 				local isRet=isInModule(rd,dx,modulesList)
-				if isRet[1]==true and dx~=nil then
+				if isRet[1]==true then
 					if rets_lookup[dx]==nil then
 						rets_lookup[dx]={}
 						rets_lookup[dx]['count']=1
@@ -387,7 +387,11 @@ local function stack(d,b,m,f)
 						rets_lookup[dx]['RSP+…'][fsx]=1
 					else
 						rets_lookup[dx]['count']=rets_lookup[dx]['count']+1
-						rets_lookup[dx]['RSP+…'][fsx]=rets_lookup[dx]['RSP+…'][fsx]+1
+						if rets_lookup[dx]['RSP+…'][fsx]~=nil then
+							rets_lookup[dx]['RSP+…'][fsx]=rets_lookup[dx]['RSP+…'][fsx]+1
+						else
+							rets_lookup[dx]['RSP+…'][fsx]=1
+						end
 					end
 					--p=p+1
 				end
@@ -442,7 +446,11 @@ local function rsp(b,m,f)
 						rets_lookup2[dx]['RSP+… '][fsx]=1
 					else
 						rets_lookup2[dx]['Count']=rets_lookup2[dx]['Count']+1
-						rets_lookup2[dx]['RSP+… '][fsx]=rets_lookup2[dx]['RSP+… '][fsx]+1
+						if rets_lookup2[dx]['RSP+… '][fsx]~=nil then
+							rets_lookup2[dx]['RSP+… '][fsx]=rets_lookup2[dx]['RSP+… '][fsx]+1
+						else
+							rets_lookup2[dx]['RSP+… '][fsx]=1
+						end
 					end
 					--p=p+1
 				end
