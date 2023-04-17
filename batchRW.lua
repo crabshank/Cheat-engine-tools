@@ -331,7 +331,7 @@ for key, value in pairs(rets_lookup) do
 	end
 end
 
-local function stack(d,b,m)
+local function stack(d,b,m,f)
 
 	if addr_stack~=nil then
 		end_stack()
@@ -362,9 +362,12 @@ local function stack(d,b,m)
 	
 	debug_setBreakpoint(addr_stack, 1, bptExecute, bpmDebugRegister, function()
 		debug_getContext()
-		local bp=math.max(RBP-7,RSP)
-		if b~=nil and b>=0 then
-			bp=math.min(RSP+b,bp)
+		local bp=RSP+b
+		if f~=true then
+			 bp=math.max(RBP-7,RSP)
+			if b~=nil and b>=0 then
+				bp=math.min(RSP+b,bp)
+			end
 		end
 		--local p=1
 		local f=0
@@ -394,7 +397,7 @@ local function stack(d,b,m)
 
 end
 
-local function rsp(b,m)
+local function rsp(b,m,f)
 
 	debug_getContext()
 	local rets_lookup2={}
@@ -411,10 +414,12 @@ local function rsp(b,m)
 		table.insert(modulesList2,tm)
 	end
   end
-
-		local bp=math.max(RBP-7,RSP)
-		if b~=nil and b>=0 then
-			bp=math.min(RSP+b,bp)
+		local bp=RSP+b
+		if f~=true then
+			 bp=math.max(RBP-7,RSP)
+			if b~=nil and b>=0 then
+				bp=math.min(RSP+b,bp)
+			end
 		end
 		--local p=1
 		local f=0
