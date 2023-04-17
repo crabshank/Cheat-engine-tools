@@ -715,7 +715,7 @@ local liteAddr=0
 local liteAbp={}
 local liteIx=1
 local liteCount=0
-local liteBp=true
+local liteBp=false
 local litePrint=true
 local liteFirst=true
 local liteFileName=''
@@ -1389,6 +1389,7 @@ local function onLiteBp()
 				if liteFirst==true then
 					debug_removeBreakpoint(ai1)
 					liteFirst=false
+					liteBp=true
 					print('Breakpoint at ' .. ai1_hx .. ' hit!')
 				end
 				
@@ -1448,7 +1449,6 @@ local function lite(a,c,f,s)
 	
 	liteIx=1
 	liteCount=c
-	liteBp=true
 	litePrint=true
 	liteFileName=''
 	liteFirst=true
