@@ -1354,7 +1354,7 @@ local function getLiteCounts()
 			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
 			
 			if extraField~='' then
-				prinfo=prinfo .. ' (' .. extraField .. ')'
+				prinfo=prinfo .. ' ( ' .. extraField .. ' )'
 			end
 
 			countInts[tix]={dsti,1,prinfo}
@@ -1761,7 +1761,7 @@ local function onBp()
 								local prinfo_cnt=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
 
 								if extraField~='' then
-									prinfo=prinfo .. ' (' .. extraField .. ')'
+									prinfo=prinfo .. ' ( ' .. extraField .. ' )'
 								end
 								m_acc['extraField']=extraField
 								m_acc['instruction']=instruction
@@ -2253,7 +2253,7 @@ end
 						end
 
 						if extraField~='' then
-							prinfo=prinfo .. ' (' .. extraField .. ')'
+							prinfo=prinfo .. ' ( ' .. extraField .. ' )'
 						end
 						prinfo=prinfo ..'\t〈 '..breakHere[2]..' 〉'
 					
