@@ -916,7 +916,7 @@ local function get_disassembly(hi,i)
 
 end
 
-local function printHits(m,n,l,f,t)
+local function printHits(m,p,n,l,f,t)
 	if m~=nil and (type(m)~='number' or (m<0 or m>1)) then
 		print('Argument "m", if specified, must be a number between 0 and 1')
 		return
@@ -969,7 +969,13 @@ local function printHits(m,n,l,f,t)
 		if t==nil then
 			t=stl
 		end
-
+			
+		local pth=nil
+		if p~=nil and p~=''  then
+				pth=io.open(p,'w')
+				print('Saving trace…')
+		end
+		
 		for i=f, t do
 			local stn2i=stnp[i]
 			table.insert(pt,'#')
@@ -978,8 +984,16 @@ local function printHits(m,n,l,f,t)
 			table.insert(pt,stn2i['count'])
 			table.insert(pt, '):\t' )
 			table.insert(pt,stn2i['mem_accesses']['prinfo'])
-			print(table.concat(pt))
+			local ptct=table.concat(pt)
+			if pth~=nil then
+				pth:write(ptct..'\n')
+			else
+				print(ptct)
+			end
 			pt={}
+		end
+		if pth~=nil then
+				print('Trace saved!')
 		end
 	else
 		-- Print by count
@@ -1000,10 +1014,18 @@ local function printHits(m,n,l,f,t)
 				table.insert(pt,stn3ic)
 				table.insert(pt, '):\t' )
 				table.insert(pt,stn3i['prinfo_cnt'])
-				print(table.concat(pt))
+				local ptct=table.concat(pt)
+				if pth~=nil then
+					pth:write(ptct..'\n')
+				else
+					print(ptct)
+				end
 				pt={}
 				ic=ic+1
 			end
+		end
+		if pth~=nil then
+			print('Trace saved!')
 		end
 	end
 
