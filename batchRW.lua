@@ -200,7 +200,6 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 			local b=bps[i]
 			debug_setBreakpoint(b[1], 1, trg, bpmInt3, function()
 						debug_getContext()
-						b[3].Color=colr --yellow
 						local mtc={false,''}
 						
 						if cond~=nil then
@@ -244,6 +243,7 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 						end
 						
 						if cond==nil or ch==true then
+							b[3].Color=colr --yellow
 							local lst=getPreviousOpcode(RIP)
 							local dst = disassemble(lst)
 							local extraField, instruction, bytes, address = splitDisassembledString(dst)
