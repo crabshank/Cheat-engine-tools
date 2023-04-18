@@ -220,7 +220,7 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 							if mtc[1]~=true then
 								local cnl=#cond.num
 								if cnl>0 then
-									for k=1, csl do
+									for k=1, cnl do
 										local ck=cond.num[k] -- each number
 											local ct=ck.tbl -- byte table for this number
 											local byt=readBytes(b[1],#ct,true)
