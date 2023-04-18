@@ -16,13 +16,53 @@ local function isInModule(address,address_hex,list) -- https://github.com/cheat-
 	return {false,address_hex}
 end
 
-local function reverseHex(h)
+local function sameTable(t1,t2)
+	local t1l, t2l= #t1, #t2
+	if t1l~=t2l then
+		return false
+	else
+		for i=1, t1l do
+			if t1[i]~=t2[i] then
+					return false
+			end
+		end
+		return true
+	end
+end
+
+local function trim_str(s)
+	return string.match(s,'^()%s*$') and '' or string.match(s,'^%s*(.*%S)')
+end
+
+local function space_fix(s)
+	local s2 = s:gsub("%s+", " ")
+	return trim_str(s2)
+end
+
+local function AOB_to_byte_table(s)
+	local t={}
+
+	for c in string.gmatch(s,'%x%x') do
+	  table.insert(t,c)
+	end
+	local out = {}
+	for i=1, #t do
+	table.insert(out,tonumber(t[i], 16))
+	end
+	return out
+end
+
+local function reverseHex(h,aob)
 	local rht={}
 	local sl=string.len(h)
 	for i=sl, 1, -2 do
 		table.insert(rht,string.sub(h,i-1,i))
 	end
-	return table.concat(rht,'')
+	local s=''
+	if aob==true then
+		s=' '
+	end
+	return table.concat(rht,s)
 end
 
 local function tableLen(t)
@@ -52,7 +92,7 @@ local function detachAll()
 	bps={}
 end
 
-local function do_attach(s,z,onWrite,col,t,alist,alc)
+local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 		for i = 1, #bps do
 			local b=bps[i]
 			debug_removeBreakpoint(b[1])
@@ -159,37 +199,117 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 		for i = 1, #bps do
 			local b=bps[i]
 			debug_setBreakpoint(b[1], 1, trg, bpmInt3, function()
-						debug_getContext(true)
+						debug_getContext()
 						b[3].Color=colr --yellow
-						local lst=getPreviousOpcode(RIP)
-						local dst = disassemble(lst)
-						local extraField, instruction, bytes, address = splitDisassembledString(dst)
-						local a = getNameFromAddress(address) or ''
-						local pa=''
-						local bx=string.format('%X',b[1])
-						local lstx=string.format('%X',lst)
-						timer_attach.accessed[bx]=b[1]
-						if a=='' then
-							pa=lstx
-						else
-							pa=lstx .. ' ( ' .. a .. ' )'
-						end
-						local prinfo=string.format('%s:\t%s  -  %s }', pa, bytes, instruction)
-						if b[4]=='' then
-								print(b[2] .. ' (#' .. b[5] .. ')\t{ '..prinfo)
-							else
-								print(b[4] .. ' - ' .. b[2] .. ' (#' .. b[5] .. ')\t{ '..prinfo)
+						local mtc={false,''}
+						
+						if cond~=nil then
+							local csl=#cond.str
+							if csl>0 then
+								for k=1, csl do
+									local ck=cond.str[k] -- each aob
+										local ct=ck.tbl -- byte table for this aob
+										local byt=readBytes(b[1],#ct,true)
+										if sameTable(ct,byt)==true then
+											mtc={true,"AOB match ('"..ck.aob.."')"}
+											break
+										end
+								end
 							end
-						debug_removeBreakpoint(b[1])
+							
+							if mtc[1]~=true then
+								local cnl=#cond.num
+								if cnl>0 then
+									for k=1, csl do
+										local ck=cond.num[k] -- each number
+											local ct=ck.tbl -- byte table for this number
+											local byt=readBytes(b[1],#ct,true)
+											if sameTable(ct,byt)==true then
+												mtc={true,'Number match ('..ck.number[1]..' - '..ck.number[2]..' bytes)'}
+												break
+											end
+									end
+								end
+							end
+						end
+						
+						local ch=false
+						if cond~=nil and mtc[1]==true then
+							ch=true
+						end
+						
+						if cond==nil or ch==true then
+							local lst=getPreviousOpcode(RIP)
+							local dst = disassemble(lst)
+							local extraField, instruction, bytes, address = splitDisassembledString(dst)
+							local a = getNameFromAddress(address) or ''
+							local pa=''
+							local bx=string.format('%X',b[1])
+							local lstx=string.format('%X',lst)
+							timer_attach.accessed[bx]=b[1]
+							if a=='' then
+								pa=lstx
+							else
+								pa=lstx .. ' ( ' .. a .. ' )'
+							end
+							local prinfo=string.format('%s:\t%s  -  %s }', pa, bytes, instruction)
+							if ch==true then
+										prinfo=prinfo..' [ '..mtc[2]..' ]'
+							end
+							if b[4]=='' then
+								local sp=b[2] .. ' (#' .. b[5] .. ')\t{ '..prinfo
+								print(sp)
+							else
+								local sp=b[4] .. ' - ' .. b[2] .. ' (#' .. b[5] .. ')\t{ '..prinfo
+								print(sp)
+							end
+							debug_removeBreakpoint(b[1])
+						end
 			end)
 		end
 end
 
-local function attach(s,z,onWrite,col)
+local function attach(s,z,onWrite,cond,col)
 	if timer~=nil then
 		timer.destroy()
 	end
-	do_attach(s,z,onWrite,col)
+	
+	--format for cond: (	string(AOB)	) /  (number, size)
+		local condit=nil
+		if cond~=nil then
+			condit={['str']={},['num']={}}
+			local typc=type(cond)
+			if typc=='table' then
+					for i=1, #cond do
+						local ci=cond[i]
+						local tyci=type(ci)
+						if tyci=='number' then
+							local cs={}
+							cs.number=cond
+							cs.tbl=AOB_to_byte_table(reverseHex(string.format('%0'..(cond[2]*2)..'X',ci),true))
+							table.insert(condit.num, cs)
+							break
+						elseif tyci=='table' then
+							local cs={}
+							cs.number=ci
+							cs.tbl=AOB_to_byte_table(reverseHex(string.format('%0'..(ci[2]*2)..'X',ci[1]),true))
+							table.insert(condit.num, cs)
+						elseif tyci=='string' then
+							local cs={}
+							cs.tbl=AOB_to_byte_table(string.upper(space_fix(ci)))
+							cs.aob=c[i]
+							table.insert(condit.str, cs)
+					end
+				end
+		elseif typc=='string' then
+			local cs={}
+			cs.tbl=AOB_to_byte_table(string.upper(space_fix(cond)))
+			cs.aob=cond
+			table.insert(condit.str, cs)
+		end
+	end
+
+	do_attach(s,z,onWrite,condit,col)
 end
 
 local function end_loop()
