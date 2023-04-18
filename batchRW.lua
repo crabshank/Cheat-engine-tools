@@ -230,7 +230,7 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 												if cn2==1 then
 													sb='byte'
 												end
-												mtc={true,'Number match: '..ck.number[1]..'('..cn2..' '..sb..')'}
+												mtc={true,'Number match: '..ck.number[1]..' ('..cn2..' '..sb..')'}
 												break
 											end
 									end
