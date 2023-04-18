@@ -419,20 +419,20 @@ local function attach_loop(z,t,onWrite,col)
 				if alc<=z then
 					end_loop()
 					print('\nAttached to remaining entries:')
-					attach(0,z,onWrite,col)
+					attach(0,z,onWrite,nil,col)
 					return
 				end
 				local taal=tableLen(timer_attach.accessed)
 				if alc-taal<=z then
 					end_loop()
 					print('\nAttached to remaining entries:')
-					attach(0,z,onWrite,col)
+					attach(0,z,onWrite,nil,col)
 				elseif taal<alc then
 					local za=timer_attach.z
 					local s=timer_attach.s_mult*za
 					timer_attach.s_mult=timer_attach.s_mult+1
 					local mod_s =math.fmod(s,alc)
-					do_attach(mod_s,za,timer_attach.onWrite,col,true,al,alc)
+					do_attach(mod_s,za,timer_attach.onWrite,nil,col,true,al,alc)
 				else
 					end_loop()
 				end
