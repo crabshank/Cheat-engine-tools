@@ -1731,7 +1731,8 @@ local function onBp()
 									local rep_with='[ '..brkt..' ('..rx..') ]'
 									reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
 								else
-									reffed_instruction='[ '..brkt..' ]'
+									local rep_with='[ '..brkt..' ]'
+									reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
 								end
 						end
 					end
@@ -2176,7 +2177,8 @@ local function onCondBp()
 					local rep_with='[ '..brkt..' ('..rx..') ]'
 					reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
 				else
-					reffed_instruction='[ '..brkt..' ]'
+					local rep_with='[ '..brkt..' ]'
+					reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
 				end
 			end
 		end
