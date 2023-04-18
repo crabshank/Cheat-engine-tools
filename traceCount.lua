@@ -1726,8 +1726,13 @@ local function onBp()
 							local fstx=asc[i][2]
 							local brkt=asc[i][1]
 							-- [2]= { --[[ full syntax "[...]" ]] }
-								local rep_with='[ '..brkt..' ('..rx..') ]'
-								reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
+
+								if brkt~=rx then
+									local rep_with='[ '..brkt..' ('..rx..') ]'
+									reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
+								else
+									reffed_instruction='[ '..brkt..' ]'
+								end
 						end
 					end
 								local a = getNameFromAddress(address) or ''
@@ -2167,8 +2172,12 @@ local function onCondBp()
 				local fstx=asc[i][2]
 				local brkt=asc[i][1]
 				-- [2]= { --[[ full syntax "[...]" ]] }
+				if brkt~=rx then
 					local rep_with='[ '..brkt..' ('..rx..') ]'
 					reffed_instruction=plainReplace(reffed_instruction,fstx,rep_with)
+				else
+					reffed_instruction='[ '..brkt..' ]'
+				end
 			end
 		end
 if breakHere[1]~=true then
