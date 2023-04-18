@@ -149,6 +149,7 @@ local function do_attach(s,z,onWrite,col,t,alist,alc)
 				print('')
 			end
 			if onWrite==true then
+				trg=bptWrite
 				print('Written to addresses:')
 			else
 				print('Read addresses:')
