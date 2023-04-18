@@ -1834,14 +1834,15 @@ local function condBp(a, c, b, f)
 	if typc=='table' then
 			for i=1, #c do
 				local ci=c[i]
-				if type(ci)=='string' then
+				local tyci=type(ci)
+				if tyci=='string' then
 					local cs=upperc(space_fix(ci))
 					table.insert(tc.str, cs)
-				elseif type(ci)=='table' then
+				elseif tyci=='table' then
 					for j=1, #ci do
 						table.insert(tc.opc, ci[j])
 					end
-				elseif typc=='number' then
+				elseif tyci=='number' then
 					table.insert(tc.num, ci)
 				end
 			end
