@@ -354,11 +354,13 @@ N.B. When not in a trace, or when using traceCount.condBp(…): When a breakpoin
 
 ### Methods on (batchRW.…): 
 
-* **attach(s, z --[[Optional]] , onWrite --[[Optional]] , col --[[Optional]] )** -> 
+* **attach(s, z --[[Optional]] , onWrite --[[Optional]] , cond --[[Optional]] , col --[[Optional]] )** -> 
  
 Attach breakpoints to address with index **s** (if eligible, otherwise will be attached to the next eligible address) ("Index" printed by "batchRW.printAddrs()") and **z**-1 eligible addresses after it (**z** in total, probably will not work if >4). If **z** is not specified, it will be set to 1. 
 
 If **onWrite**==true, then it breaks if the address is written to, otherwise it breaks if the address is read.
+
+**cond** holds condtions upon which the registration of the read/write depend. The argument takes the form of a string AOB or a table of the form `{number, number size in bytes}`, or a table with a mix of the two forms. N.B. AOB matches take precedence over number matches. 
 
 **col** is a RGB hex string, or table of strings, like "FF0000". If **col** is unspecified, accessed addresses will turn yellow. If **col** is a table of strings, then it will change the colour of the address to the 1st element's colour and duing scanning, will ignore the addresses that are any colour represented in the table. If **col** is a string, then it will change the colour of the address string's colour and duing scanning, will ignore the addresses that are that string's colour.
 
