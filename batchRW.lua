@@ -225,7 +225,12 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 											local ct=ck.tbl -- byte table for this number
 											local byt=readBytes(b[1],#ct,true)
 											if sameTable(ct,byt)==true then
-												mtc={true,'Number match ('..ck.number[1]..' - '..ck.number[2]..' bytes)'}
+												local sb='bytes'
+												local cn2=ck.number[2]
+												if cn2==1 then
+													sb='byte'
+												end
+												mtc={true,'Number match: '..ck.number[1]..' ('..cn2..' '..sb..')'}
 												break
 											end
 									end
