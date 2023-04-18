@@ -230,7 +230,7 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 												if cn2==1 then
 													sb='byte'
 												end
-												mtc={true,'Number match: '..ck.number[1]..' ('..cn2..' '..sb..')'}
+												mtc={true,'Number match: '..ck.number[1]..'('..cn2..' '..sb..')'}
 												break
 											end
 									end
@@ -259,7 +259,7 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 							end
 							local prinfo=string.format('%s:\t%s  -  %s }', pa, bytes, instruction)
 							if ch==true then
-										prinfo=prinfo..' [ '..mtc[2]..' ]'
+										prinfo=prinfo..'\t[ '..mtc[2]..' ]'
 							end
 							if b[4]=='' then
 								local sp=b[2] .. ' (#' .. b[5] .. ')\t{ '..prinfo
