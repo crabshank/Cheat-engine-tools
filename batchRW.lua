@@ -2,6 +2,7 @@ local timer
 local lprog=false;
 local timer_attach={['accessed']={}}
 local addr_stack=nil
+local empty_stack=true
 local rets_lookup={}
 local modulesList={}
 local bps={}
@@ -444,6 +445,12 @@ local function attach_loop(z,t,onWrite,col)
 end
 
 local function end_stack()
+
+ if empty_stack==true then
+    print('No stack data!')
+    return
+ end
+ 
 	if addr_stack~=nil then
 		debug_removeBreakpoint(addr_stack)
 local t2={}
@@ -459,9 +466,7 @@ end
 
 local function stack(d,b,m,f)
 
-	if addr_stack~=nil then
-		end_stack()
-	end
+	empty_stack=true
 
 	local tyd=type(d)
 	if tyd=='string' then
@@ -504,6 +509,7 @@ local function stack(d,b,m,f)
 				local dx=string.format('%X',rd)
 				local isRet=isInModule(rd,dx,modulesList)
 				if isRet[1]==true then
+				 empty_stack=false
 					if rets_lookup[dx]==nil then
 						rets_lookup[dx]={}
 						rets_lookup[dx]['count']=1
