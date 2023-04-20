@@ -308,13 +308,14 @@ end
 local function getLookaheads(k,lookahead_n,instruction,bytes)
 		local lookaheads={['offsets']={0},['instructions']={instruction},['bytes']={bytes}}
 		local szk=getInstructionSize(k)
-
+		lookaheads['sizes']={szk}
 		local lbc=szk -- running byte count
 		local offset_inst=k+szk --running byte count + address
 		while lbc<lookahead_n+1 do
 			table.insert(lookaheads['offsets'],lbc) --start (offset) of next instruction
 
 			szk=getInstructionSize(offset_inst) -- size of next instruction
+			table.insert(lookaheads['sizes'],szk)
 
 			local dsk_off = disassemble(offset_inst)
 			local extraField_off, instruction_off, bytes_off, address_off = splitDisassembledString(dsk_off)
