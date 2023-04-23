@@ -2465,7 +2465,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 				break
 			end
 		end
-		if memJmp==false then
+
 			local mn=getModuleName(lst)
 			if currModule==nil then
 				currModule=mn
@@ -2682,12 +2682,13 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			writeBytes(currRegsAddr+( rc+3),0)
 			writeBytes(currRegsAddr+( rc+4 ),FP7)
 			rc=rc+14
-
-	        local frm = getMemoryViewForm()
-		local hv = frm.DisassemblerView
-                local hx=frm.HexadecimalView
-		hv.SelectedAddress2 = lst
-                hx.address=currRegsAddr
+			
+		if memJmp==false then
+				local frm = getMemoryViewForm()
+				local hv = frm.DisassemblerView
+				local hx=frm.HexadecimalView
+				hv.SelectedAddress2 = lst
+				hx.address=currRegsAddr
 		end
 		return
 end
