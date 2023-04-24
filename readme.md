@@ -383,7 +383,7 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **stack(d, b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Break on address **d** and attempt to find return addresses in the stack. **b** how deep (RSP+**b**) to probe the stack, if unspecified the function will probe the full stack. **m** is a string containing a module name; only addresses in module **m** will be logged. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
-* **end_stack()** -> End logging by "batchRW.stack(…)", and print its output.
+* **end_stack( bck --[[Optional]] , lst --[[Optional]] )** -> End logging by "batchRW.stack(…)", and print its output. If **bck**==true/false, then the return addresses will be printed in the (reverse, if true) order that they were recorded in, and if **lst** is a number, it will only print the first (if **bck**==true) or last (if **bck**==false) n values specified by the **lst** argument.
 
 * **rsp( b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Same as "batchRW.stack(…)", except it only works when the game is currently paused at a breakpoint. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
