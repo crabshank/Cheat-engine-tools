@@ -2345,7 +2345,7 @@ end
 		
 end
 
-local function jumpMem(addr,sec)
+local function jumpMem(addr)
 	debug_getContext(true)
 	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
 	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
@@ -2734,19 +2734,13 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
                 hx.address=r
-				if sec==true then
-					hv.SelectedAddress2=addr
-				end
 				memJmp=true
 				break
 			end
 		end
 
 		if memJmp==false then
-				hx.address=currRegsAddr
-				if sec==true then
-					hv.SelectedAddress2=addr
-				end
+			hx.address=currRegsAddr
 		end
 		return
 end
@@ -2761,12 +2755,7 @@ function debugger_onBreakpoint()
 	if liteBp==true then
 		onLiteBp()
 	elseif prog==false and condBpProg==false then
-		local adr=RIP
-		local prv=getPreviousOpcode(adr)
-		if type(prv)=='number' then
-			adr=prv
-		end
-		jumpMem(adr,true)
+		jumpMem(RIP)
 	elseif condBpProg==true then
 		onCondBp()
 	elseif prog==true then
