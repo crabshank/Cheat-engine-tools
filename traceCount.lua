@@ -2340,13 +2340,11 @@ local function jumpMem()
 	registers['regs']['XMM13']=XMM13
 	registers['regs']['XMM14']=XMM14
 	registers['regs']['XMM15']=XMM15
+
+	local dst = disassemble(RIP)
+	local extraField, instruction, bytes, address = splitDisassembledString(dst)
 	
-	local lst=getPreviousOpcode(RIP)
-	if lst==nil then
-		lst=RIP
-	end
-	
-				local mn=getModuleName(lst)
+				local mn=getModuleName(RIP)
 			if currModule==nil then
 				currModule=mn
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
@@ -2562,11 +2560,7 @@ local function jumpMem()
 			writeBytes(currRegsAddr+( rc+3),0)
 			writeBytes(currRegsAddr+( rc+4 ),FP7)
 			rc=rc+14
-			
-	--local lstx=string.format('%X',lst)
-	local dst = disassemble(lst)
-	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	
+				
 local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 	local s=instruction_r  -- substitute register names for their spaces
 	--local sd=instruction_r -- substitute register names for their decimals
@@ -2677,7 +2671,6 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 		local frm = getMemoryViewForm()
 		local hv = frm.DisassemblerView
                 local hx=frm.HexadecimalView
-		hv.SelectedAddress2 = lst
                 hx.address=r 
 				memJmp=true
 				break
@@ -2688,7 +2681,6 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 				local frm = getMemoryViewForm()
 				local hv = frm.DisassemblerView
 				local hx=frm.HexadecimalView
-				hv.SelectedAddress2 = lst
 				hx.address=currRegsAddr
 		end
 		return
