@@ -2,6 +2,8 @@ local frm = getMemoryViewForm()
 local hv = frm.DisassemblerView
 local hx=frm.HexadecimalView
 
+local jmpOverride=false
+
 local print=print
 local upperc=string.upper
 local string_gmatch=string.gmatch
@@ -2752,7 +2754,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 end
 
 hv.OnSelectionChange=function (sender, address, address2)
-	if debug_isBroken()==true then
+	if debug_isBroken()==true and jmpOverride==false then
 		jumpMem(address)
 	end
 end
@@ -2766,7 +2768,9 @@ function debugger_onBreakpoint()
 		if type(prv)=='number' then
 			adr=prv
 		end
+		jmpOverride=true
 		jumpMem(adr,true)
+		jmpOverride=false
 	elseif condBpProg==true then
 		onCondBp()
 	elseif prog==true then
