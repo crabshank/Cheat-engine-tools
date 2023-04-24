@@ -310,7 +310,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 * **litePrint()** -> Prints the last trace captured by "traceCount.lite(…)" to the console.
 
-* **condBp(a, c, b --[[Optional]], f --[[Optional]])** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. if **c** is a table, and element of c is a table, then all strings inside that table will be instruction patterns which will be compared against the instruction. **b** and **f** are offsets from the referenced memory addresses to search for **c**, e.g. **b**=0 and **f**=15 searches 16 bytes from the base address. **b** and **f** are both set to 0 if unspecified. If a memory address has a match, the memory view's hex view will jump to the address previous to the match. If the target process is currently in a breakpont, you can click an instruction in the disassembler and the memory view will jump in the aforementioned way for the address you clicked on.
+* **condBp(a, c, b --[[Optional]], f --[[Optional]])** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. if **c** is a table, and element of c is a table, then all strings inside that table will be instruction patterns which will be compared against the instruction. **b** and **f** are offsets from the referenced memory addresses to search for **c**, e.g. **b**=0 and **f**=15 searches 16 bytes from the base address. **b** and **f** are both set to 0 if unspecified. If a memory address has a match, the memory view's hex view will jump to the matching address.
 
 This method breaks when a register in an instruction, or one changed by an instruction, matches any AOB string or number in **c**.
 
@@ -346,7 +346,7 @@ If **n** is a specified, non-empty string, then it will query the saved trace sa
 
 * **delete( n --[[Optional]] )** -> If n is a string matching the name of a saved trace, it will delete that trace. If n is unspecified, it will delete all saved traces.
 
-N.B. When not in a trace, or when using traceCount.condBp(…): When a breakpoint is hit, the extension will make the main memory view's hex view jump to the last (or first if jmpFirst==true) (matching in .condBp(…)) memory address ('[…]') in the broken instruction. This will make it much easier to see what's around read memory addresses when stepping through the code. If there's are no memory addressed in the instruction, it will display the contents of the registers in the hex view, all 4-byte aligned.
+N.B. When not in a trace, or when using traceCount.condBp(…): When a breakpoint is hit, the extension will make the main memory view's hex view jump to the last (or first if jmpFirst==true) (matching in .condBp(…)) memory address ('[…]') in the broken instruction. This will make it much easier to see what's around read memory addresses when stepping through the code. If there's are no memory addressed in the instruction, it will display the contents of the registers in the hex view, all 4-byte aligned. If the target process is currently in a breakpont, you can click an instruction in the disassembler and the memory view will jump in the aforementioned way for the address you clicked on.
 
 ## batchRW.lua
 
