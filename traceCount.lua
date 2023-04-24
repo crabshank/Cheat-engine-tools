@@ -1403,7 +1403,7 @@ local function onLiteBp()
 				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then
 					liteBp=false
 					if rpt==true then
-						print('Specified address re-executed!\n')
+						print('Specified address executed!\n')
 					else
 						print('Trace count limit reached!\n')
 					end
