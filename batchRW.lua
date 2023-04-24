@@ -449,6 +449,9 @@ local function end_stack(bck,lst)
 
  if empty_stack==true then
     print('No stack data!')
+	if addr_stack~=nil then
+		debug_removeBreakpoint(addr_stack)
+	end
     return
  end
  
