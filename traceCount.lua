@@ -1,3 +1,7 @@
+local frm = getMemoryViewForm()
+local hv = frm.DisassemblerView
+local hx=frm.HexadecimalView
+
 local print=print
 local upperc=string.upper
 local string_gmatch=string.gmatch
@@ -695,6 +699,7 @@ local function tprint(tbl, indent)
 end
 
 local count=0
+local instRep=nil
 local hits={}
 local hits_lookup={}
 local hits_deref={}
@@ -722,6 +727,7 @@ local liteFileName=''
 local liteStepOver=false
 local liteTrace={}
 local liteFormattedCount={}
+local liteRep=nil
 
 local function string_arr(s)
 	local spl={}
@@ -837,9 +843,14 @@ end
 
 local function attach(a,c,n,s)
 	debug_removeBreakpoint(addr)
-	if c==nil or c<0 then
-		print('Argument "c" must be >=0')
-		return
+	local tyc=type(c)
+	local tyct=false
+	if tyc=='table' then
+		tyct=true
+	end
+	if ( tyct==false and (c==nil or c<=0) ) then
+			print('Argument "c" must be >0, or a table')
+			return
 	end
 	if a==nil then
 		print('Argument "a" must be specified')
@@ -878,7 +889,19 @@ local function attach(a,c,n,s)
 	currTraceDss={}
 	present_r_last_lookup={}
 	present_m_last_lookup={}
-	count=c
+	
+	if tyct==true then
+		if type(c[2])=='number' and c[2]>=0 then
+			count=c[2]
+		else
+			count=nil
+		end
+		instRep=getAddress(c[1])
+	else
+		instRep=nil
+		count=c
+	end
+
 	stp=s
 	sio='step into'
 	if s==true then
@@ -1087,7 +1110,7 @@ local function saveTrace()
 	currTraceDss={hits, ds, hpp, trace_info, hp, hpp_a, hits_deref, hits_deref_lookup,hits_lookup}
 end
 
-local function runStop(b)
+local function runStop(b,adx)
 	condBpProg=false
 	prog=false
 	if abp~= nil and #abp>1 then
@@ -1096,6 +1119,8 @@ local function runStop(b)
 	saveTrace()
 	if b==true then
 		print('Trace count limit reached')
+	elseif b==false then
+		print('Specified address ( '..adx..' ) executed!')
 	else
 		print('Trace ended')
 	end
@@ -1394,10 +1419,18 @@ local function onLiteBp()
 				
 				liteTrace[liteIx]=RIP
 				liteIx=liteIx+1
+				local rpt=false
+				if (liteRep~=nil and RIP==liteRep and liteIx>2) then
+					rpt=true
+				end
 				
-				if liteIx>liteCount then
+				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then
 					liteBp=false
-					print('Trace count limit reached!\n')
+					if rpt==true then
+						print('Specified address ( '..string.format('%X',RIP)..' ) executed!\n')
+					else
+						print('Trace count limit reached!\n')
+					end
 					liteFormattedCount=getLiteCounts()
 					if litePrint==false then
 						local f=io.open(liteFileName,'w')
@@ -1417,9 +1450,15 @@ end
 
 local function lite(a,c,f,s)
 	debug_removeBreakpoint(liteAddr)
-	if c==nil or c<0 then
-		print('Argument "c" must be >=0')
-		return
+	liteBp=false
+	local tyc=type(c)
+	local tyct=false
+	if tyc=='table' then
+		tyct=true
+	end
+	if ( tyct==false and (c==nil or c<=0) ) then
+			print('Argument "c" must be >0, or a table')
+			return
 	end
 	if a==nil then
 		print('Argument "a" must be specified')
@@ -1447,7 +1486,18 @@ local function lite(a,c,f,s)
 	end
 	
 	liteIx=1
-	liteCount=c
+	if tyct==true then
+		if type(c[2])=='number' and c[2]>=0 then
+			liteCount=c[2]
+		else
+			liteCount=nil
+		end
+		liteRep=getAddress(c[1])
+	else
+		liteRep=nil
+		liteCount=c
+	end
+		
 	litePrint=true
 	liteBp=true
 	liteFileName=''
@@ -1544,15 +1594,22 @@ local function onBp()
 			debug_setBreakpoint(abp[1][1], 1, bptExecute)
 			debug_continueFromBreakpoint(co_run)
 		else
+				local rpt=false
+				
 				if first ==true then
 					debug_removeBreakpoint(ai1)
 					first=false
 					print('Breakpoint at ' .. ai1_hx .. ' hit!')
+				else
+					if (instRep~=nil and RIP==instRep) then
+						rpt=true
+					end
 				end
 
+				
+			if ( count~=nil and count>=1 ) then
 				count=count-1
-
-				if count>=0 then
+				--if count>=0 then
 					table.insert(hits,RIP)
 
 					local ix=#hits
@@ -1793,16 +1850,23 @@ local function onBp()
 						end
 					end
 					hits_deref[ix]['count']=hit_no
-					if stp==true then
-						debug_continueFromBreakpoint(co_stepover)
-					else
-						debug_continueFromBreakpoint(co_stepinto)
+					if rpt==false then
+						if stp==true then
+							debug_continueFromBreakpoint(co_stepover)
+						else
+							debug_continueFromBreakpoint(co_stepinto)
+						end
 					end
-				else
-					debug_continueFromBreakpoint(co_run)
-					runStop(true)
 				end
-		end
+				if ( rpt==true or ( count~=nil and count<1 ) ) then
+					debug_continueFromBreakpoint(co_run)
+					if rpt==true then
+						runStop(false,string.format('%X',instRep))
+					else
+						runStop(true)
+					end	
+				end
+	end
 end
 
 local function condBp(a, c, b, f)
@@ -2281,7 +2345,7 @@ end
 		
 end
 
-local function jumpMem()
+local function jumpMem(addr,sec)
 	debug_getContext(true)
 	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
 	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
@@ -2341,10 +2405,11 @@ local function jumpMem()
 	registers['regs']['XMM14']=XMM14
 	registers['regs']['XMM15']=XMM15
 
-	local dst = disassemble(RIP)
+
+	local dst = disassemble(addr)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
 	
-				local mn=getModuleName(RIP)
+				local mn=getModuleName(addr)
 			if currModule==nil then
 				currModule=mn
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
@@ -2668,29 +2733,40 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			local b,r=pcall(func) -- r=calculated address
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
-		local frm = getMemoryViewForm()
-		local hv = frm.DisassemblerView
-                local hx=frm.HexadecimalView
-                hx.address=r 
+                hx.address=r
+				if sec==true then
+					hv.SelectedAddress2=addr
+				end
 				memJmp=true
 				break
 			end
 		end
 
 		if memJmp==false then
-				local frm = getMemoryViewForm()
-				local hv = frm.DisassemblerView
-				local hx=frm.HexadecimalView
 				hx.address=currRegsAddr
+				if sec==true then
+					hv.SelectedAddress2=addr
+				end
 		end
 		return
+end
+
+hv.OnSelectionChange=function (sender, address, address2)
+	if debug_isBroken()==true then
+		jumpMem(address)
+	end
 end
 
 function debugger_onBreakpoint()
 	if liteBp==true then
 		onLiteBp()
 	elseif prog==false and condBpProg==false then
-		jumpMem()
+		local adr=RIP
+		local prv=getPreviousOpcode(adr)
+		if type(prv)=='number' then
+			adr=prv
+		end
+		jumpMem(adr,true)
 	elseif condBpProg==true then
 		onCondBp()
 	elseif prog==true then
