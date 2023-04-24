@@ -1403,7 +1403,7 @@ local function onLiteBp()
 				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then
 					liteBp=false
 					if rpt==true then
-						print('Specified address executed!\n')
+						print('Specified address ( '..string.format('%X',RIP)..' ) executed!\n')
 					else
 						print('Trace count limit reached!\n')
 					end
