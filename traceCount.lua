@@ -2345,128 +2345,8 @@ local function jumpMem()
 	if lst==nil then
 		lst=RIP
 	end
-	--local lstx=string.format('%X',lst)
-	local dst = disassemble(lst)
-	local extraField, instruction, bytes, address = splitDisassembledString(dst)
 	
-local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
-	local s=instruction_r  -- substitute register names for their spaces
-	--local sd=instruction_r -- substitute register names for their decimals
-	local present_r={}
-	local present_r_lookup={}
-	
-	for i=1, #registers['list_regs'] do
-		local regs_pos={}
-		if string.find(s,'%u')~=nil then
-			local fnd=false
-			local ri=registers['list_regs'][i] --check for presence of register
-			local ri_fnd=ri
-			local ri_alt=registers['alt_names'][ri]
-			local ri_pos=str_allPosPlain(s,ri)
-			if ri~=ri_alt and ri_alt~=nil then
-				local ri_alt_pos=str_allPosPlain(s,ri_alt)
-				if #ri_pos>0 then
-					fnd=true
-					regs_pos=ri_pos
-				elseif  #ri_alt_pos>0 then
-					fnd=true
-					ri_fnd=ri_alt
-					regs_pos=ri_alt_pos
-				end
-			else
-				if #ri_pos>0 then
-					fnd=true
-					regs_pos=ri_pos
-				end
-			end
-			
-			if  fnd==true then
-				local rgs=registers['regs'][ri]
-				local arg_n=registers['regs_args'][ri]
-				local rg={}
-				if arg_n~=nil then
-					rg=registers['get_regs'][ri](registers['regs'][arg_n])
-				else
-					rg['dec']=rgs
-					local hx=string.format('%X',rgs)
-					rg['hex']=hx
-				end
-				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
-				table.insert(present_r,{ri_fnd,rg,regs_pos,ri})
-				present_r_lookup[ri_fnd]={#present_r,rg,regs_pos}
-			end
-		else
-			break
-		end
-	end
-		local prl=#present_r
-		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
-		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
-		local ascl=#asc
-		ja=ascl
-		jb=1
-		jc=-1
-		if jmpFirst==true then
-			local ja=1
-			local jb=ascl
-			local jc=1
-		end
-		local memJmp=false
-		for i=ja, jb, jc do
-			local ai=asc_nr[i]
-			local sa=string_arr(s)
-			local c=1
-			local mtc_hex="%x+"
-			local brk=false
-			while brk==false do
-				  local fa,fb=string.find(s,mtc_hex,c)
-				  if fa~=nil then
-					 sa[fa]='0x'..sa[fa]
-					 c=fb+1
-				  else
-					  brk=true
-				  end
-			end
-			
-			local ai3=ai[3]  -- pos of syntax
-			local ai3_1, ai3_2=ai3[1], ai3[2]
-			
-			for k=1, prl do --reintroduce decimal registers
-				rk=present_r[k]
-				local rkd=rk[2]['dec']
-				local rk3=rk[3]
-				local rk3l=#rk3
-				if rkd~=nil and #rk3>0 then	
-				for m=1, rk3l do
-						rk3_1=rk3[m][1]
-						rk3_2=rk3[m][2]
-						if rk3_1>=ai3_1 and rk3_2<=ai3_2 then
-							sa[ rk3_1 ]=rkd
-								for j=rk3_1+1, rk3_2 do
-									sa[j]=''
-								end
-						end
-					end
-				end
-			end
-
-			local a_dec=get_substring_tbl(sa,ai3_1,ai3_2)
-			local func= load("return ".. a_dec)
-			local b,r=pcall(func) -- r=calculated address
-
-			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
-		local frm = getMemoryViewForm()
-		local hv = frm.DisassemblerView
-                local hx=frm.HexadecimalView
-		hv.SelectedAddress2 = lst
-                hx.address=r 
-				memJmp=true
-				break
-			end
-		end
-
-			local mn=getModuleName(lst)
+				local mn=getModuleName(lst)
 			if currModule==nil then
 				currModule=mn
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
@@ -2683,6 +2563,127 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			writeBytes(currRegsAddr+( rc+4 ),FP7)
 			rc=rc+14
 			
+	--local lstx=string.format('%X',lst)
+	local dst = disassemble(lst)
+	local extraField, instruction, bytes, address = splitDisassembledString(dst)
+	
+local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+	local s=instruction_r  -- substitute register names for their spaces
+	--local sd=instruction_r -- substitute register names for their decimals
+	local present_r={}
+	local present_r_lookup={}
+	
+	for i=1, #registers['list_regs'] do
+		local regs_pos={}
+		if string.find(s,'%u')~=nil then
+			local fnd=false
+			local ri=registers['list_regs'][i] --check for presence of register
+			local ri_fnd=ri
+			local ri_alt=registers['alt_names'][ri]
+			local ri_pos=str_allPosPlain(s,ri)
+			if ri~=ri_alt and ri_alt~=nil then
+				local ri_alt_pos=str_allPosPlain(s,ri_alt)
+				if #ri_pos>0 then
+					fnd=true
+					regs_pos=ri_pos
+				elseif  #ri_alt_pos>0 then
+					fnd=true
+					ri_fnd=ri_alt
+					regs_pos=ri_alt_pos
+				end
+			else
+				if #ri_pos>0 then
+					fnd=true
+					regs_pos=ri_pos
+				end
+			end
+			
+			if  fnd==true then
+				local rgs=registers['regs'][ri]
+				local arg_n=registers['regs_args'][ri]
+				local rg={}
+				if arg_n~=nil then
+					rg=registers['get_regs'][ri](registers['regs'][arg_n])
+				else
+					rg['dec']=rgs
+					local hx=string.format('%X',rgs)
+					rg['hex']=hx
+				end
+				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
+				table.insert(present_r,{ri_fnd,rg,regs_pos,ri})
+				present_r_lookup[ri_fnd]={#present_r,rg,regs_pos}
+			end
+		else
+			break
+		end
+	end
+		local prl=#present_r
+		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
+		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
+		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
+		local ascl=#asc
+		ja=ascl
+		jb=1
+		jc=-1
+		if jmpFirst==true then
+			local ja=1
+			local jb=ascl
+			local jc=1
+		end
+		local memJmp=false
+		for i=ja, jb, jc do
+			local ai=asc_nr[i]
+			local sa=string_arr(s)
+			local c=1
+			local mtc_hex="%x+"
+			local brk=false
+			while brk==false do
+				  local fa,fb=string.find(s,mtc_hex,c)
+				  if fa~=nil then
+					 sa[fa]='0x'..sa[fa]
+					 c=fb+1
+				  else
+					  brk=true
+				  end
+			end
+			
+			local ai3=ai[3]  -- pos of syntax
+			local ai3_1, ai3_2=ai3[1], ai3[2]
+			
+			for k=1, prl do --reintroduce decimal registers
+				rk=present_r[k]
+				local rkd=rk[2]['dec']
+				local rk3=rk[3]
+				local rk3l=#rk3
+				if rkd~=nil and #rk3>0 then	
+				for m=1, rk3l do
+						rk3_1=rk3[m][1]
+						rk3_2=rk3[m][2]
+						if rk3_1>=ai3_1 and rk3_2<=ai3_2 then
+							sa[ rk3_1 ]=rkd
+								for j=rk3_1+1, rk3_2 do
+									sa[j]=''
+								end
+						end
+					end
+				end
+			end
+
+			local a_dec=get_substring_tbl(sa,ai3_1,ai3_2)
+			local func= load("return ".. a_dec)
+			local b,r=pcall(func) -- r=calculated address
+
+			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
+		local frm = getMemoryViewForm()
+		local hv = frm.DisassemblerView
+                local hx=frm.HexadecimalView
+		hv.SelectedAddress2 = lst
+                hx.address=r 
+				memJmp=true
+				break
+			end
+		end
+
 		if memJmp==false then
 				local frm = getMemoryViewForm()
 				local hv = frm.DisassemblerView
