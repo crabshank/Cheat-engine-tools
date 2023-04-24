@@ -722,6 +722,7 @@ local liteFileName=''
 local liteStepOver=false
 local liteTrace={}
 local liteFormattedCount={}
+local liteRep=nil
 
 local function string_arr(s)
 	local spl={}
@@ -1394,10 +1395,18 @@ local function onLiteBp()
 				
 				liteTrace[liteIx]=RIP
 				liteIx=liteIx+1
+				local rpt=false
+				if (liteRep~=nil and RIP==liteRep and liteIx>2) then
+					rpt=true
+				end
 				
-				if liteIx>liteCount then
+				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then
 					liteBp=false
-					print('Trace count limit reached!\n')
+					if rpt==true then
+						print('Specified address re-executed!\n')
+					else
+						print('Trace count limit reached!\n')
+					end
 					liteFormattedCount=getLiteCounts()
 					if litePrint==false then
 						local f=io.open(liteFileName,'w')
@@ -1417,9 +1426,15 @@ end
 
 local function lite(a,c,f,s)
 	debug_removeBreakpoint(liteAddr)
-	if c==nil or c<0 then
-		print('Argument "c" must be >=0')
-		return
+	liteBp=false
+	local tyc=type(c)
+	local tyct=false
+	if tyc=='table' then
+		tyct=true
+	end
+	if ( tyct==false and (c==nil or c<=0) ) then
+			print('Argument "c" must be >0, or a table')
+			return
 	end
 	if a==nil then
 		print('Argument "a" must be specified')
@@ -1447,7 +1462,18 @@ local function lite(a,c,f,s)
 	end
 	
 	liteIx=1
-	liteCount=c
+	if tyct==true then
+		if type(c[2])=='number' and c[2]>=0 then
+			liteCount=c[2]
+		else
+			liteCount=nil
+		end
+		liteRep=getAddress(c[1])
+	else
+		liteRep=nil
+		liteCount=c
+	end
+		
 	litePrint=true
 	liteBp=true
 	liteFileName=''
