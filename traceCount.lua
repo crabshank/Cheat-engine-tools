@@ -699,6 +699,7 @@ local function tprint(tbl, indent)
 end
 
 local count=0
+local instRep=nil
 local hits={}
 local hits_lookup={}
 local hits_deref={}
@@ -842,9 +843,14 @@ end
 
 local function attach(a,c,n,s)
 	debug_removeBreakpoint(addr)
-	if c==nil or c<0 then
-		print('Argument "c" must be >=0')
-		return
+	local tyc=type(c)
+	local tyct=false
+	if tyc=='table' then
+		tyct=true
+	end
+	if ( tyct==false and (c==nil or c<=0) ) then
+			print('Argument "c" must be >0, or a table')
+			return
 	end
 	if a==nil then
 		print('Argument "a" must be specified')
@@ -883,7 +889,19 @@ local function attach(a,c,n,s)
 	currTraceDss={}
 	present_r_last_lookup={}
 	present_m_last_lookup={}
-	count=c
+	
+	if tyct==true then
+		if type(c[2])=='number' and c[2]>=0 then
+			count=c[2]
+		else
+			count=nil
+		end
+		instRep=getAddress(c[1])
+	else
+		instRep=nil
+		count=c
+	end
+
 	stp=s
 	sio='step into'
 	if s==true then
@@ -1092,7 +1110,7 @@ local function saveTrace()
 	currTraceDss={hits, ds, hpp, trace_info, hp, hpp_a, hits_deref, hits_deref_lookup,hits_lookup}
 end
 
-local function runStop(b)
+local function runStop(b,adx)
 	condBpProg=false
 	prog=false
 	if abp~= nil and #abp>1 then
@@ -1101,6 +1119,8 @@ local function runStop(b)
 	saveTrace()
 	if b==true then
 		print('Trace count limit reached')
+	elseif b==false then
+		print('Specified address ( '..adx..' ) executed!')
 	else
 		print('Trace ended')
 	end
@@ -1574,15 +1594,22 @@ local function onBp()
 			debug_setBreakpoint(abp[1][1], 1, bptExecute)
 			debug_continueFromBreakpoint(co_run)
 		else
+				local rpt=false
+				
 				if first ==true then
 					debug_removeBreakpoint(ai1)
 					first=false
 					print('Breakpoint at ' .. ai1_hx .. ' hit!')
+				else
+					if (instRep~=nil and RIP==instRep) then
+						rpt=true
+					end
 				end
 
+				
+			if ( count~=nil and count>=1 ) then
 				count=count-1
-
-				if count>=0 then
+				--if count>=0 then
 					table.insert(hits,RIP)
 
 					local ix=#hits
@@ -1823,16 +1850,23 @@ local function onBp()
 						end
 					end
 					hits_deref[ix]['count']=hit_no
-					if stp==true then
-						debug_continueFromBreakpoint(co_stepover)
-					else
-						debug_continueFromBreakpoint(co_stepinto)
+					if rpt==false then
+						if stp==true then
+							debug_continueFromBreakpoint(co_stepover)
+						else
+							debug_continueFromBreakpoint(co_stepinto)
+						end
 					end
-				else
-					debug_continueFromBreakpoint(co_run)
-					runStop(true)
 				end
-		end
+				if ( rpt==true or ( count~=nil and count<1 ) ) then
+					debug_continueFromBreakpoint(co_run)
+					if rpt==true then
+						runStop(false,string.format('%X',instRep))
+					else
+						runStop(true)
+					end	
+				end
+	end
 end
 
 local function condBp(a, c, b, f)
