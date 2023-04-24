@@ -1,3 +1,7 @@
+local frm = getMemoryViewForm()
+local hv = frm.DisassemblerView
+local hx=frm.HexadecimalView
+
 local print=print
 local upperc=string.upper
 local string_gmatch=string.gmatch
@@ -2307,7 +2311,7 @@ end
 		
 end
 
-local function jumpMem()
+local function jumpMem(addr)
 	debug_getContext(true)
 	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
 	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
@@ -2367,10 +2371,11 @@ local function jumpMem()
 	registers['regs']['XMM14']=XMM14
 	registers['regs']['XMM15']=XMM15
 
-	local dst = disassemble(RIP)
+
+	local dst = disassemble(addr)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
 	
-				local mn=getModuleName(RIP)
+				local mn=getModuleName(addr)
 			if currModule==nil then
 				currModule=mn
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
@@ -2694,9 +2699,6 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			local b,r=pcall(func) -- r=calculated address
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
-		local frm = getMemoryViewForm()
-		local hv = frm.DisassemblerView
-                local hx=frm.HexadecimalView
                 hx.address=r 
 				memJmp=true
 				break
@@ -2704,19 +2706,22 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 		end
 
 		if memJmp==false then
-				local frm = getMemoryViewForm()
-				local hv = frm.DisassemblerView
-				local hx=frm.HexadecimalView
 				hx.address=currRegsAddr
 		end
 		return
+end
+
+hv.OnSelectionChange=function (sender, address, address2)
+	if debug_isBroken()==true then
+		jumpMem(address)
+	end
 end
 
 function debugger_onBreakpoint()
 	if liteBp==true then
 		onLiteBp()
 	elseif prog==false and condBpProg==false then
-		jumpMem()
+		jumpMem(RIP)
 	elseif condBpProg==true then
 		onCondBp()
 	elseif prog==true then
