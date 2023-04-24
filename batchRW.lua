@@ -4,6 +4,7 @@ local timer_attach={['accessed']={}}
 local addr_stack=nil
 local empty_stack=true
 local rets_lookup={}
+local rets_lookup_order={}
 local modulesList={}
 local bps={}
 
@@ -444,7 +445,7 @@ local function attach_loop(z,t,onWrite,col)
 	timer.OnTimer=ot
 end
 
-local function end_stack()
+local function end_stack(bck,lst)
 
  if empty_stack==true then
     print('No stack data!')
@@ -453,14 +454,42 @@ local function end_stack()
  
 	if addr_stack~=nil then
 		debug_removeBreakpoint(addr_stack)
-local t2={}
-
-for key, value in pairs(rets_lookup) do
-		table.insert(t2,{['Symbolic address']=value['Symbolic_address'],['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
-	end
-	
-	table.sort( t2, function(a, b) return a['Count'] > b['Count'] end )
-		tprint(t2)
+		
+		
+		if bck==true or bck==false then
+			local tyl=type(lst)
+			local tyn=false
+			if tyl=='number' then
+				tyn=true
+			end
+			
+			local a=1
+			local b=#rets_lookup_order
+			if tyn==true then
+				b=a+lst-1
+			end
+			local d=-1
+			if bck==true then
+				a=b
+				b=1
+				if tyn==true then
+					b=a-lst+1
+				end
+				d=1
+			end
+			for i=b,a,d do
+				tprint(rets_lookup_order[i])
+			end
+			
+		else
+			local t2={}
+			for key, value in pairs(rets_lookup) do
+				table.insert(t2,{['Symbolic address']=value['Symbolic_address'],['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
+			end
+			
+			table.sort( t2, function(a, b) return a['Count'] > b['Count'] end )
+				tprint(t2)
+		end
 	end
 end
 
@@ -477,6 +506,7 @@ local function stack(d,b,m,f)
 		print("Argument 'd' must be a number or string")
 	end
 	rets_lookup={}
+	rets_lookup_order={}
 	modulesList={}
 	
 	local modulesTable= enumModules()
@@ -510,6 +540,12 @@ local function stack(d,b,m,f)
 				local isRet=isInModule(rd,dx,modulesList)
 				if isRet[1]==true then
 				 empty_stack=false
+				 local orderRet={}
+				 orderRet['# ']=#rets_lookup_order+1
+				 orderRet['Address']=dx
+				 orderRet['Symbolic address']=isRet[2]
+				 orderRet['RSP+… ']=fsx
+				 table.insert(rets_lookup_order,orderRet)
 					if rets_lookup[dx]==nil then
 						rets_lookup[dx]={}
 						rets_lookup[dx]['count']=1
