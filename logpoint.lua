@@ -217,42 +217,6 @@ local function count_dumpRegisters(akc)
 			tprint(akc)
 end
 
-local function dumpRegisters(k)
-	local c=false
-	local ks={#abp}
-	if k~=nil then 
-		ks[1]=k
-	end
-	
-		for j=1, #ks do
-			local ak=abp[j]
-			if ak['count']==true then
-				if j==1 then
-					print('Counts (#'..j..'):')
-				end
-				count_dumpRegisters(ak.regs.counts)
-			else
-			
-			local riv=ak.regs
-			local rivl=#riv
-				print('regs length = ' .. rivl)
-			 if rivl >0 then
-				for i = 1, rivl do
-					if c==false then
-						print( ak['calc'] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
-						c=true
-					end
-					print(riv[i])
-				end
-				if c==true then
-							   print('')
-				end
-			end
-	end
-	end
-	removeAttached()
-end
-
 local function rem_abp(i,b)
 	local out={}
 	if b==true then
@@ -290,6 +254,42 @@ local function removeAttached(i,b)
 	if abpl>0 then
 		printAttached()
 	end
+end
+
+local function dumpRegisters(k)
+	local c=false
+	local ks={#abp}
+	if k~=nil then 
+		ks[1]=k
+	end
+	
+		for j=1, #ks do
+			local ak=abp[j]
+			if ak['count']==true then
+				if j==1 then
+					print('Counts (#'..j..'):')
+				end
+				count_dumpRegisters(ak.regs.counts)
+			else
+			
+			local riv=ak.regs
+			local rivl=#riv
+				print('regs length = ' .. rivl)
+			 if rivl >0 then
+				for i = 1, rivl do
+					if c==false then
+						print( ak['calc'] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
+						c=true
+					end
+					print(riv[i])
+				end
+				if c==true then
+							   print('')
+				end
+			end
+	end
+	end
+	removeAttached()
 end
 
 local function stop(pr)
