@@ -2752,7 +2752,7 @@ hv.OnSelectionChange=function (sender, address, address2)
 end
 
 function onOpenProcess(processid)
-	if currModule~=nil
+	if currModule~=nil then
 		dealloc('traceCount_registers')
 		currModule=nil
 	end
