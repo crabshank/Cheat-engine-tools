@@ -2411,12 +2411,12 @@ local function jumpMem(addr)
 	
 				local mn=getModuleName(addr)
 			if currModule==nil then
-				currModule=mn
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
+				currModule=mn
 			elseif mn~=currModule then
 				dealloc('traceCount_registers')
-				currModule=mn
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
+				currModule=mn
 			end
 			
 			local rc=0
@@ -2752,8 +2752,10 @@ hv.OnSelectionChange=function (sender, address, address2)
 end
 
 function onOpenProcess(processid)
-	dealloc('traceCount_registers')
-	currModule=nil
+	if currModule~=nil
+		dealloc('traceCount_registers')
+		currModule=nil
+	end
 end
 
 function debugger_onBreakpoint()
