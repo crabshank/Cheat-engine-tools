@@ -2751,6 +2751,11 @@ hv.OnSelectionChange=function (sender, address, address2)
 	end
 end
 
+function onOpenProcess(processid)
+	dealloc('traceCount_registers')
+	currModule=nil
+end
+
 function debugger_onBreakpoint()
 	if liteBp==true then
 		onLiteBp()
