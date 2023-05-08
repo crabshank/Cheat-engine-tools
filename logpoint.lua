@@ -380,31 +380,42 @@ local function onBp()
 				R15B=getSubRegDecBytes(r15g,8,8,8,true)
 				R15L=R15B
 				
-				SIL=getSubRegDecBytes(ESI,4,4,4,true)
-				DIL=getSubRegDecBytes(EDI,4,4,4,true)
-				BPL=getSubRegDecBytes(EBP,4,4,4,true)
-				SPL=getSubRegDecBytes(ESP,4,4,4,true)
+				
+			local ESI_X=getSubRegDecBytes(string.format("%X", ESI), 4,1,4)
+			local EDI_X=getSubRegDecBytes(string.format("%X", EDI), 4,1,4)
+			local EBP_X=getSubRegDecBytes(string.format("%X", EBP), 4,1,4)
+			local ESP_X=getSubRegDecBytes(string.format("%X", ESP), 4,1,4)
+			local EIP_X=getSubRegDecBytes(string.format("%X", EIP), 4,1,4)
+			local EAX_X=getSubRegDecBytes(string.format("%X", EAX), 4,1,4)
+			local EBX_X=getSubRegDecBytes(string.format("%X", EBX), 4,1,4)
+			local ECX_X=getSubRegDecBytes(string.format("%X", ECX), 4,1,4)
+			local EDX_X=getSubRegDecBytes(string.format("%X", EDX), 4,1,4)
+				
+				SIL=getSubRegDecBytes(ESI_X,4,4,4,true)
+				DIL=getSubRegDecBytes(EDI_X,4,4,4,true)
+				BPL=getSubRegDecBytes(EBP_X,4,4,4,true)
+				SPL=getSubRegDecBytes(ESP_X,4,4,4,true)
 
-				AX=getSubRegDecBytes(EAX,4,3,4,true) 
-				AL=getSubRegDecBytes(EAX,4,4,4,true) 
-				AH=getSubRegDecBytes(EAX,4,3,3,true) 
+				AX=getSubRegDecBytes(EAX_X,4,3,4,true) 
+				AL=getSubRegDecBytes(EAX_X,4,4,4,true) 
+				AH=getSubRegDecBytes(EAX_X,4,3,3,true) 
 				
-				BX=getSubRegDecBytes(EBX,4,3,4,true) 
-				BL=getSubRegDecBytes(EBX,4,4,4,true) 
-				BH=getSubRegDecBytes(EBX,4,3,3,true) 
+				BX=getSubRegDecBytes(EBX_X,4,3,4,true) 
+				BL=getSubRegDecBytes(EBX_X,4,4,4,true) 
+				BH=getSubRegDecBytes(EBX_X,4,3,3,true) 
 				
-				CX=getSubRegDecBytes(ECX,4,3,4,true) 
-				CL=getSubRegDecBytes(ECX,4,4,4,true) 
-				CH=getSubRegDecBytes(ECX,4,3,3,true) 
+				CX=getSubRegDecBytes(ECX_X,4,3,4,true) 
+				CL=getSubRegDecBytes(ECX_X,4,4,4,true) 
+				CH=getSubRegDecBytes(ECX_X,4,3,3,true) 
 				
-				DX=getSubRegDecBytes(EDX,4,3,4,true) 
-				DL=getSubRegDecBytes(EDX,4,4,4,true) 
-				DH=getSubRegDecBytes(EDX,4,3,3,true) 
+				DX=getSubRegDecBytes(EDX_X,4,3,4,true) 
+				DL=getSubRegDecBytes(EDX_X,4,4,4,true) 
+				DH=getSubRegDecBytes(EDX_X,4,3,3,true) 
 				
-				SI=getSubRegDecBytes(ESI,4,3,4,true)
-				DI=getSubRegDecBytes(EDI,4,3,4,true)
-				BP=getSubRegDecBytes(EBP,4,3,4,true)
-				SP=getSubRegDecBytes(ESP,4,3,4,true)
+				SI=getSubRegDecBytes(ESI_X,4,3,4,true)
+				DI=getSubRegDecBytes(EDI_X,4,3,4,true)
+				BP=getSubRegDecBytes(EBP_X,4,3,4,true)
+				SP=getSubRegDecBytes(ESP_X,4,3,4,true)
 				
 				-- EXTRA SUB-REGISTERS
 			
