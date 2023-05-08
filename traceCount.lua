@@ -281,6 +281,37 @@ registers['disp_aob']={
 
 registers['regs']={}
 
+registers['regs_dbl_sizes']={
+	['RAX']=16, -- 8*2
+	['RBX']=16,
+	['RCX']=16,
+	['RDX']=16,
+	['RDI']=16,
+	['RSI']=16,
+	['RBP']=16,
+	['RSP']=16,
+	['R8,']=16,
+	['R9']=16,
+	['R10']=16,
+	['R11']=16,
+	['R12']=16,
+	['R13']=16,
+	['R14']=16,
+	['R15']=16,
+	['RIP']=16,
+	['EAX']=8,
+	['EBX']=8,
+	['ECX']=8,
+	['EDX']=8,
+	['EDI']=8,
+	['ESI']=8,
+	['EBP']=8,
+	['ESP']=8,
+	['EIP']=8
+}
+
+
+
 registers['regs_args']={
 	['R8D']='R8G',
 	['R8W']='R8G',
@@ -314,27 +345,27 @@ registers['regs_args']={
 	['R15W']='R15G',
 	['R15B']='R15G',
 	['R15L']='R15G',
-	['SIL']='ESI',
-	['DIL']='EDI',
-	['BPL']='EBP',
-	['SPL']='ESP',
-	['IP']='EIP',
-	['AX']='EAX',
-	['AL']='EAX',
-	['AH']='EAX',
-	['BX']='EBX',
-	['BL']='EBX',
-	['BH']='EBX',
-	['CX']='ECX',
-	['CL']='ECX',
-	['CH']='ECX',
-	['DX']='EDX',
-	['DL']='EDX',
-	['DH']='EDX',
-	['SI']='ESI',
-	['DI']='EDI',
-	['BP']='EBP',
-	['SP']='ESP',
+	['SIL']='ESI_X',
+	['DIL']='EDI_X',
+	['BPL']='EBP_X',
+	['SPL']='ESP_X',
+	['IP']='EIP_X',
+	['AX']='EAX_X',
+	['AL']='EAX_X',
+	['AH']='EAX_X',
+	['BX']='EBX_X',
+	['BL']='EBX_X',
+	['BH']='EBX_X',
+	['CX']='ECX_X',
+	['CL']='ECX_X',
+	['CH']='ECX_X',
+	['DX']='EDX_X',
+	['DL']='EDX_X',
+	['DH']='EDX_X',
+	['SI']='ESI_X',
+	['DI']='EDI_X',
+	['BP']='EBP_X',
+	['SP']='ESP_X',
 	['FP0']='FP0',
 	['FP1']='FP1',
 	['FP2']='FP2',
@@ -585,88 +616,88 @@ end
 	return registers['get_regs']['R15B'](R15G)
 end]]
 
-registers['get_regs']['SIL']=function(ESI)
-	return getSubRegDecBytes(ESI,4,4,4,true)
+registers['get_regs']['SIL']=function(ESI_X)
+	return getSubRegDecBytes(ESI_X,4,4,4,true)
 end
 
-registers['get_regs']['DIL']=function(EDI)
-	return getSubRegDecBytes(EDI,4,4,4,true)
+registers['get_regs']['DIL']=function(EDI_X)
+	return getSubRegDecBytes(EDI_X,4,4,4,true)
 end
 
-registers['get_regs']['BPL']=function(EBP)
-	return getSubRegDecBytes(EBP,4,4,4,true)
+registers['get_regs']['BPL']=function(EBP_X)
+	return getSubRegDecBytes(EBP_X,4,4,4,true)
 end
 
-registers['get_regs']['SPL']=function(ESP)
-	return getSubRegDecBytes(ESP,4,4,4,true)
+registers['get_regs']['SPL']=function(ESP_X)
+	return getSubRegDecBytes(ESP_X,4,4,4,true)
 end
 
-registers['get_regs']['AX']=function(EAX)
-	return getSubRegDecBytes(EAX,4,3,4,true)
+registers['get_regs']['AX']=function(EAX_X)
+	return getSubRegDecBytes(EAX_X,4,3,4,true)
 end
 
-registers['get_regs']['AL']=function(EAX)
-	return getSubRegDecBytes(EAX,4,4,4,true)
+registers['get_regs']['AL']=function(EAX_X)
+	return getSubRegDecBytes(EAX_X,4,4,4,true)
 end
 
-registers['get_regs']['AH']=function(EAX)
-	return getSubRegDecBytes(EAX,4,3,3,true)
+registers['get_regs']['AH']=function(EAX_X)
+	return getSubRegDecBytes(EAX_X,4,3,3,true)
 end
 
-registers['get_regs']['BX']=function(EBX)
-	return getSubRegDecBytes(EBX,4,3,4,true)
+registers['get_regs']['BX']=function(EBX_X)
+	return getSubRegDecBytes(EBX_X,4,3,4,true)
 end
 
-registers['get_regs']['BL']=function(EBX)
-	return getSubRegDecBytes(EBX,4,4,4,true)
+registers['get_regs']['BL']=function(EBX_X)
+	return getSubRegDecBytes(EBX_X,4,4,4,true)
 end
 
-registers['get_regs']['BH']=function(EBX)
-	return getSubRegDecBytes(EBX,4,3,3,true)
+registers['get_regs']['BH']=function(EBX_X)
+	return getSubRegDecBytes(EBX_X,4,3,3,true)
 end
 
-registers['get_regs']['CX']=function(ECX)
-	return getSubRegDecBytes(ECX,4,3,4,true)
+registers['get_regs']['CX']=function(ECX_X)
+	return getSubRegDecBytes(ECX_X,4,3,4,true)
 end
 
-registers['get_regs']['CL']=function(ECX)
-	return getSubRegDecBytes(ECX,4,4,4,true)
+registers['get_regs']['CL']=function(ECX_X)
+	return getSubRegDecBytes(ECX_X,4,4,4,true)
 end
 
-registers['get_regs']['CH']=function(ECX)
-	return getSubRegDecBytes(ECX,4,3,3,true)
+registers['get_regs']['CH']=function(ECX_X)
+	return getSubRegDecBytes(ECX_X,4,3,3,true)
 end
 
-registers['get_regs']['DX']=function(EDX)
-	return getSubRegDecBytes(EDX,4,3,4,true)
+registers['get_regs']['DX']=function(EDX_X)
+	return getSubRegDecBytes(EDX_X,4,3,4,true)
 end
 
-registers['get_regs']['DL']=function(EDX)
-	return getSubRegDecBytes(EDX,4,4,4,true)
+registers['get_regs']['DL']=function(EDX_X)
+	return getSubRegDecBytes(EDX_X,4,4,4,true)
 end
 
-registers['get_regs']['DH']=function(EDX)
-	return getSubRegDecBytes(EDX,4,3,3,true)
+registers['get_regs']['DH']=function(EDX_X)
+	return getSubRegDecBytes(EDX_X,4,3,3,true)
 end
 
-registers['get_regs']['SI']=function(ESI)
-	return getSubRegDecBytes(ESI,4,3,4,true)
+registers['get_regs']['SI']=function(ESI_X)
+	return getSubRegDecBytes(ESI_X,4,3,4,true)
 end
 
-registers['get_regs']['DI']=function(EDI)
-	return getSubRegDecBytes(EDI,4,3,4,true)
+registers['get_regs']['DI']=function(EDI_X)
+	return getSubRegDecBytes(EDI_X,4,3,4,true)
 end
 
-registers['get_regs']['BP']=function(EBP)
-	return getSubRegDecBytes(EBP,4,3,4,true)
+registers['get_regs']['BP']=function(EBP_X)
+	return getSubRegDecBytes(EBP_X,4,3,4,true)
 end
 
-registers['get_regs']['SP']=function(ESP)
-	return getSubRegDecBytes(ESP,4,3,4,true)
+registers['get_regs']['SP']=function(ESP_X)
+	return getSubRegDecBytes(ESP_X,4,3,4,true)
 end
 
-registers['get_regs']['IP']=function(EIP)
-	return getSubRegDecBytes(EIP,4,4,4,true)
+registers['get_regs']['IP']=function(EIP_X)
+	return getSubRegDecBytes(EIP_X,4,4,4,true)
 end
 
 local function tprint(tbl, indent)
@@ -1556,6 +1587,15 @@ local function onBp()
 	registers['regs']['EBP']=EBP
 	registers['regs']['ESP']=ESP
 	registers['regs']['EIP']=EIP
+	registers['regs']['ESI_X']=getSubRegDecBytes(string.format("%X", ESI), 4,1,4)
+	registers['regs']['EDI_X']=getSubRegDecBytes(string.format("%X", EDI), 4,1,4)
+	registers['regs']['EBP_X']=getSubRegDecBytes(string.format("%X", EBP), 4,1,4)
+	registers['regs']['ESP_X']=getSubRegDecBytes(string.format("%X", ESP), 4,1,4)
+	registers['regs']['EIP_X']=getSubRegDecBytes(string.format("%X", EIP), 4,1,4)
+	registers['regs']['EAX_X']=getSubRegDecBytes(string.format("%X", EAX), 4,1,4)
+	registers['regs']['EBX_X']=getSubRegDecBytes(string.format("%X", EBX), 4,1,4)
+	registers['regs']['ECX_X']=getSubRegDecBytes(string.format("%X", ECX), 4,1,4)
+	registers['regs']['EDX_X']=getSubRegDecBytes(string.format("%X", EDX), 4,1,4)
 	registers['regs']['FP0']=FP0
 	registers['regs']['FP1']=FP1
 	registers['regs']['FP2']=FP2
@@ -1670,7 +1710,15 @@ local function onBp()
 									rg=registers['get_regs'][ri](registers['regs'][arg_n])
 								else
 									rg['dec']=rgs
-									local hx=string.format('%X',rgs)
+									
+									local sz=registers['regs_dbl_sizes'][ri]
+									local hx=''
+									if sz==nil then
+										hx=string.format('%X',rgs)
+									else
+										hx=string.format('%0'..(sz)..'X',rgs)
+									end
+									
 									rg['hex']=hx
 									rg['aob']=hexToAOB(hx)
 								end
@@ -1702,7 +1750,15 @@ local function onBp()
 									rg=registers['get_regs'][ri](registers['regs'][arg_n])
 								else
 									rg['dec']=rgs
-									local hx=string.format('%X',rgs)
+									
+									local sz=registers['regs_dbl_sizes'][ri]
+									local hx=''
+									if sz==nil then
+										hx=string.format('%X',rgs)
+									else
+										hx=string.format('%0'..(sz)..'X',rgs)
+									end
+									
 									rg['hex']=hx
 									rg['aob']=hexToAOB(hx)
 								end
@@ -1966,6 +2022,15 @@ local function onCondBp()
 	registers['regs']['EBP']=EBP
 	registers['regs']['ESP']=ESP
 	registers['regs']['EIP']=EIP
+	registers['regs']['ESI_X']=getSubRegDecBytes(string.format("%X", ESI), 4,1,4)
+	registers['regs']['EDI_X']=getSubRegDecBytes(string.format("%X", EDI), 4,1,4)
+	registers['regs']['EBP_X']=getSubRegDecBytes(string.format("%X", EBP), 4,1,4)
+	registers['regs']['ESP_X']=getSubRegDecBytes(string.format("%X", ESP), 4,1,4)
+	registers['regs']['EIP_X']=getSubRegDecBytes(string.format("%X", EIP), 4,1,4)
+	registers['regs']['EAX_X']=getSubRegDecBytes(string.format("%X", EAX), 4,1,4)
+	registers['regs']['EBX_X']=getSubRegDecBytes(string.format("%X", EBX), 4,1,4)
+	registers['regs']['ECX_X']=getSubRegDecBytes(string.format("%X", ECX), 4,1,4)
+	registers['regs']['EDX_X']=getSubRegDecBytes(string.format("%X", EDX), 4,1,4)
 	registers['regs']['FP0']=FP0
 	registers['regs']['FP1']=FP1
 	registers['regs']['FP2']=FP2
@@ -2066,7 +2131,15 @@ local function onCondBp()
 					rg=registers['get_regs'][ri](registers['regs'][arg_n])
 				else
 					rg['dec']=rgs
-					local hx=string.format('%X',rgs)
+					
+					local sz=registers['regs_dbl_sizes'][ri]
+					local hx=''
+					if sz==nil then
+						hx=string.format('%X',rgs)
+					else
+						hx=string.format('%0'..(sz)..'X',rgs)
+					end
+					
 					rg['hex']=hx
 					rg['aob']=hexToAOB(hx)
 				end
@@ -2112,7 +2185,15 @@ local function onCondBp()
 						end
 					end
 					
-					local hx=string.format('%X',rgs)
+					
+					local sz=registers['regs_dbl_sizes'][ri]
+					local hx=''
+					if sz==nil then
+						hx=string.format('%X',rgs)
+					else
+						hx=string.format('%0'..(sz)..'X',rgs)
+					end
+					
 					rg['hex']=hx
 					rg['aob']=hexToAOB(hx)
 				end
@@ -2380,6 +2461,15 @@ local function jumpMem(addr)
 	registers['regs']['EBP']=EBP
 	registers['regs']['ESP']=ESP
 	registers['regs']['EIP']=EIP
+	registers['regs']['ESI_X']=getSubRegDecBytes(string.format("%X", ESI), 4,1,4)
+	registers['regs']['EDI_X']=getSubRegDecBytes(string.format("%X", EDI), 4,1,4)
+	registers['regs']['EBP_X']=getSubRegDecBytes(string.format("%X", EBP), 4,1,4)
+	registers['regs']['ESP_X']=getSubRegDecBytes(string.format("%X", ESP), 4,1,4)
+	registers['regs']['EIP_X']=getSubRegDecBytes(string.format("%X", EIP), 4,1,4)
+	registers['regs']['EAX_X']=getSubRegDecBytes(string.format("%X", EAX), 4,1,4)
+	registers['regs']['EBX_X']=getSubRegDecBytes(string.format("%X", EBX), 4,1,4)
+	registers['regs']['ECX_X']=getSubRegDecBytes(string.format("%X", ECX), 4,1,4)
+	registers['regs']['EDX_X']=getSubRegDecBytes(string.format("%X", EDX), 4,1,4)
 	registers['regs']['FP0']=FP0
 	registers['regs']['FP1']=FP1
 	registers['regs']['FP2']=FP2
@@ -2665,7 +2755,15 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 					rg=registers['get_regs'][ri](registers['regs'][arg_n])
 				else
 					rg['dec']=rgs
-					local hx=string.format('%X',rgs)
+					
+					local sz=registers['regs_dbl_sizes'][ri]
+					local hx=''
+					if sz==nil then
+						hx=string.format('%X',rgs)
+					else
+						hx=string.format('%0'..(sz)..'X',rgs)
+					end
+
 					rg['hex']=hx
 				end
 				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
