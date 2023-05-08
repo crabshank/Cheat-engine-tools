@@ -123,9 +123,17 @@ local function getSubRegDecBytes(x,g,a,b,n)
 		end
 	end
 
-	for i=b*2, a*2, -2 do
-	   out=string.sub(out1,i-1,i) .. out
+    local fnz=false
+	for i=a*2, b*2, 2 do
+		local sb=string.sub(out1,i-1,i)
+		if fnz==false and sb~='00' then
+			fnz=true
+		end
+		if fnz==true then
+			out=out..sb
+		end
 	end
+
 	if n==true then
 		return {['dec']=tonumber(out,16), ['aob']=hexToAOB(out), ['hex']=out}
 	else
@@ -280,37 +288,6 @@ registers['disp_aob']={
 }
 
 registers['regs']={}
-
-registers['regs_dbl_sizes']={
-	['RAX']=16, -- 8*2
-	['RBX']=16,
-	['RCX']=16,
-	['RDX']=16,
-	['RDI']=16,
-	['RSI']=16,
-	['RBP']=16,
-	['RSP']=16,
-	['R8,']=16,
-	['R9']=16,
-	['R10']=16,
-	['R11']=16,
-	['R12']=16,
-	['R13']=16,
-	['R14']=16,
-	['R15']=16,
-	['RIP']=16,
-	['EAX']=8,
-	['EBX']=8,
-	['ECX']=8,
-	['EDX']=8,
-	['EDI']=8,
-	['ESI']=8,
-	['EBP']=8,
-	['ESP']=8,
-	['EIP']=8
-}
-
-
 
 registers['regs_args']={
 	['R8D']='R8G',
@@ -1710,15 +1687,7 @@ local function onBp()
 									rg=registers['get_regs'][ri](registers['regs'][arg_n])
 								else
 									rg['dec']=rgs
-									
-									local sz=registers['regs_dbl_sizes'][ri]
-									local hx=''
-									if sz==nil then
-										hx=string.format('%X',rgs)
-									else
-										hx=string.format('%0'..(sz)..'X',rgs)
-									end
-									
+									local hx=string.format('%X',rgs)								
 									rg['hex']=hx
 									rg['aob']=hexToAOB(hx)
 								end
@@ -1750,15 +1719,7 @@ local function onBp()
 									rg=registers['get_regs'][ri](registers['regs'][arg_n])
 								else
 									rg['dec']=rgs
-									
-									local sz=registers['regs_dbl_sizes'][ri]
-									local hx=''
-									if sz==nil then
-										hx=string.format('%X',rgs)
-									else
-										hx=string.format('%0'..(sz)..'X',rgs)
-									end
-									
+									local hx=string.format('%X',rgs)
 									rg['hex']=hx
 									rg['aob']=hexToAOB(hx)
 								end
@@ -2131,15 +2092,7 @@ local function onCondBp()
 					rg=registers['get_regs'][ri](registers['regs'][arg_n])
 				else
 					rg['dec']=rgs
-					
-					local sz=registers['regs_dbl_sizes'][ri]
-					local hx=''
-					if sz==nil then
-						hx=string.format('%X',rgs)
-					else
-						hx=string.format('%0'..(sz)..'X',rgs)
-					end
-					
+					local hx=string.format('%X',rgs)
 					rg['hex']=hx
 					rg['aob']=hexToAOB(hx)
 				end
@@ -2185,15 +2138,7 @@ local function onCondBp()
 						end
 					end
 					
-					
-					local sz=registers['regs_dbl_sizes'][ri]
-					local hx=''
-					if sz==nil then
-						hx=string.format('%X',rgs)
-					else
-						hx=string.format('%0'..(sz)..'X',rgs)
-					end
-					
+					local hx=string.format('%X',rgs)
 					rg['hex']=hx
 					rg['aob']=hexToAOB(hx)
 				end
@@ -2755,15 +2700,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 					rg=registers['get_regs'][ri](registers['regs'][arg_n])
 				else
 					rg['dec']=rgs
-					
-					local sz=registers['regs_dbl_sizes'][ri]
-					local hx=''
-					if sz==nil then
-						hx=string.format('%X',rgs)
-					else
-						hx=string.format('%0'..(sz)..'X',rgs)
-					end
-
+					local hx=string.format('%X',rgs)
 					rg['hex']=hx
 				end
 				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
