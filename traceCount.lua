@@ -123,10 +123,11 @@ local function getSubRegDecBytes(x,g,a,b,n)
 		end
 	end
 
-    local fnz=false
-	for i=a*2, b*2, 2 do
+    	local fnz=false
+	local b2=b*2
+	for i=a*2, b2, 2 do
 		local sb=string.sub(out1,i-1,i)
-		if fnz==false and sb~='00' then
+		if fnz==false and (sb~='00' or i==b2) then
 			fnz=true
 		end
 		if fnz==true then
