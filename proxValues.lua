@@ -284,7 +284,7 @@ local function tbl_include(t,n,l)
 end
 
 local function compare(t,r)
-	-- e.g. t={{1,true},{2,false}}
+	-- e.g. t={{1,1},{2,0}}
 	local rsl=#ress
 	if rsl<2 then
 		print('There must be at least 2 sets of scan results added!')
