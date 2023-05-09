@@ -1,5 +1,5 @@
 local ress={}
-local ress_comp={['res']={},['filt']={}}
+local ress_comp={['rsl']=0,['res']={},['filt']={}}
 local boundedResParams={-1,0,false}
 local boundedRes={}
 local narrow_err=true
@@ -297,13 +297,14 @@ local function compare(t,r)
 		table.insert(tb,t)
 	end
 	
+	local rcrsl=ress_comp['rsl']
 	
-	if tbl_pair_len(ress_comp['res'])==0 then
+	if tbl_pair_len(ress_comp['res'])==0 or rcrsl==0 or rcrsl~=rsl then
 		r=true
 	end
 	
 	if r==true and rsl>1 then
-		ress_comp={['res']={},['filt']={}}
+		ress_comp={['rsl']=rsl,['res']={},['filt']={}}
 		for i=1, rsl do --each result from this list
 		local currResEl=ress[i]
 		local crl=#currResEl
