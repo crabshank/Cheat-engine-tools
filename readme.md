@@ -436,7 +436,8 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
         narrowDown(n) : Only keep and output results with max. memory area size <=**n**
         
         narrowDown() : Use previous memory area size
-
+	
+* **compare( t, r --[[Optional]] )** -> After using `.addMemScan()` at least twice, use this to print which addresses appear in the sets you sepecify with **t**. **t** is a table, or table of tables containing 2 numeric elements: {set #i, 0/1/2/3}; for the second element: 0 - > addresses contained in set #i, 1 - > addresses not contained in set #i, 2 - > addresses exclusively contained in set #i, , 3 - > addresses contained in all sets but set #i. **r** can be set to true to force the sets to be re-analysed, but they will be automatically, if: there are not yet any analysed results, or the number of added scans is different from the number there were when the results were last analysed.
 ***
 
 ## CETRACE reader x64.html
