@@ -526,15 +526,19 @@ local function stack(d,b,m,f)
 	
 	debug_setBreakpoint(addr_stack, 1, bptExecute, bpmDebugRegister, function()
 		debug_getContext()
-		local bp=RSP+b
-		if f~=true then
-			 bp=math.max(RBP-7,RSP)
-			if b~=nil and b>=0 then
-				bp=math.min(RSP+b,bp)
+		local bp
+		if b==nil or b<0 then
+			bp=math.max(RBP-7,RSP)
+		else
+			if f==true then
+				bp=RSP+b
+			else
+				bp=math.max(math.min(RSP+b,RBP-7),RSP)
 			end
 		end
+		
 		--local p=1
-		local f=0
+		local fc=0
 		local fsx='0'
 		for i=RSP, bp do
 			local rd=readQword(i)
@@ -567,8 +571,8 @@ local function stack(d,b,m,f)
 					--p=p+1
 				end
 			end
-			f=f+1
-			fsx=string.format('%X',f)
+			fc=fc+1
+			fsx=string.format('%X',fc)
 		end
 	end)
 
@@ -591,15 +595,18 @@ local function rsp(b,m,f)
 		table.insert(modulesList2,tm)
 	end
   end
-		local bp=RSP+b
-		if f~=true then
-			 bp=math.max(RBP-7,RSP)
-			if b~=nil and b>=0 then
-				bp=math.min(RSP+b,bp)
+		local bp
+		if b==nil or b<0 then
+			bp=math.max(RBP-7,RSP)
+		else
+			if f==true then
+				bp=RSP+b
+			else
+				bp=math.max(math.min(RSP+b,RBP-7),RSP)
 			end
 		end
 		--local p=1
-		local f=0
+		local fc=0
 		local fsx='0'
 		for i=RSP, bp do
 			local rd=readQword(i)
@@ -626,8 +633,8 @@ local function rsp(b,m,f)
 					--p=p+1
 				end
 			end
-			f=f+1
-			fsx=string.format('%X',f)
+			fc=fc+1
+			fsx=string.format('%X',fc)
 		end
 	tprint(rets_lookup2)
 end
