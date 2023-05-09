@@ -297,9 +297,7 @@ local function compare(t,r)
 		table.insert(tb,t)
 	end
 	
-	local rcrsl=ress_comp['rsl']
-	
-	if tbl_pair_len(ress_comp['res'])==0 or rcrsl==0 or rcrsl~=rsl then
+	if tbl_pair_len(ress_comp['res'])==0 or ress_comp['rsl']~=rsl then
 		r=true
 	end
 	
