@@ -1,7 +1,37 @@
 local ress={}
+local ress_comp={['res']={},['filt']={}}
 local boundedResParams={-1,0,false}
 local boundedRes={}
 local narrow_err=true
+
+local function tprint(tbl, indent)
+  local function do_tprint(tbl, indent) -- https://gist.github.com/ripter/4270799
+	if not indent then indent = 0 end
+	for k, v in pairs(tbl) do
+	  formatting = string.rep("	", indent) .. k .. ": "
+	  local typv=type(v)
+	  if typv == "table" then
+		print(formatting)
+		do_tprint(v, indent+1)
+	  elseif typv == 'boolean' then
+		print(formatting .. tostring(v))
+	  elseif typv == 'string' then
+		local la, lb=string.find(v, "\n")
+		if la==nil then
+			print(formatting .. '"'.. v ..'"')
+		else
+			print(formatting .. '[['.. v ..']]')
+		end
+	  elseif typv == 'function' then
+		print(formatting .. 'function () … end')
+	  else
+		print(formatting .. v)
+	  end
+	end
+  end
+  do_tprint(tbl,indent)
+  print('\n')
+end
 
 local function resetAllResults()
 	ress={}
@@ -232,9 +262,90 @@ local function fullScan(m) -- m is limit (Absolute value)
 	end
 end
 
+local function tbl_pair_len(t)
+	local c=0
+	for k,v in pairs(t) do -- iterate over addresses (k) || v is the table for the address
+		c=c+1
+	end
+	return c
+end
+
+local function tbl_include(t,n,l)
+	local g=l
+	if l==nil then 
+		g=#t
+	end
+	for i=1, g do
+		if t[i]==n then
+			return i
+		end
+	end
+	return nil
+end
+
+local function compare(t,r)
+	-- e.g. t={{1,true},{2,false}}
+	local rsl=#ress
+	if rsl<2 then
+		print('There must be at least 2 sets of scan results added!')
+		return
+	end
+	local tb={}
+	if type(t[1])=='table' and type(t[1][1])=='table' then
+		tb=t
+	else
+		table.insert(tb,t)
+	end
+	
+	
+	if tbl_pair_len(ress_comp['res'])==0 then
+		r=true
+	end
+	
+	if r==true and rsl>1 then
+		ress_comp={['res']={},['filt']={}}
+		for i=1, rsl do --each result from this list
+		local currResEl=ress[i]
+		local crl=#currResEl
+		if crl>0 then
+				for j=1, crl do --each result from this list
+							local cj=currResEl[j]
+							local cja=cj.Address
+							if ress_comp['res'][cja]==nil then -- table of which addresses appear in which set of results
+								ress_comp['res'][cja]={i}
+							else
+								table.insert(ress_comp['res'][cja],i)
+							end
+				end
+			end
+		end
+	else
+		ress_comp['filt']={}
+	end
+	
+	for i=1, #tb do
+		local ti=tb[i]
+		local n=ti[1]
+		local b=ti[2] -- 0/1/2/3 ->? false/true/exclusively in/exclusively not in
+
+		for k,v in pairs(ress_comp['res']) do -- iterate over addresses (k) || v is the table for the address
+			local lv=#v
+			local tinc=tbl_include(v,n,lv)
+			if (tinc==nil and b==0) or (tinc~=nil and b==1) or (tinc~=nil and lv==1 and b==2) or (tinc==nil and lv==(rsl-1) and b==3) then
+				local tf={}
+				tf.Address=k
+				tf.sets=table.concat(v,', ')
+				table.insert(ress_comp['filt'],tf)
+			end
+		end
+		tprint(ress_comp['filt'])
+	end
+end
+
 proxValues={
 	resetAllResults=resetAllResults,
 	addMemScan=addMemScan,
+	compare=compare,
 	removeResult=removeResult,
 	printFiltered=printFiltered,
 	narrowDown=narrowDown,
