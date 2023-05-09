@@ -278,7 +278,7 @@ local function dumpRegisters(k)
 			 if rivl >0 then
 				for i = 1, rivl do
 					if c==false then
-						print( ak['calc'] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
+						print( ak['calcs'][i] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
 						c=true
 					end
 					print(riv[i])
@@ -421,7 +421,9 @@ local function onBp()
 			
 			ar=abpx.regs
 			arc=ar.counts
+			
 				for j=1, #abpxc do
+						local newReg=false
 						local func= load("return function() return ".. abpxc[j] .." end")
 						local b,r=pcall(func())
 						restoreGlobals()
@@ -444,6 +446,10 @@ local function onBp()
 									end
 								else
 									table.insert(ar,hexByteString)
+									if newReg==false then
+										newReg=true
+										table.insert(abpx.calcs,abpxc[j])
+									end
 									table.insert(fres,hexByteString)
 								end
 								chk=true
@@ -463,6 +469,10 @@ local function onBp()
 									end
 								else
 									table.insert(ar,rx)
+									if newReg==false then
+										newReg=true
+										table.insert(abpx.calcs,abpxc[j])
+									end
 									table.insert(fres,rx)
 								end
 								chk=true
@@ -483,6 +493,10 @@ local function onBp()
 									end
 								else
 									table.insert(ar,rxbt)
+									if newReg==false then
+										newReg=true
+										table.insert(abpx.calcs,abpxc[j])
+									end
 									table.insert(fres,rxbt)
 								end
 								chk=true
@@ -536,10 +550,10 @@ local function attachLpAddr(a,c,p,bh,fw,bpst,cnt)
 					cu[1]=upperc(c)
 			end
 	if cnt==true then
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['c_type']=tyc,['count']=cnt})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['c_type']=tyc,['count']=cnt})
 		debug_setBreakpoint(a,onBp)
 	else
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']={},['ptr']=p,['calc']=cu,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt})
 		debug_setBreakpoint(a,onBp)
 	end
 	
