@@ -11,7 +11,7 @@ local bps={}
 local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
 	for i=1, #list do
 	local v=list[i]
-		if address>=v.Address and address<(v.Address+v.Size) then
+		if address>=v.Address and address<=v.lastByte then
 			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
 		end
 	end
@@ -587,9 +587,11 @@ local function rsp(b,m,f)
 	local modulesTable= enumModules()
   for i,v in pairs(modulesTable) do
 	if v.Name==m or m==nil or m=='' then
+		local sz=getModuleSize(v.Name)
 		local tm={
-			['Size']=getModuleSize(v.Name),
+			['Size']=sz,
 			['Name']=v.Name,
+			['lastByte']=v.Address+sz-1
 			['Address']=v.Address
 		}
 		table.insert(modulesList2,tm)
