@@ -318,7 +318,7 @@ N.B. To continue detection after a break, press "Step Into" in the Memory Viewer
 
 To add extended registers (i.e. sub-registers) to Cheat Engine's in-built conditional breakpoints, see: [https://gist.github.com/crabshank/549a67e52b6fc298912cf55532de5b9d](https://gist.github.com/crabshank/549a67e52b6fc298912cf55532de5b9d)
 
-* **stop()** -> End the trace and print in ascending order of times executed. Or it ends "traceCount.condBp(…)".
+* **stop()** -> Ends the trace, or it ends "traceCount.condBp(…)".
 
 * **printHits( m --[[Optional]], p --[[Optional]],  n --[[Optional]], l --[[Optional]] , f --[[Optional]] , t --[[Optional]] )** -> 
 
