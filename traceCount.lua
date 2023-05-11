@@ -39,7 +39,7 @@ local function getModuleName(address) -- https://github.com/cheat-engine/cheat-e
   local modulesTable,size = enumModules(),0
   for i,v in pairs(modulesTable) do
       size = getModuleSize(v.Name)
-      if address>=v.Address and address<=(v.Address+size) then
+      if address>=v.Address and address<(v.Address+size) then
         return v.Name
       end
   end
