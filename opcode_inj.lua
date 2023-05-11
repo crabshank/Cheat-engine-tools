@@ -6,7 +6,7 @@ local function giveModuleAndOffset(address) -- https://github.com/cheat-engine/c
   local modulesTable,size = enumModules(),0
   for i,v in pairs(modulesTable) do
       size = getModuleSize(v.Name)
-      if address>=v.Address and address<=(v.Address+size) then
+      if address>=v.Address and address<(v.Address+size) then
         return {v.Name..'+'..string.format('%X',address-v.Address),v.Name}
       end
   end
