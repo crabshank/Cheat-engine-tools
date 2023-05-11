@@ -11,7 +11,7 @@ local bps={}
 local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
 	for i=1, #list do
 	local v=list[i]
-		if address>=v.Address and address<=(v.Address+v.Size) then
+		if address>=v.Address and address<(v.Address+v.Size) then
 			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
 		end
 	end
