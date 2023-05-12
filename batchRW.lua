@@ -511,20 +511,21 @@ local function stack(d,b,m,f)
 	rets_lookup={}
 	rets_lookup_order={}
 	modulesList={}
-	
+
 	local modulesTable= enumModules()
-  for i,v in pairs(modulesTable) do
-	if v.Name==m or m==nil or m=='' then
-		local tm={
-			['Size']=getModuleSize(v.Name),
-			['Name']=v.Name,
-			['lastByte']=v.Address+sz-1,
-			['Address']=v.Address
-		}
-		table.insert(modulesList,tm)
+	for i,v in pairs(modulesTable) do
+		if v.Name==m or m==nil or m=='' then
+			local sz=getModuleSize(v.Name)
+			local tm={
+				['Size']=sz,
+				['Name']=v.Name,
+				['lastByte']=v.Address+sz-1,
+				['Address']=v.Address
+			}
+			table.insert(modulesList,tm)
+		end
 	end
-  end
-	
+
 	debug_setBreakpoint(addr_stack, 1, bptExecute, bpmDebugRegister, function()
 		debug_getContext()
 		local bp
