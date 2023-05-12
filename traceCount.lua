@@ -720,23 +720,34 @@ local prog=false
 local first=false
 local abp={}
 local hpp={}
-local stp=false
+local stp=0
 local trace_info=''
 local forceSave=''
 local sio=''
+local traceModules={}
 
 local liteAddr=0
 local liteAbp={}
 local liteIx=1
 local liteCount=0
 local liteBp=false
-local litePrint=true
+
 local liteFirst=true
-local liteFileName=''
-local liteStepOver=false
+local liteStepOver=0
+local liteModules={}
 local liteTrace={}
 local liteFormattedCount={}
 local liteRep=nil
+
+local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
+	for i=1, #list do
+	local v=list[i]
+		if address>=v.Address and address<=v.lastByte then
+			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
+		end
+	end
+	return {false,address_hex}
+end
 
 local function string_arr(s)
 	local spl={}
@@ -850,7 +861,7 @@ local function deepcopy(orig)
 	return copy
 end
 
-local function attach(a,c,n,s)
+local function attach(a,c,s,n)
 	debug_removeBreakpoint(addr)
 	local tyc=type(c)
 	local tyct=false
@@ -911,11 +922,40 @@ local function attach(a,c,n,s)
 		count=c
 	end
 
-	stp=s
+	stp=0
 	sio='step into'
 	if s==true then
+		stp=1
 		sio='step over'
+	else
+		stp=2
+		sio='step into specified modules'
+		local tys=type(s)
+		traceModules={}
+		local lms={}
+		if tys=='string' then 
+			lms[s]=true
+		elseif tys=='table' then
+			for k=1, #s do
+				lms[ s[k] ]=true
+			end
+		end
+		
+		local modulesTable= enumModules()
+		for i,v in pairs(modulesTable) do
+			if lms[v.Name]==true then
+				local sz=getModuleSize(v.Name)
+				local tm={
+					['Size']=sz,
+					['Name']=v.Name,
+					['lastByte']=v.Address+sz-1,
+					['Address']=v.Address
+				}
+				table.insert(traceModules,tm)
+			end 
+		end
 	end
+	
 	condBpProg=false
 	prog=true
 	first=true
@@ -1348,8 +1388,9 @@ local function getSubRegDecBytes(x,g,a,b,n)
 	end
 end
 
-local function do_litePrint(fileHdl)
-	if fileHdl~=nil then
+local function litePrint(fileName)
+	if fileName~=nil then
+		local fileHdl=io.open(fileName,'w')
 		print('Saving trace…')
 		for i=1, #liteFormattedCount do
 			fileHdl:write(liteFormattedCount[i]..'\n')
@@ -1361,10 +1402,6 @@ local function do_litePrint(fileHdl)
 			print(liteFormattedCount[i])
 		end
 	end
-end
-
-local function litePrint()
-	do_litePrint()
 end
 
 local function getLiteCounts()
@@ -1433,7 +1470,18 @@ local function onLiteBp()
 					rpt=true
 				end
 				
-				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then
+				local outOfModules=true
+				if liteStepOver==2 then
+					for j=1, #liteModules do
+						local jm=liteModules[j]
+						if RIP>=jm.Address and RIP<=jm.lastByte then
+							outOfModules=false
+							break
+						end
+					end
+				end
+
+				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then -- End of trace!
 					liteBp=false
 					if rpt==true then
 						print('Specified address ( '..string.format('%X',RIP)..' ) executed!\n')
@@ -1441,23 +1489,17 @@ local function onLiteBp()
 						print('Trace count limit reached!\n')
 					end
 					liteFormattedCount=getLiteCounts()
-					if litePrint==false then
-						local f=io.open(liteFileName,'w')
-						do_litePrint(f)
-					else
-						do_litePrint()
-					end
 					debug_continueFromBreakpoint(co_run)
-				elseif liteStepOver==false then
-					debug_continueFromBreakpoint(co_stepinto)
-				else
+				elseif ( liteStepOver==1 ) or (liteStepOver==2 and outOfModules==true) then --Step over or Out of specified modules
 					debug_continueFromBreakpoint(co_stepover)
+				else
+					debug_continueFromBreakpoint(co_stepinto)
 				end
 				
 		end
 end
 
-local function lite(a,c,f,s)
+local function lite(a,c,s)
 	debug_removeBreakpoint(liteAddr)
 	liteBp=false
 	local tyc=type(c)
@@ -1507,20 +1549,38 @@ local function lite(a,c,f,s)
 		liteCount=c
 	end
 		
-	litePrint=true
 	liteBp=true
-	liteFileName=''
 	liteFirst=true
-	
-	if f~=nil and f~='' then
-		litePrint=false
-		liteFileName=f
-	end
+	liteStepOver=0
 	
 	if s==true then
-		liteStepOver=true
+		liteStepOver=1
 	else
-		liteStepOver=false
+		liteStepOver=2
+		local tys=type(s)
+		liteModules={}
+		local lms={}
+		if tys=='string' then 
+			lms[s]=true
+		elseif tys=='table' then
+			for k=1, #s do
+				lms[ s[k] ]=true
+			end
+		end
+		
+		local modulesTable= enumModules()
+		for i,v in pairs(modulesTable) do
+			if lms[v.Name]==true then
+				local sz=getModuleSize(v.Name)
+				local tm={
+					['Size']=sz,
+					['Name']=v.Name,
+					['lastByte']=v.Address+sz-1,
+					['Address']=v.Address
+				}
+				table.insert(liteModules,tm)
+			end 
+		end
 	end
 	liteTrace={}
 	liteFormattedCount={}
@@ -1623,7 +1683,17 @@ local function onBp()
 						rpt=true
 					end
 				end
-
+			
+			local outOfModules=true
+			if stp==2 then
+				for j=1, #traceModules do
+					local jm=traceModules[j]
+					if RIP>=jm.Address and RIP<=jm.lastByte then
+						outOfModules=false
+						break
+					end
+				end
+			end
 				
 			if ( count~=nil and count>=1 ) then
 				count=count-1
@@ -1869,14 +1939,14 @@ local function onBp()
 					end
 					hits_deref[ix]['count']=hit_no
 					if rpt==false then
-						if stp==true then
+						if stp==1 or  (stp==2 and outOfModules==true) then
 							debug_continueFromBreakpoint(co_stepover)
 						else
 							debug_continueFromBreakpoint(co_stepinto)
 						end
 					end
 				end
-				if ( rpt==true or ( count~=nil and count<1 ) ) then
+				if ( rpt==true or ( count~=nil and count<1 ) ) then -- End of trace!
 					debug_continueFromBreakpoint(co_run)
 					if rpt==true then
 						runStop(false,string.format('%X',instRep))
