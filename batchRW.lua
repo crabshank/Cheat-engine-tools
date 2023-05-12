@@ -518,6 +518,7 @@ local function stack(d,b,m,f)
 		local tm={
 			['Size']=getModuleSize(v.Name),
 			['Name']=v.Name,
+			['lastByte']=v.Address+sz-1,
 			['Address']=v.Address
 		}
 		table.insert(modulesList,tm)
@@ -591,7 +592,7 @@ local function rsp(b,m,f)
 		local tm={
 			['Size']=sz,
 			['Name']=v.Name,
-			['lastByte']=v.Address+sz-1
+			['lastByte']=v.Address+sz-1,
 			['Address']=v.Address
 		}
 		table.insert(modulesList2,tm)
