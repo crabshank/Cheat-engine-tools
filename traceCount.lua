@@ -739,16 +739,6 @@ local liteTrace={}
 local liteFormattedCount={}
 local liteRep=nil
 
-local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
-	for i=1, #list do
-	local v=list[i]
-		if address>=v.Address and address<=v.lastByte then
-			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
-		end
-	end
-	return {false,address_hex}
-end
-
 local function string_arr(s)
 	local spl={}
 	local sl=string.len(s)
