@@ -1663,7 +1663,7 @@ local function onBp()
 			debug_continueFromBreakpoint(co_run)
 		else
 				local rpt=false
-				local outOfModules=true
+				
 				if first ==true then
 					debug_removeBreakpoint(ai1)
 					first=false
@@ -1672,6 +1672,9 @@ local function onBp()
 					if (instRep~=nil and RIP==instRep) then
 						rpt=true
 					end
+				end
+				
+					local outOfModules=true
 					if stp==2 then
 						for j=1, #traceModules do
 							local jm=traceModules[j]
@@ -1681,7 +1684,6 @@ local function onBp()
 							end
 						end
 					end
-				end
 
 			if ( count~=nil and count>=1 ) then
 				count=count-1
