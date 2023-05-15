@@ -726,6 +726,10 @@ local forceSave=''
 local sio=''
 local traceModules={}
 
+local mri_skip=false
+local mri_isCall=true
+local mrc_retAdr=nil
+
 local liteAddr=0
 local liteAbp={}
 local liteIx=1
@@ -733,8 +737,7 @@ local liteCount=0
 local liteBp=false
 
 local liteFirst=true
-local liteStepOver=0
-local liteModules={}
+local liteStepOver=false
 local liteTrace={}
 local liteFormattedCount={}
 local liteRep=nil
@@ -899,6 +902,9 @@ local function attach(a,c,s,n)
 	currTraceDss={}
 	present_r_last_lookup={}
 	present_m_last_lookup={}
+	mri_skip=false
+	mri_isCall=true
+	mrc_retAdr=nil
 	
 	if tyct==true then
 		if type(c[2])=='number' and c[2]>=0 then
@@ -1152,6 +1158,7 @@ end
 local function runStop(b,adx)
 	condBpProg=false
 	prog=false
+	liteBp=false
 	if abp~= nil and #abp>1 then
 			debug_removeBreakpoint(abp[1][1])
 	end
@@ -1460,17 +1467,6 @@ local function onLiteBp()
 					rpt=true
 				end
 				
-				local outOfModules=true
-				if liteStepOver==2 then
-					for j=1, #liteModules do
-						local jm=liteModules[j]
-						if RIP>=jm.Address and RIP<=jm.lastByte then
-							outOfModules=false
-							break
-						end
-					end
-				end
-
 				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then -- End of trace!
 					liteBp=false
 					if rpt==true then
@@ -1480,7 +1476,7 @@ local function onLiteBp()
 					end
 					liteFormattedCount=getLiteCounts()
 					debug_continueFromBreakpoint(co_run)
-				elseif ( liteStepOver==1 ) or (liteStepOver==2 and outOfModules==true) then --Step over or Out of specified modules
+				elseif liteStepOver==true then --Step over or Out of specified modules
 					debug_continueFromBreakpoint(co_stepover)
 				else
 					debug_continueFromBreakpoint(co_stepinto)
@@ -1541,37 +1537,11 @@ local function lite(a,c,s)
 		
 	liteBp=true
 	liteFirst=true
-	liteStepOver=0
+	mri_skip=false
+	mri_isCall=true
+	mrc_retAdr=nil
+	liteStepOver=s
 	
-	if s==true then
-		liteStepOver=1
-	else
-		liteStepOver=2
-		local tys=type(s)
-		liteModules={}
-		local lms={}
-		if tys=='string' then 
-			lms[s]=true
-		elseif tys=='table' then
-			for k=1, #s do
-				lms[ s[k] ]=true
-			end
-		end
-		
-		local modulesTable= enumModules()
-		for i,v in pairs(modulesTable) do
-			if lms[v.Name]==true then
-				local sz=getModuleSize(v.Name)
-				local tm={
-					['Size']=sz,
-					['Name']=v.Name,
-					['lastByte']=v.Address+sz-1,
-					['Address']=v.Address
-				}
-				table.insert(liteModules,tm)
-			end 
-		end
-	end
 	liteTrace={}
 	liteFormattedCount={}
 	
@@ -1662,9 +1632,10 @@ local function onBp()
 			debug_setBreakpoint(abp[1][1], 1, bptExecute)
 			debug_continueFromBreakpoint(co_run)
 		else
+				local runToRet=false
 				local rpt=false
 				
-				if first ==true then
+				if first==true then
 					debug_removeBreakpoint(ai1)
 					first=false
 					print('Breakpoint at ' .. ai1_hx .. ' hit!')
@@ -1674,16 +1645,6 @@ local function onBp()
 					end
 				end
 				
-					local outOfModules=true
-					if stp==2 then
-						for j=1, #traceModules do
-							local jm=traceModules[j]
-							if RIP>=jm.Address and RIP<=jm.lastByte then
-								outOfModules=false
-								break
-							end
-						end
-					end
 
 			if ( count~=nil and count>=1 ) then
 				count=count-1
@@ -1705,6 +1666,40 @@ local function onBp()
 					local deref={['hit_address']=RIPx}
 					local dst = disassemble(RIP)
 					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					
+					if stp==2 then
+						if mri_skip==true then
+							debug_removeBreakpoint(mrc_retAdr)
+							mri_skip=false
+						end
+						
+						if mri_isCall==true then
+							local outOfModules=true
+								for j=1, #traceModules do
+									local jm=traceModules[j]
+									if RIP>=jm.Address and RIP<=jm.lastByte then
+										outOfModules=false
+										break
+									end
+								end
+								
+							if outOfModules==true then
+								mrc_retAdr=readQword(RSP)
+								runToRet=true
+								mri_skip=true
+								debug_setBreakpoint(mrc_retAdr, 1, bptExecute)
+							else
+								mrc_retAdr=nil
+								mri_skip=false
+							end
+						end
+						
+						mri_isCall=false
+						if string.find(instruction,'^%s*call%s+')~=nil then
+							mri_isCall=true
+						end
+				end
+					
 					deref['disassembly']={instruction,address,bytes,extraField}
 					--Get accessed memory addresses
 
@@ -1929,7 +1924,9 @@ local function onBp()
 					end
 					hits_deref[ix]['count']=hit_no
 					if rpt==false then
-						if stp==1 or  (stp==2 and outOfModules==true) then
+						if runToRet==true then
+								debug_continueFromBreakpoint(co_run)
+						elseif stp==1 then
 							debug_continueFromBreakpoint(co_stepover)
 						else
 							debug_continueFromBreakpoint(co_stepinto)
