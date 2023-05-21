@@ -15,9 +15,24 @@ local condBp_fw=0
 
 local present_r_last_lookup={}
 local present_m_last_lookup={}
+local present_mem_last_lookup={}
 local currModule=nil
 local currRegsAddr=nil
 local jmpFirst=false
+
+local function sameTable(t1,t2)
+	local t1l, t2l= #t1, #t2
+	if t1l~=t2l then
+		return false
+	else
+		for i=1, t1l do
+			if t1[i]~=t2[i] then
+					return false
+			end
+		end
+		return true
+	end
+end
 
 local function alloc(name,size,module_name)
   local scrp=''
@@ -166,100 +181,100 @@ registers['alt_names']={
 }
 
 registers['list_regs']={
-	'XMM10',
-	'XMM11',
-	'XMM12',
-	'XMM13',
-	'XMM14',
-	'XMM15',
-	'XMM0',
-	'XMM1',
-	'XMM2',
-	'XMM3',
-	'XMM4',
-	'XMM5',
-	'XMM6',
-	'XMM7',
-	'XMM8',
-	'XMM9',
-	'R10D',
-	'R10W',
-	'R10B',
-	'R11D',
-	'R11W',
-	'R11B',
-	'R12D',
-	'R12W',
-	'R12B',
-	'R13D',
-	'R13W',
-	'R13B',
-	'R14D',
-	'R14W',
-	'R14B',
-	'R15D',
-	'R15W',
-	'R15B',
-	'RAX',
-	'RBX',
-	'RCX',
-	'RDX',
-	'RDI',
-	'RSI',
-	'RBP',
-	'RSP',
-	'R10',
-	'R11',
-	'R12',
-	'R13',
-	'R14',
-	'R15',
-	'EAX',
-	'EBX',
-	'ECX',
-	'EDX',
-	'EDI',
-	'ESI',
-	'EBP',
-	'ESP',
-	'EIP',
-	'FP0',
-	'FP1',
-	'FP2',
-	'FP3',
-	'FP4',
-	'FP5',
-	'FP6',
-	'FP7',
-	'R8D',
-	'R8W',
-	'R8B',
-	'R9D',
-	'R9W',
-	'R9B',
-	'SIL',
-	'DIL',
-	'BPL',
-	'SPL',
-	'R8',
-	'R9',
-	'AX',
-	'AL',
-	'AH',
-	'BX',
-	'BL',
-	'BH',
-	'CX',
-	'CL',
-	'CH',
-	'DX',
-	'DL',
-	'DH',
-	'SI',
-	'DI',
-	'BP',
-	'SP',
-	'IP',
+	{'XMM10',16},
+	{'XMM11',16},
+	{'XMM12',16},
+	{'XMM13',16},
+	{'XMM14',16},
+	{'XMM15',16},
+	{'XMM0',16},
+	{'XMM1',16},
+	{'XMM2',16},
+	{'XMM3',16},
+	{'XMM4',16},
+	{'XMM5',16},
+	{'XMM6',16},
+	{'XMM7',16},
+	{'XMM8',16},
+	{'XMM9',16},
+	{'R10D',4},
+	{'R10W',2},
+	{'R10B',1},
+	{'R11D',4},
+	{'R11W',2},
+	{'R11B',1},
+	{'R12D',4},
+	{'R12W',2},
+	{'R12B',1},
+	{'R13D',4},
+	{'R13W',2},
+	{'R13B',1},
+	{'R14D',4},
+	{'R14W',2},
+	{'R14B',1},
+	{'R15D',4},
+	{'R15W',2},
+	{'R15B',1},
+	{'RAX',8},
+	{'RBX',8},
+	{'RCX',8},
+	{'RDX',8},
+	{'RDI',8},
+	{'RSI',8},
+	{'RBP',8},
+	{'RSP',8},
+	{'R10',8},
+	{'R11',8},
+	{'R12',8},
+	{'R13',8},
+	{'R14',8},
+	{'R15',8},
+	{'EAX',4},
+	{'EBX',4},
+	{'ECX',4},
+	{'EDX',4},
+	{'EDI',4},
+	{'ESI',4},
+	{'EBP',4},
+	{'ESP',4},
+	{'EIP',4},
+	{'FP0',10},
+	{'FP1',10},
+	{'FP2',10},
+	{'FP3',10},
+	{'FP4',10},
+	{'FP5',10},
+	{'FP6',10},
+	{'FP7',10},
+	{'R8D',4},
+	{'R8W',2},
+	{'R8B',1},
+	{'R9D',4},
+	{'R9W',2},
+	{'R9B',1},
+	{'SIL',1},
+	{'DIL',1},
+	{'BPL',1},
+	{'SPL',1},
+	{'R8',8},
+	{'R9',8},
+	{'AX',2},
+	{'AL',1},
+	{'AH',1},
+	{'BX',2},
+	{'BL',1},
+	{'BH',1},
+	{'CX',2},
+	{'CL',1},
+	{'CH',1},
+	{'DX',2},
+	{'DL',1},
+	{'DH',1},
+	{'SI',2},
+	{'DI',2},
+	{'BP',2},
+	{'SP',2},
+	{'IP',2}
 }
 
 registers['disp_aob']={
@@ -708,6 +723,21 @@ local function tprint(tbl, indent)
   print('\n')
 end
 
+local function deepcopy(orig)
+	local orig_type = type(orig)
+	local copy
+	if orig_type == 'table' then
+		copy = {}
+		for orig_key, orig_value in next, orig, nil do
+			copy[deepcopy(orig_key)] = deepcopy(orig_value)
+		end
+		setmetatable(copy, deepcopy(getmetatable(orig)))
+	else -- number, string, boolean, etc
+		copy = orig
+	end
+	return copy
+end
+
 local count=0
 local instRep=nil
 local hits={}
@@ -810,49 +840,80 @@ local function get_substring_tbl(t, strt, ed)
 	return table.concat(ss,'')
 end
 
+local function strPatCeption(s,t)
+	local str, stt
+	local tys=type(s)
+	if tys=='string' then
+		str=s
+		stt=string_arr(str)
+	elseif tys=='table' then
+		str=table.concat(s,'')
+		stt=s
+	end
+	
+	local fnds={}
+	for i=1, #t do
+		local ti=t[i]
+		local fnd_i={'',{},{}}
+		
+		if i==1 then
+			local fa,fb=string.find(str,ti)
+			if fa==nil then
+				break
+			else
+				for j=fa, fb do
+					table.insert(fnd_i[2],stt[j])
+					table.insert(fnd_i[3],j)
+				end
+				fnd_i[1]=table.concat(fnd_i[2],'')
+				table.insert(fnds,fnd_i)
+			end
+		else
+			local lst=i-1
+			local flst=fnds[lst]
+			local flst_st=flst[3][1]
+			local fa,fb=string.find(flst[1],ti)
+			if fa==nil then
+				break
+			else
+				for j=fa, fb do
+					local j2=flst_st+j-1
+					table.insert(fnd_i[2],stt[j2])
+					table.insert(fnd_i[3],j2)
+				end
+				fnd_i[1]=table.concat(fnd_i[2],'')
+				table.insert(fnds,fnd_i)
+		end
+		end
+	end
+	return fnds
+end
+
 local function getAccessed(instruction)
 	local t={}
 	local instruction_arr=string_arr(instruction)
-	
-	local mtc="%[%s*[^%]]+%s*%]" -- [...]
-	local mtc2="%[%s*([^%]]+)%s*%]" -- [(...)]
+	local instruction_arr_run=deepcopy(instruction_arr)
 
-	local c=1
-	local brk=false
-	while brk==false do
-		  local fa,fb=string.find(instruction,mtc,c)
-		  if fa~=nil then
-			local curr=get_substring_tbl(instruction_arr, fa, fb)
-			local og_fa=fa
-			local og_fb=fb
-			fa,fb=string.find(curr,mtc2,1)
-			 if fa~=nil then
-				local l_fa, l_fb=og_fa+1, og_fb-1
-				local a=string_match(curr,mtc2)
-				table.insert(t,{ a, curr, { l_fa, l_fb} })
-				c=og_fb+1
+	local mtc='%[%s*[^%]]+%s*%]' -- [...]
+	local mtc2='[^%[%]]+' -- [(...)]
+	local pts={'byte%s+ptr%s*'..mtc,'dword%s+ptr%s*'..mtc,'qword%s+ptr%s*'..mtc,'word%s+ptr%s*'..mtc,mtc}
+	local ptsz={1,4,8,2,0}
+	for i=1, #pts do
+		local pi=pts[i]
+		local sf=strPatCeption(instruction_arr_run,{pi,mtc,mtc2})
+		if #sf>0 then
+			local sf1=sf[1]
+            local sf3=sf[3]
+			local sf3_3=sf3[3]
+			local cpos=sf1[3]
+			for j=1, #cpos do
+				instruction_arr_run[ cpos[j] ]=' ' -- REPLACE WITH SPACES!
 			end
-		  else
-			  brk=true
-		  end
-	end
-
-	return t -- { { --[[ just the bracket contents ]] }, { --[[ full syntax "[...]" ]] }, {start, end} }
-end
-
-local function deepcopy(orig)
-	local orig_type = type(orig)
-	local copy
-	if orig_type == 'table' then
-		copy = {}
-		for orig_key, orig_value in next, orig, nil do
-			copy[deepcopy(orig_key)] = deepcopy(orig_value)
+			table.insert(t,{  sf3[1], sf[2][1], { sf3_3[1], sf3_3[#sf3_3]},sf1[1],ptsz[i] })
 		end
-		setmetatable(copy, deepcopy(getmetatable(orig)))
-	else -- number, string, boolean, etc
-		copy = orig
 	end
-	return copy
+
+	return t -- {  --[[ just the bracket contents (string) ]] , { --[[ full syntax "[...]" string ]] }, {start, end}, ptr size syntax, ptr size }
 end
 
 local function attach(a,c,s,n)
@@ -903,6 +964,7 @@ local function attach(a,c,s,n)
 	currTraceDss={}
 	present_r_last_lookup={}
 	present_m_last_lookup={}
+	present_mem_last_lookup={}
 	mri_skip=false
 	mri_isCall=true
 	mrc_retAdr=nil
@@ -1711,11 +1773,13 @@ local function onBp()
 					local present_r={}
 					local present_r_lookup={}
 					
+					local maxRegSize=0
 					for i=1, #registers['list_regs'] do
 						local regs_pos={}
 						if string.find(s,'%u')~=nil then
 							local fnd=false
-							local ri=registers['list_regs'][i] --check for presence of register
+							local lri=registers['list_regs'][i] --check for presence of register
+							local ri=lri[1] --check for presence of register
 							local ri_fnd=ri
 							local ri_alt=registers['alt_names'][ri]
 							local ri_pos=str_allPosPlain(s,ri)
@@ -1739,6 +1803,10 @@ local function onBp()
 							if  fnd==true then
 								local rgs=registers['regs'][ri]
 								local arg_n=registers['regs_args'][ri]
+								local mxr=lri[2]
+								if mxr>maxRegSize then
+									maxRegSize=mxr
+								end
 								local rg={}
 								if arg_n~=nil then
 									rg=registers['get_regs'][ri](registers['regs'][arg_n])
@@ -1799,17 +1867,28 @@ local function onBp()
 						rk=og_present_r[k]
 						present_r_last_lookup[ rk[1] ]=rk
 					end
-					
+
+					local present_mem={}
+					local present_mem_lookup={}
 					
 					local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 					--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-					local asc=getAccessed(instruction) -- get memory "[...]	" syntax matches
+					local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
 					local m_acc={}
 					local reffed_instruction=instruction
 					local accessed_addrs={}
-
+					local maxPtrSize=0
+					
+					for i=1, #asc do -- get max ptr size
+							local bz=asc[i][5]
+							if bz>maxPtrSize then
+								maxPtrSize=bz
+							end
+					end
+					
 					for i=1, #asc do
 						local ai=asc_nr[i]
+						local ais=asc[i]
 						local sa=string_arr(s)
 						local c=1
 						local mtc_hex="%x+"
@@ -1854,6 +1933,24 @@ local function onBp()
 						if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then				
 							local rx=string.format('%X',r)
 							table.insert(accessed_addrs,rx)
+							local bz=ais[5]
+							if bz==0 then -- No attached size
+								if maxRegSize==0 then
+									if maxPtrSize==0 then
+										bz=1 -- No attached size, no max register size, no max ptr size
+									else
+										bz=maxPtrSize -- No attached size, no max register size, a max ptr size
+									end
+								else -- No attached size, a max register size
+									bz=maxRegSize
+								end
+							end
+							local byt=readBytes(r,bz,true)
+							if byt~=nil then
+								local raat={rx,r,bz,byt} -- {hex address, decmal address, ptr size, byte table}
+								present_mem_lookup[rx]=raat
+								table.insert(present_mem,raat)
+							end
 							local fstx=asc[i][2]
 							local brkt=asc[i][1]
 							-- [2]= { --[[ full syntax "[...]" ]] }
@@ -1867,6 +1964,35 @@ local function onBp()
 								end
 						end
 					end
+					
+					local og_present_mem=deepcopy(present_mem)
+					
+					for key, value in pairs(present_mem_last_lookup) do
+						if present_mem_lookup[key] == nil then			
+								local insrt=true
+								local rd=value[2]
+								local bzm=value[3]
+								local byt=readBytes(rd,bzm,true)
+								if byt~=nil then
+									if sameTable(value[4],byt)==true then
+										insrt=false
+									end
+								end
+							
+								if insrt==true then
+									table.insert(present_mem,{key,rd,bzm,byt}) -- {hex address, decmal address, ptr size, (new) byte table}
+								end
+						end
+					end
+					present_mem_last_lookup={}
+					
+					local prm=#present_mem
+					
+					for k=1, #og_present_mem do
+						mk=og_present_mem[k]
+						present_mem_last_lookup[ mk[1] ]=mk
+					end
+					
 								local a = getNameFromAddress(address) or ''
 								local pa=''
 								if a=='' then
@@ -1878,9 +2004,9 @@ local function onBp()
 								end
 
 								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_instruction)
+								local regs_mem_tbl={}
 								
 								if prl>0 then
-									local regs_tbl={}
 									for i=1, prl do
 										local pi=present_r[i]
 										local dsp=''
@@ -1889,9 +2015,21 @@ local function onBp()
 										else
 											dsp='='..pi[2]['hex']
 										end
-										table.insert(regs_tbl,pi[1]..dsp)
+										table.insert(regs_mem_tbl,pi[1]..dsp)
 									end
-									local regs_str=table.concat(regs_tbl,', ')
+								end
+								
+								if prm>0 then
+									for i=1, prm do
+										local pi=present_mem[i]
+										local aoby= table.concat(tableToAOB(pi[4])['aob'],' ')
+										local dsp=string.format('[%s] = {%s}',pi[1],aoby)
+										table.insert(regs_mem_tbl,dsp)
+									end
+								end
+								
+								if #regs_mem_tbl>0 then
+									local regs_str=table.concat(regs_mem_tbl,', ')
 									prinfo=prinfo..'\t( '..regs_str..' )'
 								end
 								
@@ -2001,6 +2139,7 @@ local function condBp(a, c, b, f)
 	
 	first=true
 	present_r_last_lookup={}
+	present_mem_last_lookup={}
 	present_m_last_lookup={}
 	condBpProg=true
 	debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
@@ -2122,7 +2261,7 @@ local function onCondBp()
 		local regs_pos={}
 		if string.find(s,'%u')~=nil then
 			local fnd=false
-			local ri=registers['list_regs'][i] --check for presence of register
+			local ri=registers['list_regs'][i][1] --check for presence of register
 			local ri_fnd=ri
 			local ri_alt=registers['alt_names'][ri]
 			local ri_pos=str_allPosPlain(s,ri)
@@ -2730,7 +2869,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 		local regs_pos={}
 		if string.find(s,'%u')~=nil then
 			local fnd=false
-			local ri=registers['list_regs'][i] --check for presence of register
+			local ri=registers['list_regs'][i][1] --check for presence of register
 			local ri_fnd=ri
 			local ri_alt=registers['alt_names'][ri]
 			local ri_pos=str_allPosPlain(s,ri)
