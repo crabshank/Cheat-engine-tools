@@ -311,7 +311,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
  
 * **litePrint(fileName)** -> **fileName** is a (full path to a) file name (use double backslashes instead on single ones), where the last trace captured by "traceCount.lite(…)" will be saved; if unspecified or nil, the trace will be printed to the console.
 
-* **condBp( a, c )** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. if **c** is a table, and element of c is a table, then all strings inside that table will be instruction patterns which will be compared against the instruction.
+* **condBp( a, c, s --[[Optional]] )** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. if **c** is a table, and element of c is a table, then all strings inside that table will be instruction patterns which will be compared against the instruction. **s** is the same as in "traceCount.attach(…)".
 
 This method breaks when a register in an instruction, or one changed by an instruction, matches any AOB string or number in **c**.
 
