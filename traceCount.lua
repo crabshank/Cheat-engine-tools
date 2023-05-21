@@ -754,10 +754,15 @@ local trace_info=''
 local forceSave=''
 local sio=''
 local traceModules={}
+local condTraceModules={}
 
 local mri_skip=false
 local mri_isCall=true
 local mrc_retAdr=nil
+
+local mri_skipCond=false
+local mri_isCallCond=true
+local mrc_retAdrCond=nil
 
 local liteAddr=0
 local liteAbp={}
@@ -2081,7 +2086,7 @@ local function onBp()
 	end
 end
 
-local function condBp(a, c)
+local function condBp(a, c, s)
 
 	local ta={}
 	local typa=type(a)
@@ -2125,6 +2130,38 @@ local function condBp(a, c)
 		tc.num={c}
 	end
 	condBpVals=tc
+
+
+	mri_skipCond=false
+	mri_isCallCond=true
+	mrc_retAdrCond=nil
+	
+	local tys=type(s)
+	condTraceModules={}
+	if tys=='table' or tys=='string' then
+		local lms={}
+		if tys=='table' then 
+			for k=1, #s do
+				lms[ s[k] ]=true
+			end
+		else
+			lms[s]=true
+		end
+	
+		local modulesTable=enumModules()
+		for i,v in pairs(modulesTable) do
+			if lms[v.Name]==true then
+				local sz=getModuleSize(v.Name)
+				local tm={
+					['Size']=sz,
+					['Name']=v.Name,
+					['lastByte']=v.Address+sz-1,
+					['Address']=v.Address
+				}
+				table.insert(condTraceModules,tm)
+			end 
+		end
+	end
 	
 	first=true
 	present_r_last_lookup={}
@@ -2210,23 +2247,60 @@ local function onCondBp()
 			ai1=condBpAddr[1][1]
 			ai1_hx=condBpAddr[1][2]
 		end
-		if #condBpAddr>1 and RIP==ai1 then
-			print('Breakpoint at ' .. ai1_hx .. ' hit!')
-			debug_removeBreakpoint(ai1)
-			table.remove(condBpAddr,1)
-			debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
-			debug_continueFromBreakpoint(co_run)
-		else
-				if first ==true then
-					debug_removeBreakpoint(ai1)
-					first=false
-					print('Breakpoint at ' .. ai1_hx .. ' hit!')
-				end
+		if RIP==ai1 then
+			if #condBpAddr>1 then
+				print('Breakpoint at ' .. ai1_hx .. ' hit!')
+				debug_removeBreakpoint(ai1)
+				table.remove(condBpAddr,1)
+				debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
+				debug_continueFromBreakpoint(co_run)
+			else
+					if first ==true then
+						debug_removeBreakpoint(ai1)
+						first=false
+						print('Breakpoint at ' .. ai1_hx .. ' hit!')
+					end
+		end
 	end
+	local runToRet=false
 	local breakHere={false,''}
 	local RIPx=string.format('%X',RIP)
 	local dst = disassemble(RIP)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
+	
+	
+				if #condTraceModules>0 then
+						if mri_skipCond==true then
+							debug_removeBreakpoint(mrc_retAdrCond)
+							mri_skipCond=false
+						end
+						
+						if mri_isCallCond==true then
+							local outOfModules=true
+								for j=1, #condTraceModules do
+									local jm=condTraceModules[j]
+									if RIP>=jm.Address and RIP<=jm.lastByte then
+										outOfModules=false
+										break
+									end
+								end
+								
+							if outOfModules==true then
+								mrc_retAdrCond=readQword(RSP)
+								runToRet=true
+								mri_skipCond=true
+								debug_setBreakpoint(mrc_retAdrCond, 1, bptExecute)
+							else
+								mrc_retAdrCond=nil
+								mri_skipCond=false
+							end
+						end
+						
+						mri_isCallCond=false
+						if string.find(instruction,'^%s*call%s+')~=nil then
+							mri_isCallCond=true
+						end
+				end
 	
 					local cvp=#condBpVals.opc
 					if cvp>0 then
@@ -2572,12 +2646,16 @@ end
 					
 						print(prinfo)
 						
-						if breakHere[3]~=nil then
+					if breakHere[3]~=nil then
 							getMemoryViewForm().HexadecimalView.address=breakHere[3]
 						end
 						return 1
 					else
-						debug_continueFromBreakpoint(co_stepinto)
+						if runToRet==true then
+								debug_continueFromBreakpoint(co_run)
+						else
+							debug_continueFromBreakpoint(co_stepinto)
+						end
 					end
 		
 end
