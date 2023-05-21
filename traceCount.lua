@@ -10,8 +10,6 @@ local string_match=string.match
 local condBpProg=false
 local condBpAddr={}
 local condBpVals={['str']={},['num']={},['opc']={}}
-local condBp_bk=0
-local condBp_fw=0
 
 local present_r_last_lookup={}
 local present_m_last_lookup={}
@@ -2083,16 +2081,7 @@ local function onBp()
 	end
 end
 
-local function condBp(a, c, b, f)
-	condBp_bk=0
-	condBp_fw=0
-	if b~=nil then
-		condBp_bk=b
-	end
-	
-	if f~=nil then
-		condBp_fw=f
-	end
+local function condBp(a, c)
 
 	local ta={}
 	local typa=type(a)
@@ -2256,12 +2245,14 @@ local function onCondBp()
 	--local sd=instruction_r -- substitute register names for their decimals
 	local present_r={}
 	local present_r_lookup={}
+	local maxRegSize=0
 	
 	for i=1, #registers['list_regs'] do
 		local regs_pos={}
 		if string.find(s,'%u')~=nil then
 			local fnd=false
-			local ri=registers['list_regs'][i][1] --check for presence of register
+			lri=registers['list_regs'][i] --check for presence of register
+			local ri=lri[1]
 			local ri_fnd=ri
 			local ri_alt=registers['alt_names'][ri]
 			local ri_pos=str_allPosPlain(s,ri)
@@ -2285,6 +2276,10 @@ local function onCondBp()
 			if  fnd==true then
 				local rgs=registers['regs'][ri]
 				local arg_n=registers['regs_args'][ri]
+				local mxr=lri[2]
+				if mxr>maxRegSize then
+					maxRegSize=mxr
+				end
 				local rg={}
 				if arg_n~=nil then
 					rg=registers['get_regs'][ri](registers['regs'][arg_n])
@@ -2379,18 +2374,27 @@ local function onCondBp()
 		chkMem[key]=value
 		chkMem_last[key]=value
 	end
+	
 	present_m_last_lookup={}
-	
-	
-	
+
 		--print('HIT!')
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
 		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
 		local reffed_instruction=instruction
+		
+		local maxPtrSize=0
+
+		for i=1, #asc do -- get max ptr size
+				local bz=asc[i][5]
+				if bz>maxPtrSize then
+					maxPtrSize=bz
+				end
+		end
 
 		for i=1, #asc do
 			local ai=asc_nr[i]
+			local ais=asc[i]
 			local sa=string_arr(s)
 			local c=1
 			local mtc_hex="%x+"
@@ -2433,10 +2437,19 @@ local function onCondBp()
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then				
 				local rx=string.format('%X',r)
-				local rb=r+condBp_bk
-				local rf=r+condBp_fw
-				local rg=rf-rb+1
-				local byt=readBytes(rb,rg,true)
+				local bz=ais[5]
+				if bz==0 then -- No attached size
+					if maxRegSize==0 then
+						if maxPtrSize==0 then
+							bz=1 -- No attached size, no max register size, no max ptr size
+						else
+							bz=maxPtrSize -- No attached size, no max register size, a max ptr size
+						end
+					else -- No attached size, a max register size
+						bz=maxRegSize
+					end
+				end
+				local byt=readBytes(r,bz,true)
 				local tb={r,rx,nil,nil,r}
 				
 				if type(byt) =='table' then
