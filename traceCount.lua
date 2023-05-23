@@ -2104,7 +2104,6 @@ local function onBp()
 						end
 					end
 					hits_deref[ix]['count']=hit_no
-					print(count)
 					local cnt_done=false
 					if count~=nil and count<1 then
 						cnt_done=true
