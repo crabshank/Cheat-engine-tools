@@ -1029,7 +1029,7 @@ local function get_disassembly(hi,i)
 	local h=hp[hisx]
 
 	local hdi=hits_deref[i]
-	local hdi_dss=hdi['disassembly']
+	--local hdi_dss=hdi['disassembly']
 	local hdi_dss_m=hdi['mem_accesses']
 	local extraField = hdi_dss_m['extraField']
 	local instruction = hdi_dss_m['instruction']
@@ -1518,22 +1518,34 @@ local function onLiteBp()
 			table.remove(liteAbp,1)
 			debug_setBreakpoint(liteAbp[1][1], 1, bptExecute)
 			debug_continueFromBreakpoint(co_run)
-			return 0
 		else
 				if liteFirst==true then
-					debug_removeBreakpoint(ai1)
-					liteFirst=false
-					print('Breakpoint at ' .. ai1_hx .. ' hit!')
+					if RIP==ai1 then
+						debug_removeBreakpoint(ai1)
+						liteFirst=false
+						print('Breakpoint at ' .. ai1_hx .. ' hit!')
+					else
+						if debug_isBroken()==true then
+							jumpMem(RIP)
+						end
+						return
+					end
 				end
 				
 				liteTrace[liteIx]=RIP
 				liteIx=liteIx+1
+				
 				local rpt=false
 				if (liteRep~=nil and RIP==liteRep and liteIx>2) then
 					rpt=true
 				end
 				
-				if ( (liteCount~=nil and liteIx>liteCount) or rpt==true ) then -- End of trace!
+				local cnt_done=false
+					if liteCount~=nil and liteIx>liteCount then
+						cnt_done=true
+					end
+				
+				if ( cnt_done==true or rpt==true ) then -- End of trace!
 					liteBp=false
 					if rpt==true then
 						print('Specified address ( '..string.format('%X',RIP)..' ) executed!\n')
@@ -1543,9 +1555,19 @@ local function onLiteBp()
 					liteFormattedCount=getLiteCounts()
 					debug_continueFromBreakpoint(co_run)
 				elseif liteStepOver==true then --Step over or Out of specified modules
-					debug_continueFromBreakpoint(co_stepover)
+					if cnt_done==true then
+						liteFormattedCount=getLiteCounts()
+						debug_continueFromBreakpoint(co_run)
+					else
+						debug_continueFromBreakpoint(co_stepover)
+					end
 				else
-					debug_continueFromBreakpoint(co_stepinto)
+					if cnt_done==true then
+						liteFormattedCount=getLiteCounts()
+						debug_continueFromBreakpoint(co_run)
+					else
+						debug_continueFromBreakpoint(co_stepinto)
+					end
 				end
 				
 		end
@@ -1698,13 +1720,22 @@ local function onBp()
 			debug_setBreakpoint(abp[1][1], 1, bptExecute)
 			debug_continueFromBreakpoint(co_run)
 		else
+				
+				
 				local runToRet=false
 				local rpt=false
 				
 				if first==true then
-					debug_removeBreakpoint(ai1)
-					first=false
-					print('Breakpoint at ' .. ai1_hx .. ' hit!')
+					if RIP==ai1 then
+						debug_removeBreakpoint(ai1)
+						first=false
+						print('Breakpoint at ' .. ai1_hx .. ' hit!')
+					else
+						if debug_isBroken()==true then
+							jumpMem(RIP)
+						end
+						return
+					end
 				else
 					if (instRep~=nil and RIP==instRep) then
 						rpt=true
@@ -1712,7 +1743,7 @@ local function onBp()
 				end
 				
 
-			if ( count~=nil and count>=1 ) then
+			if ( count~=nil --[[and count>=1]] ) then
 				count=count-1
 				--if count>=0 then
 					table.insert(hits,RIP)
@@ -1766,7 +1797,7 @@ local function onBp()
 						end
 				end
 					
-					deref['disassembly']={instruction,address,bytes,extraField}
+					--deref['disassembly']={instruction,address,bytes,extraField}
 					--Get accessed memory addresses
 
 					-- EXTRA SUB-REGISTERS
@@ -2065,17 +2096,30 @@ local function onBp()
 						end
 					end
 					hits_deref[ix]['count']=hit_no
+					print(count)
+					local cnt_done=false
+					if count~=nil and count<1 then
+						cnt_done=true
+					end
+					
 					if rpt==false then
-						if runToRet==true then
+						if cnt_done==true then
+							debug_continueFromBreakpoint(co_run)
+							runStop(true)
+						elseif runToRet==true then
 								debug_continueFromBreakpoint(co_run)
 						elseif stp==1 then
-							debug_continueFromBreakpoint(co_stepover)
+							if cnt_done==false then
+								debug_continueFromBreakpoint(co_stepover)
+							end
 						else
-							debug_continueFromBreakpoint(co_stepinto)
+							if cnt_done==false then
+								debug_continueFromBreakpoint(co_stepinto)
+							end
 						end
 					end
 				end
-				if ( rpt==true or ( count~=nil and count<1 ) ) then -- End of trace!
+				if ( rpt==true or cnt_done==true ) then -- End of trace!
 					debug_continueFromBreakpoint(co_run)
 					if rpt==true then
 						runStop(false,string.format('%X',instRep))
@@ -2247,8 +2291,7 @@ local function onCondBp()
 			ai1=condBpAddr[1][1]
 			ai1_hx=condBpAddr[1][2]
 		end
-		if RIP==ai1 then
-			if #condBpAddr>1 then
+			if #condBpAddr>1 and RIP==ai1 then
 				print('Breakpoint at ' .. ai1_hx .. ' hit!')
 				debug_removeBreakpoint(ai1)
 				table.remove(condBpAddr,1)
@@ -2256,12 +2299,18 @@ local function onCondBp()
 				debug_continueFromBreakpoint(co_run)
 			else
 					if first ==true then
-						debug_removeBreakpoint(ai1)
-						first=false
-						print('Breakpoint at ' .. ai1_hx .. ' hit!')
+						if RIP==ai1 then
+							debug_removeBreakpoint(ai1)
+							first=false
+							print('Breakpoint at ' .. ai1_hx .. ' hit!')
+						else
+							if debug_isBroken()==true then
+								jumpMem(RIP)
+							end
+							return
+						end
 					end
 		end
-	end
 	local runToRet=false
 	local breakHere={false,''}
 	local RIPx=string.format('%X',RIP)
@@ -3086,7 +3135,9 @@ function debugger_onBreakpoint()
 	if liteBp==true then
 		onLiteBp()
 	elseif prog==false and condBpProg==false then
-		jumpMem(RIP)
+		if debug_isBroken()==true then
+			jumpMem(RIP)
+		end
 	elseif condBpProg==true then
 		onCondBp()
 	elseif prog==true then
