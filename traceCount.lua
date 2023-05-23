@@ -9,7 +9,7 @@ local string_match=string.match
 
 local condBpProg=false
 local condBpAddr={}
-local condBpVals={['str']={},['num']={},['opc']={}}
+local condBpVals={['str']={},['num']={},['opc']={},['bf']=nil}
 
 local present_r_last_lookup={}
 local present_m_last_lookup={}
@@ -1222,6 +1222,14 @@ local function saveTrace()
 end
 
 local function runStop(b,adx)
+	if condBpProg==true then
+		condBpProg=false
+		if condBpAddr~= nil and #condBpAddr>0 then
+			debug_removeBreakpoint(condBpAddr[1][1])
+			condBpAddr={}
+		end
+		return
+	end
 	condBpProg=false
 	prog=false
 	liteBp=false
@@ -2130,7 +2138,16 @@ local function onBp()
 	end
 end
 
-local function condBp(a, c, s)
+local function condBp(a, c, s, bf)
+	local tc={['str']={},['num']={},['opc']={},['bf']=nil}
+		
+	if type(bf)=='number' then
+		if bf<0 then
+			print('bf, if specified, must be >=0!')
+			return
+		end
+		tc.bf=bf
+	end
 
 	local ta={}
 	local typa=type(a)
@@ -2151,7 +2168,6 @@ local function condBp(a, c, s)
 	end
 	condBpAddr=ta
 		
-	local tc={['str']={},['num']={},['opc']={}}
 	local typc=type(c)
 	if typc=='table' then
 			for i=1, #c do
@@ -2175,14 +2191,13 @@ local function condBp(a, c, s)
 	end
 	condBpVals=tc
 
-
 	mri_skipCond=false
 	mri_isCallCond=true
 	mrc_retAdrCond=nil
 	
 	local tys=type(s)
 	condTraceModules={}
-	if tys=='table' or tys=='string' then
+	if tys=='table' or (tys=='string' and s~='') then
 		local lms={}
 		if tys=='table' then 
 			for k=1, #s do
@@ -2291,65 +2306,24 @@ local function onCondBp()
 			ai1=condBpAddr[1][1]
 			ai1_hx=condBpAddr[1][2]
 		end
-			if #condBpAddr>1 and RIP==ai1 then
-				print('Breakpoint at ' .. ai1_hx .. ' hit!')
-				debug_removeBreakpoint(ai1)
-				table.remove(condBpAddr,1)
-				debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
-				debug_continueFromBreakpoint(co_run)
-			else
-					if first ==true then
-						if RIP==ai1 then
-							debug_removeBreakpoint(ai1)
-							first=false
-							print('Breakpoint at ' .. ai1_hx .. ' hit!')
-						else
-							if debug_isBroken()==true then
-								jumpMem(RIP)
-							end
-							return
-						end
-					end
-		end
-	local runToRet=false
+		if #condBpAddr>1 and RIP==ai1 then
+			print('Breakpoint at ' .. ai1_hx .. ' hit!')
+			debug_removeBreakpoint(ai1)
+			table.remove(condBpAddr,1)
+			debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
+			debug_continueFromBreakpoint(co_run)
+		else
+				if first ==true then
+					debug_removeBreakpoint(ai1)
+					condBpAddr={}
+					first=false
+					print('Breakpoint at ' .. ai1_hx .. ' hit!')
+				end
+	end
 	local breakHere={false,''}
 	local RIPx=string.format('%X',RIP)
 	local dst = disassemble(RIP)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	
-	
-				if #condTraceModules>0 then
-						if mri_skipCond==true then
-							debug_removeBreakpoint(mrc_retAdrCond)
-							mri_skipCond=false
-						end
-						
-						if mri_isCallCond==true then
-							local outOfModules=true
-								for j=1, #condTraceModules do
-									local jm=condTraceModules[j]
-									if RIP>=jm.Address and RIP<=jm.lastByte then
-										outOfModules=false
-										break
-									end
-								end
-								
-							if outOfModules==true then
-								mrc_retAdrCond=readQword(RSP)
-								runToRet=true
-								mri_skipCond=true
-								debug_setBreakpoint(mrc_retAdrCond, 1, bptExecute)
-							else
-								mrc_retAdrCond=nil
-								mri_skipCond=false
-							end
-						end
-						
-						mri_isCallCond=false
-						if string.find(instruction,'^%s*call%s+')~=nil then
-							mri_isCallCond=true
-						end
-				end
 	
 					local cvp=#condBpVals.opc
 					if cvp>0 then
@@ -2572,10 +2546,22 @@ local function onCondBp()
 						bz=maxRegSize
 					end
 				end
-				local byt=readBytes(r,bz,true)
-				local tb={r,rx,nil,nil,r}
 				
-				if type(byt) =='table' then
+				local adr=r
+				if condBpVals.bf~=nil then
+					adr=adr-condBpVals.bf -- origin address
+					if adr<0 then
+						adr=0
+					end
+					bz=math.max(bz,condBpVals.bf) -- no. of bytes to read
+					local upl=adr+bz-1
+					bz=upl-adr+1
+				end
+
+				local byt=readBytes(adr,bz,true)			
+				local tb={r,rx,nil,nil}
+				
+				if byt~=nil then
 								local aobt={}
 								local aobt_le={}
 								local bytl=#byt
@@ -2606,6 +2592,7 @@ local function onCondBp()
 				end
 			end
 		end
+
 if breakHere[1]~=true then
 	for key, v in pairs(chkMem) do
 		if breakHere[1]==true then
@@ -2662,6 +2649,7 @@ if breakHere[1]~=true then
 	end
 end
 
+
 					if breakHere[1]==true then
 						local a = getNameFromAddress(address) or ''
 						local pa=''
@@ -2695,16 +2683,12 @@ end
 					
 						print(prinfo)
 						
-					if breakHere[3]~=nil then
+						if breakHere[3]~=nil then
 							getMemoryViewForm().HexadecimalView.address=breakHere[3]
 						end
 						return 1
 					else
-						if runToRet==true then
-								debug_continueFromBreakpoint(co_run)
-						else
-							debug_continueFromBreakpoint(co_stepinto)
-						end
+						debug_continueFromBreakpoint(co_stepinto)
 					end
 		
 end
