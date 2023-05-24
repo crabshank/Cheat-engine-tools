@@ -1792,7 +1792,7 @@ local function onBp()
 								mrc_retAdr=readQword(RSP)
 								runToRet=true
 								mri_skip=true
-								if count~=nil and count>=1 then
+								if rpt==true or (count~=nil and count>=1) then
 									debug_setBreakpoint(mrc_retAdr, 1, bptExecute)
 								end
 								
