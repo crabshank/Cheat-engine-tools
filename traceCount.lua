@@ -1753,6 +1753,14 @@ local function onBp()
 
 			if ( count~=nil --[[and count>=1]] ) then
 				count=count-1
+				local cnt_done=false
+					if count~=nil and count<1 then
+						cnt_done=true
+					end
+					local endTrace=false
+					if rpt==true or cnt_done==true then
+						endTrace=true
+					end
 				--if count>=0 then
 					table.insert(hits,RIP)
 
@@ -1792,7 +1800,7 @@ local function onBp()
 								mrc_retAdr=readQword(RSP)
 								runToRet=true
 								mri_skip=true
-								if rpt==true or (count~=nil and count>=1) then
+								if endTrace==false then
 									debug_setBreakpoint(mrc_retAdr, 1, bptExecute)
 								end
 								
@@ -2107,10 +2115,6 @@ local function onBp()
 						end
 					end
 					hits_deref[ix]['count']=hit_no
-					local cnt_done=false
-					if count~=nil and count<1 then
-						cnt_done=true
-					end
 					
 					if rpt==false then
 						if cnt_done==true then
@@ -2129,7 +2133,7 @@ local function onBp()
 						end
 					end
 				end
-				if ( rpt==true or cnt_done==true ) then -- End of trace!
+				if endTrace==true then -- End of trace!
 					debug_continueFromBreakpoint(co_run)
 					if rpt==true then
 						runStop(false,string.format('%X',instRep))
