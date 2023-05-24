@@ -2552,7 +2552,7 @@ local function onCondBp()
 						bz=maxRegSize
 					end
 				end
-				
+				local og_bz=bz
 				local adr=r
 				if condBpVals.bf~=nil then
 					adr=adr-condBpVals.bf -- origin address
@@ -2564,26 +2564,34 @@ local function onCondBp()
 					bz=upl-adr+1
 				end
 
-				local byt=readBytes(adr,bz,true)			
+				local byt=readBytes(adr,bz,true)	
+				local bytn=readBytes(r,og_bz,true)	
 				local tb={r,rx,nil,nil}
 				
 				if byt~=nil then
 								local aobt={}
-								local aobt_le={}
 								local bytl=#byt
 								for j=1, bytl do
 									table.insert(aobt,string.format('%X',byt[j]))
 								end
-								
-								for j=bytl, 1, -1 do
-									table.insert(aobt_le,string.format('%X',byt[j]))
-								end
 								local aob=table.concat(aobt, ' ')
+								chk=true
+								tb[4]=aob
+				end
+				
+					if bytn~=nil then
+								local bytln=#bytn
+								local aobt_le={}
+								for j=bytln, 1, -1 do
+									table.insert(aobt_le,string.format('%X',bytn[j]))
+								end
+						
 								local dec = tonumber(table.concat(aobt_le, ''),16)
 								chk=true
 								tb[3]=dec
-								tb[4]=aob
-				end
+					end
+							
+				
 				present_m_last_lookup[rx]=tb -- all present addresses added
 				chkMem[rx]=tb
 				local fstx=asc[i][2]
