@@ -991,7 +991,7 @@ local function attach(a,c,s,n)
 	if s==true then
 		stp=1
 		sio='step over'
-	elseif tys=='string' or tys=='table' then
+	elseif (tys=='string' and s~='') or (tys=='table' and #s>0) then
 		stp=2
 		sio='step into specified modules'
 		
@@ -1487,6 +1487,20 @@ local function getLiteCounts()
 	for i=1, #liteTrace do
 		local ti=liteTrace[i]
 		local tix=string.format('%X',ti)
+		local isJump=false
+		if i>1 then
+			local last_addr=liteTrace[i-1]
+			local nextInst_addr=getInstructionSize(last_addr)+last_addr
+			print(last_addr..' - '..ti..' - '..nextInst_addr)
+			if ti~=nextInst_addr then
+				isJump=true
+			end
+			print(tostring(isJump))
+		end
+		local out_str=''
+		if isJump==true then
+			out_str='\n'
+		end
 		if countInts[tix]==nil then
 			local dsti=disassemble(ti)
 			local extraField, instruction, bytes, address=splitDisassembledString(dsti)
@@ -1505,11 +1519,13 @@ local function getLiteCounts()
 			end
 
 			countInts[tix]={dsti,1,prinfo}
-			out[i]=string.format('#%d (1):\t%s',i,prinfo)
+			out_str=out_str..'#%d (1):\t%s'
+			out[i]=string.format(out_str,i,prinfo)
 		else
 			local cit=countInts[tix]
 			countInts[tix][2]=cit[2]+1
-			out[i]=string.format('#%d (%d):\t%s',i,cit[2],cit[3])
+			out_str=out_str..'#%d (%d):\t%s'
+			out[i]=string.format(out_str,i,cit[2],cit[3])
 		end
 	end
 	return out
