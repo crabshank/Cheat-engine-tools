@@ -524,9 +524,13 @@ local function end_stack(bck,lst)
 				end
 				d=1
 			end
+
+			print('Partial stack results:\n')
 			jumpRes.stack=rets_lookup_order
+			jumpRes.sel='stack'
 			for i=b,a,d do
-				tprint(rets_lookup_order[i],xcld)
+				local ri=rets_lookup_order[i]
+				tprint(ri,xcld,1)
 			end
 			
 		else
