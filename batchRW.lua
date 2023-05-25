@@ -7,6 +7,50 @@ local rets_lookup={}
 local rets_lookup_order={}
 local modulesList={}
 local bps={}
+local xcld={['Decimal address']=true}
+local jumpRes={['sel']='',['rsp']={},['stack']={}}
+
+local function tprint(tbl, lookup_exclude, indent)
+  local function do_tprint(tbl, lookup_exclude, indent) -- https://gist.github.com/ripter/4270799
+	if indent==nil then indent = 0 end
+	for k, v in pairs(tbl) do
+		local tyk=type(k)
+		local passthrough=false
+		if tyk~='string' then
+			passthrough=true
+		elseif type(lookup_exclude)=='table' then
+			if lookup_exclude[k]==nil then
+				passthrough=true
+			end
+		else
+			passthrough=true
+		end
+		if passthrough==true then
+			  formatting = string.rep("	", indent) .. k .. ": "
+			  local typv=type(v)
+			  if typv == "table" then
+				print(formatting)
+				do_tprint(v, lookup_exclude, indent+1)
+			  elseif typv == 'boolean' then
+				print(formatting .. tostring(v))
+			  elseif typv == 'string' then
+				local la, lb=string.find(v, "\n")
+				if la==nil then
+					print(formatting .. '"'.. v ..'"')
+				else
+					print(formatting .. '[['.. v ..']]')
+				end
+			  elseif typv == 'function' then
+				print(formatting .. 'function () … end')
+			  else
+				print(formatting .. v)
+			  end
+		end
+	end
+  end
+  do_tprint(tbl, lookup_exclude, indent)
+  print('\n')
+end
 
 local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
 	for i=1, #list do
@@ -480,18 +524,21 @@ local function end_stack(bck,lst)
 				end
 				d=1
 			end
+			jumpRes.stack=rets_lookup_order
 			for i=b,a,d do
-				tprint(rets_lookup_order[i])
+				tprint(rets_lookup_order[i],xcld)
 			end
 			
 		else
 			local t2={}
 			for key, value in pairs(rets_lookup) do
-				table.insert(t2,{['Symbolic address']=value['Symbolic_address'],['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
+				table.insert(t2,{['Symbolic address']=value['Symbolic_address'],['Decimal address']=value['address_dec'],['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
 			end
 			
 			table.sort( t2, function(a, b) return a['Count'] > b['Count'] end )
-				tprint(t2)
+				jumpRes.stack=t2
+				jumpRes.sel='stack'
+				tprint(t2,xcld)
 		end
 	end
 end
@@ -552,6 +599,7 @@ local function stack(d,b,m,f)
 				 local orderRet={}
 				 orderRet['# ']=#rets_lookup_order+1
 				 orderRet['Address']=dx
+				 orderRet['Decimal address']=rd
 				 orderRet['Symbolic address']=isRet[2]
 				 orderRet['RSP+… ']=fsx
 				 table.insert(rets_lookup_order,orderRet)
@@ -623,6 +671,7 @@ local function rsp(b,m,f)
 						rets_lookup2[dx]['Count']=1
 						--rets_lookup2[dx]['address_dec']=rd
 						rets_lookup2[dx]['Address']=dx
+						rets_lookup2[dx]['Decimal address']=rd
 						rets_lookup2[dx]['Symbolic address']=isRet[2]
 						rets_lookup2[dx]['RSP+… ']={}
 						rets_lookup2[dx]['RSP+… '][fsx]=1
@@ -640,7 +689,31 @@ local function rsp(b,m,f)
 			fc=fc+1
 			fsx=string.format('%X',fc)
 		end
-	tprint(rets_lookup2)
+	jumpRes.rsp=rets_lookup2
+	jumpRes.sel='rsp'
+	tprint(rets_lookup2,xcld)
+end
+
+local function jump(i,s)
+	
+	local stk=jumpRes['sel']
+	if s==true then
+		stk='rsp'
+	elseif s==false then
+		stk='stack'
+	end
+	local js=jumpRes[stk]
+	if js==nil then
+		print(stk..' does not exist!')
+	else
+		
+		local j=js[i]
+		if j==nil then
+			print(string.format('For %s: i must be between %d and %d',stk,1,#js))
+		else
+			getMemoryViewForm().DisassemblerView.TopAddress=j['Decimal address']
+		end
+	end
 end
 
 batchRW={
@@ -653,5 +726,6 @@ batchRW={
 	keepCol=keepCol,
 	end_stack=end_stack,
 	stack=stack,
-	rsp=rsp
+	rsp=rsp,
+	jump=jump
 }
