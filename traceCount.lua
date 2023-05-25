@@ -16,7 +16,7 @@ local present_m_last_lookup={}
 local present_mem_last_lookup={}
 local currModule=nil
 local currRegsAddr=nil
-local jmpFirst=false
+local jmpFirst=falseo
 
 local function sameTable(t1,t2)
 	local t1l, t2l= #t1, #t2
@@ -983,16 +983,18 @@ local function attach(a,c,s,n)
 		instRep=nil
 		count=c
 	end
-
+	
+	local tys=type(s)
+	
 	stp=0
 	sio='step into'
 	if s==true then
 		stp=1
 		sio='step over'
-	else
+	elseif tys=='string' or tys=='table' then
 		stp=2
 		sio='step into specified modules'
-		local tys=type(s)
+		
 		traceModules={}
 		local lms={}
 		if tys=='string' then 
@@ -1112,6 +1114,9 @@ local function printHits(m,p,n,l,f,t)
 		
 		for i=f, t do
 			local stn2i=stnp[i]
+			if stn2i['isJump']==true then
+				table.insert(pt,'\n')
+			end
 			table.insert(pt,'#')
 			table.insert(pt,i)
 			table.insert(pt,' (')
@@ -2101,7 +2106,15 @@ local function onBp()
 
 					deref['mem_accesses']=m_acc --List of accessed memory addresses; table of tables
 					deref['dec_address']=RIP
-					local ix=#hits
+					deref['isJump']=false
+					
+					if ix>1 then
+						local last_addr=hits[ix-1]
+						local nextInst_addr=getInstructionSize(last_addr)+last_addr
+						if RIP~=nextInst_addr then
+							deref['isJump']=true
+						end
+					end
 					hits_deref[ix]=deref -- hits_deref is a table of tables (full local scope)
 					deref['index']=ix
 					local cnt=1
