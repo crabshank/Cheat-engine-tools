@@ -2144,10 +2144,13 @@ local function onBp()
 					end
 					hits_deref[ix]['count']=hit_no
 					
+					local ended=false
+					
 					if rpt==false then
 						if cnt_done==true then
 							debug_continueFromBreakpoint(co_run)
 							runStop(true)
+							ended=true
 						elseif runToRet==true then
 								debug_continueFromBreakpoint(co_run)
 						elseif stp==1 then
@@ -2159,15 +2162,14 @@ local function onBp()
 								debug_continueFromBreakpoint(co_stepinto)
 							end
 						end
-					end
+					elseif endTrace==true and ended==false then -- End of trace!
+						debug_continueFromBreakpoint(co_run)
+						if rpt==true then
+							runStop(false,string.format('%X',instRep))
+						else
+							runStop(true)
+						end	
 				end
-				if endTrace==true then -- End of trace!
-					debug_continueFromBreakpoint(co_run)
-					if rpt==true then
-						runStop(false,string.format('%X',instRep))
-					else
-						runStop(true)
-					end	
 				end
 	end
 end
