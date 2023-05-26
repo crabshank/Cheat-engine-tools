@@ -1491,11 +1491,9 @@ local function getLiteCounts()
 		if i>1 then
 			local last_addr=liteTrace[i-1]
 			local nextInst_addr=getInstructionSize(last_addr)+last_addr
-			print(last_addr..' - '..ti..' - '..nextInst_addr)
 			if ti~=nextInst_addr then
 				isJump=true
 			end
-			print(tostring(isJump))
 		end
 		local out_str=''
 		if isJump==true then
@@ -1753,6 +1751,7 @@ local function onBp()
 				
 				local runToRet=false
 				local rpt=false
+				local endTrace=false
 				
 				if first==true then
 					if RIP==ai1 then
@@ -1771,14 +1770,14 @@ local function onBp()
 					end
 				end
 				
-
-			if ( count~=nil --[[and count>=1]] ) then
+			
+			if count~=nil then
 				count=count-1
 				local cnt_done=false
-					if count~=nil and count<1 then
+					if count<1 then
 						cnt_done=true
 					end
-					local endTrace=false
+					
 					if rpt==true or cnt_done==true then
 						endTrace=true
 					end
