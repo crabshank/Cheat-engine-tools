@@ -1529,6 +1529,415 @@ local function getLiteCounts()
 	return out
 end
 
+local function jumpMem(addr)
+	debug_getContext(true)
+	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
+	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
+	registers['regs']['R10G']=getSubRegDecBytes(string.format("%X", R10), 8,1,8)
+	registers['regs']['R11G']=getSubRegDecBytes(string.format("%X", R11), 8,1,8)
+	registers['regs']['R12G']=getSubRegDecBytes(string.format("%X", R12), 8,1,8)
+	registers['regs']['R13G']=getSubRegDecBytes(string.format("%X", R13), 8,1,8)
+	registers['regs']['R14G']=getSubRegDecBytes(string.format("%X", R14), 8,1,8)
+	registers['regs']['R15G']=getSubRegDecBytes(string.format("%X", R15), 8,1,8)
+	registers['regs']['RAX']=RAX
+	registers['regs']['RBX']=RBX
+	registers['regs']['RCX']=RCX
+	registers['regs']['RDX']=RDX
+	registers['regs']['RDI']=RDI
+	registers['regs']['RSI']=RSI
+	registers['regs']['RBP']=RBP
+	registers['regs']['RSP']=RSP
+	registers['regs']['R8']=R8
+	registers['regs']['R9']=R9
+	registers['regs']['R10']=R10
+	registers['regs']['R11']=R11
+	registers['regs']['R12']=R12
+	registers['regs']['R13']=R13
+	registers['regs']['R14']=R14
+	registers['regs']['R15']=R15
+	registers['regs']['EAX']=EAX
+	registers['regs']['EBX']=EBX
+	registers['regs']['ECX']=ECX
+	registers['regs']['EDX']=EDX
+	registers['regs']['EDI']=EDI
+	registers['regs']['ESI']=ESI
+	registers['regs']['EBP']=EBP
+	registers['regs']['ESP']=ESP
+	registers['regs']['EIP']=EIP
+	registers['regs']['ESI_X']=getSubRegDecBytes(string.format("%X", ESI), 4,1,4)
+	registers['regs']['EDI_X']=getSubRegDecBytes(string.format("%X", EDI), 4,1,4)
+	registers['regs']['EBP_X']=getSubRegDecBytes(string.format("%X", EBP), 4,1,4)
+	registers['regs']['ESP_X']=getSubRegDecBytes(string.format("%X", ESP), 4,1,4)
+	registers['regs']['EIP_X']=getSubRegDecBytes(string.format("%X", EIP), 4,1,4)
+	registers['regs']['EAX_X']=getSubRegDecBytes(string.format("%X", EAX), 4,1,4)
+	registers['regs']['EBX_X']=getSubRegDecBytes(string.format("%X", EBX), 4,1,4)
+	registers['regs']['ECX_X']=getSubRegDecBytes(string.format("%X", ECX), 4,1,4)
+	registers['regs']['EDX_X']=getSubRegDecBytes(string.format("%X", EDX), 4,1,4)
+	registers['regs']['FP0']=FP0
+	registers['regs']['FP1']=FP1
+	registers['regs']['FP2']=FP2
+	registers['regs']['FP3']=FP3
+	registers['regs']['FP4']=FP4
+	registers['regs']['FP5']=FP5
+	registers['regs']['FP6']=FP6
+	registers['regs']['FP7']=FP7
+	registers['regs']['XMM0']=XMM0
+	registers['regs']['XMM1']=XMM1
+	registers['regs']['XMM2']=XMM2
+	registers['regs']['XMM3']=XMM3
+	registers['regs']['XMM4']=XMM4
+	registers['regs']['XMM5']=XMM5
+	registers['regs']['XMM6']=XMM6
+	registers['regs']['XMM7']=XMM7
+	registers['regs']['XMM8']=XMM8
+	registers['regs']['XMM9']=XMM9
+	registers['regs']['XMM10']=XMM10
+	registers['regs']['XMM11']=XMM11
+	registers['regs']['XMM12']=XMM12
+	registers['regs']['XMM13']=XMM13
+	registers['regs']['XMM14']=XMM14
+	registers['regs']['XMM15']=XMM15
+
+
+	local dst = disassemble(addr)
+	local extraField, instruction, bytes, address = splitDisassembledString(dst)
+	
+				local mn=getModuleName(addr)
+			if currModule==nil then
+				currRegsAddr=alloc('traceCount_registers',1024,mn)
+				currModule=mn
+			elseif mn~=currModule then
+				dealloc('traceCount_registers')
+				currRegsAddr=alloc('traceCount_registers',1024,mn)
+				currModule=mn
+			end
+			
+			local rc=0
+
+			writeString(currRegsAddr+( rc ),'RAX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RAX)
+			rc=rc+12
+			
+			writeString(currRegsAddr+( rc ),'RBX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RBX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RCX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RCX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RDX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RDX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RBX')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBX)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RBP')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RBP)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RSI')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RSI)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RDI')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RDI)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'RSP')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),RSP)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'R8')
+			writeBytes(currRegsAddr+( rc+2),0,0)
+			writeQword(currRegsAddr+( rc+4 ),RSI)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'R9')
+			writeBytes(currRegsAddr+( rc+2),0,0)
+			writeQword(currRegsAddr+( rc+4 ),R9)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R10')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R10)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R11')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R11)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R12')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R12)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R13')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R13)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R14')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R14)
+			rc=rc+12
+					
+			writeString(currRegsAddr+( rc ),'R15')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeQword(currRegsAddr+( rc+4 ),R15)
+			rc=rc+12
+						
+			writeString(currRegsAddr+( rc ),'XMM0')
+			writeBytes(currRegsAddr+( rc+4 ),XMM0)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM1')
+			writeBytes(currRegsAddr+( rc+4 ),XMM1)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM2')
+			writeBytes(currRegsAddr+( rc+4 ),XMM2)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM3')
+			writeBytes(currRegsAddr+( rc+4 ),XMM3)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM4')
+			writeBytes(currRegsAddr+( rc+4 ),XMM4)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM5')
+			writeBytes(currRegsAddr+( rc+4 ),XMM5)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM6')
+			writeBytes(currRegsAddr+( rc+4 ),XMM6)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM7')
+			writeBytes(currRegsAddr+( rc+4 ),XMM7)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM8')
+			writeBytes(currRegsAddr+( rc+4 ),XMM8)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM9')
+			writeBytes(currRegsAddr+( rc+4 ),XMM9)
+			rc=rc+20
+			
+			writeString(currRegsAddr+( rc ),'XMM10')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM10)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM11')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM11)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM12')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM12)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM13')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM13)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM14')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM14)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'XMM15')
+			writeBytes(currRegsAddr+( rc+5),0,0,0)
+			writeBytes(currRegsAddr+( rc+8 ),XMM15)
+			rc=rc+24
+			
+			writeString(currRegsAddr+( rc ),'FP0')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP0)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP1')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP1)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP1')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP1)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP2')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP2)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP3')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP3)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP4')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP4)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP5')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP5)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP6')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP6)
+			rc=rc+14
+			
+			writeString(currRegsAddr+( rc ),'FP7')
+			writeBytes(currRegsAddr+( rc+3),0)
+			writeBytes(currRegsAddr+( rc+4 ),FP7)
+			rc=rc+14
+				
+local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+	local s=instruction_r  -- substitute register names for their spaces
+	--local sd=instruction_r -- substitute register names for their decimals
+	local present_r={}
+	local present_r_lookup={}
+	
+	for i=1, #registers['list_regs'] do
+		local regs_pos={}
+		if string.find(s,'%u')~=nil then
+			local fnd=false
+			local ri=registers['list_regs'][i][1] --check for presence of register
+			local ri_fnd=ri
+			local ri_alt=registers['alt_names'][ri]
+			local ri_pos=str_allPosPlain(s,ri)
+			if ri~=ri_alt and ri_alt~=nil then
+				local ri_alt_pos=str_allPosPlain(s,ri_alt)
+				if #ri_pos>0 then
+					fnd=true
+					regs_pos=ri_pos
+				elseif  #ri_alt_pos>0 then
+					fnd=true
+					ri_fnd=ri_alt
+					regs_pos=ri_alt_pos
+				end
+			else
+				if #ri_pos>0 then
+					fnd=true
+					regs_pos=ri_pos
+				end
+			end
+			
+			if  fnd==true then
+				local rgs=registers['regs'][ri]
+				local arg_n=registers['regs_args'][ri]
+				local rg={}
+				if arg_n~=nil then
+					rg=registers['get_regs'][ri](registers['regs'][arg_n])
+				else
+					rg['dec']=rgs
+					local hx=string.format('%X',rgs)
+					rg['hex']=hx
+				end
+				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
+				table.insert(present_r,{ri_fnd,rg,regs_pos,ri})
+				present_r_lookup[ri_fnd]={#present_r,rg,regs_pos}
+			end
+		else
+			break
+		end
+	end
+		local prl=#present_r
+		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
+		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
+		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
+		local ascl=#asc
+		ja=ascl
+		jb=1
+		jc=-1
+		if jmpFirst==true then
+			local ja=1
+			local jb=ascl
+			local jc=1
+		end
+		local memJmp=false
+		for i=ja, jb, jc do
+			local ai=asc_nr[i]
+			local sa=string_arr(s)
+			local c=1
+			local mtc_hex="%x+"
+			local brk=false
+			while brk==false do
+				  local fa,fb=string.find(s,mtc_hex,c)
+				  if fa~=nil then
+					 sa[fa]='0x'..sa[fa]
+					 c=fb+1
+				  else
+					  brk=true
+				  end
+			end
+			
+			local ai3=ai[3]  -- pos of syntax
+			local ai3_1, ai3_2=ai3[1], ai3[2]
+			
+			for k=1, prl do --reintroduce decimal registers
+				rk=present_r[k]
+				local rkd=rk[2]['dec']
+				local rk3=rk[3]
+				local rk3l=#rk3
+				if rkd~=nil and #rk3>0 then	
+				for m=1, rk3l do
+						rk3_1=rk3[m][1]
+						rk3_2=rk3[m][2]
+						if rk3_1>=ai3_1 and rk3_2<=ai3_2 then
+							sa[ rk3_1 ]=rkd
+								for j=rk3_1+1, rk3_2 do
+									sa[j]=''
+								end
+						end
+					end
+				end
+			end
+
+			local a_dec=get_substring_tbl(sa,ai3_1,ai3_2)
+			local func= load("return ".. a_dec)
+			local b,r=pcall(func) -- r=calculated address
+
+			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
+                hx.address=r
+				memJmp=true
+				break
+			end
+		end
+
+		if memJmp==false then
+			hx.address=currRegsAddr
+		end
+		return
+end
+
 local function onLiteBp()
 
 	debug_getContext()
@@ -2735,415 +3144,6 @@ end
 						debug_continueFromBreakpoint(co_stepinto)
 					end
 		
-end
-
-local function jumpMem(addr)
-	debug_getContext(true)
-	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
-	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
-	registers['regs']['R10G']=getSubRegDecBytes(string.format("%X", R10), 8,1,8)
-	registers['regs']['R11G']=getSubRegDecBytes(string.format("%X", R11), 8,1,8)
-	registers['regs']['R12G']=getSubRegDecBytes(string.format("%X", R12), 8,1,8)
-	registers['regs']['R13G']=getSubRegDecBytes(string.format("%X", R13), 8,1,8)
-	registers['regs']['R14G']=getSubRegDecBytes(string.format("%X", R14), 8,1,8)
-	registers['regs']['R15G']=getSubRegDecBytes(string.format("%X", R15), 8,1,8)
-	registers['regs']['RAX']=RAX
-	registers['regs']['RBX']=RBX
-	registers['regs']['RCX']=RCX
-	registers['regs']['RDX']=RDX
-	registers['regs']['RDI']=RDI
-	registers['regs']['RSI']=RSI
-	registers['regs']['RBP']=RBP
-	registers['regs']['RSP']=RSP
-	registers['regs']['R8']=R8
-	registers['regs']['R9']=R9
-	registers['regs']['R10']=R10
-	registers['regs']['R11']=R11
-	registers['regs']['R12']=R12
-	registers['regs']['R13']=R13
-	registers['regs']['R14']=R14
-	registers['regs']['R15']=R15
-	registers['regs']['EAX']=EAX
-	registers['regs']['EBX']=EBX
-	registers['regs']['ECX']=ECX
-	registers['regs']['EDX']=EDX
-	registers['regs']['EDI']=EDI
-	registers['regs']['ESI']=ESI
-	registers['regs']['EBP']=EBP
-	registers['regs']['ESP']=ESP
-	registers['regs']['EIP']=EIP
-	registers['regs']['ESI_X']=getSubRegDecBytes(string.format("%X", ESI), 4,1,4)
-	registers['regs']['EDI_X']=getSubRegDecBytes(string.format("%X", EDI), 4,1,4)
-	registers['regs']['EBP_X']=getSubRegDecBytes(string.format("%X", EBP), 4,1,4)
-	registers['regs']['ESP_X']=getSubRegDecBytes(string.format("%X", ESP), 4,1,4)
-	registers['regs']['EIP_X']=getSubRegDecBytes(string.format("%X", EIP), 4,1,4)
-	registers['regs']['EAX_X']=getSubRegDecBytes(string.format("%X", EAX), 4,1,4)
-	registers['regs']['EBX_X']=getSubRegDecBytes(string.format("%X", EBX), 4,1,4)
-	registers['regs']['ECX_X']=getSubRegDecBytes(string.format("%X", ECX), 4,1,4)
-	registers['regs']['EDX_X']=getSubRegDecBytes(string.format("%X", EDX), 4,1,4)
-	registers['regs']['FP0']=FP0
-	registers['regs']['FP1']=FP1
-	registers['regs']['FP2']=FP2
-	registers['regs']['FP3']=FP3
-	registers['regs']['FP4']=FP4
-	registers['regs']['FP5']=FP5
-	registers['regs']['FP6']=FP6
-	registers['regs']['FP7']=FP7
-	registers['regs']['XMM0']=XMM0
-	registers['regs']['XMM1']=XMM1
-	registers['regs']['XMM2']=XMM2
-	registers['regs']['XMM3']=XMM3
-	registers['regs']['XMM4']=XMM4
-	registers['regs']['XMM5']=XMM5
-	registers['regs']['XMM6']=XMM6
-	registers['regs']['XMM7']=XMM7
-	registers['regs']['XMM8']=XMM8
-	registers['regs']['XMM9']=XMM9
-	registers['regs']['XMM10']=XMM10
-	registers['regs']['XMM11']=XMM11
-	registers['regs']['XMM12']=XMM12
-	registers['regs']['XMM13']=XMM13
-	registers['regs']['XMM14']=XMM14
-	registers['regs']['XMM15']=XMM15
-
-
-	local dst = disassemble(addr)
-	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	
-				local mn=getModuleName(addr)
-			if currModule==nil then
-				currRegsAddr=alloc('traceCount_registers',1024,mn)
-				currModule=mn
-			elseif mn~=currModule then
-				dealloc('traceCount_registers')
-				currRegsAddr=alloc('traceCount_registers',1024,mn)
-				currModule=mn
-			end
-			
-			local rc=0
-
-			writeString(currRegsAddr+( rc ),'RAX')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RAX)
-			rc=rc+12
-			
-			writeString(currRegsAddr+( rc ),'RBX')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RBX)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RBX')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RBX)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RCX')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RCX)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RDX')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RDX)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RBX')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RBX)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RBP')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RBP)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RSI')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RSI)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RDI')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RDI)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'RSP')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),RSP)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'R8')
-			writeBytes(currRegsAddr+( rc+2),0,0)
-			writeQword(currRegsAddr+( rc+4 ),RSI)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'R9')
-			writeBytes(currRegsAddr+( rc+2),0,0)
-			writeQword(currRegsAddr+( rc+4 ),R9)
-			rc=rc+12
-					
-			writeString(currRegsAddr+( rc ),'R10')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),R10)
-			rc=rc+12
-					
-			writeString(currRegsAddr+( rc ),'R11')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),R11)
-			rc=rc+12
-					
-			writeString(currRegsAddr+( rc ),'R12')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),R12)
-			rc=rc+12
-					
-			writeString(currRegsAddr+( rc ),'R13')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),R13)
-			rc=rc+12
-					
-			writeString(currRegsAddr+( rc ),'R14')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),R14)
-			rc=rc+12
-					
-			writeString(currRegsAddr+( rc ),'R15')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeQword(currRegsAddr+( rc+4 ),R15)
-			rc=rc+12
-						
-			writeString(currRegsAddr+( rc ),'XMM0')
-			writeBytes(currRegsAddr+( rc+4 ),XMM0)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM1')
-			writeBytes(currRegsAddr+( rc+4 ),XMM1)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM2')
-			writeBytes(currRegsAddr+( rc+4 ),XMM2)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM3')
-			writeBytes(currRegsAddr+( rc+4 ),XMM3)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM4')
-			writeBytes(currRegsAddr+( rc+4 ),XMM4)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM5')
-			writeBytes(currRegsAddr+( rc+4 ),XMM5)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM6')
-			writeBytes(currRegsAddr+( rc+4 ),XMM6)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM7')
-			writeBytes(currRegsAddr+( rc+4 ),XMM7)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM8')
-			writeBytes(currRegsAddr+( rc+4 ),XMM8)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM9')
-			writeBytes(currRegsAddr+( rc+4 ),XMM9)
-			rc=rc+20
-			
-			writeString(currRegsAddr+( rc ),'XMM10')
-			writeBytes(currRegsAddr+( rc+5),0,0,0)
-			writeBytes(currRegsAddr+( rc+8 ),XMM10)
-			rc=rc+24
-			
-			writeString(currRegsAddr+( rc ),'XMM11')
-			writeBytes(currRegsAddr+( rc+5),0,0,0)
-			writeBytes(currRegsAddr+( rc+8 ),XMM11)
-			rc=rc+24
-			
-			writeString(currRegsAddr+( rc ),'XMM12')
-			writeBytes(currRegsAddr+( rc+5),0,0,0)
-			writeBytes(currRegsAddr+( rc+8 ),XMM12)
-			rc=rc+24
-			
-			writeString(currRegsAddr+( rc ),'XMM13')
-			writeBytes(currRegsAddr+( rc+5),0,0,0)
-			writeBytes(currRegsAddr+( rc+8 ),XMM13)
-			rc=rc+24
-			
-			writeString(currRegsAddr+( rc ),'XMM14')
-			writeBytes(currRegsAddr+( rc+5),0,0,0)
-			writeBytes(currRegsAddr+( rc+8 ),XMM14)
-			rc=rc+24
-			
-			writeString(currRegsAddr+( rc ),'XMM15')
-			writeBytes(currRegsAddr+( rc+5),0,0,0)
-			writeBytes(currRegsAddr+( rc+8 ),XMM15)
-			rc=rc+24
-			
-			writeString(currRegsAddr+( rc ),'FP0')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP0)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP1')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP1)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP1')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP1)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP2')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP2)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP3')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP3)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP4')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP4)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP5')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP5)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP6')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP6)
-			rc=rc+14
-			
-			writeString(currRegsAddr+( rc ),'FP7')
-			writeBytes(currRegsAddr+( rc+3),0)
-			writeBytes(currRegsAddr+( rc+4 ),FP7)
-			rc=rc+14
-				
-local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
-	local s=instruction_r  -- substitute register names for their spaces
-	--local sd=instruction_r -- substitute register names for their decimals
-	local present_r={}
-	local present_r_lookup={}
-	
-	for i=1, #registers['list_regs'] do
-		local regs_pos={}
-		if string.find(s,'%u')~=nil then
-			local fnd=false
-			local ri=registers['list_regs'][i][1] --check for presence of register
-			local ri_fnd=ri
-			local ri_alt=registers['alt_names'][ri]
-			local ri_pos=str_allPosPlain(s,ri)
-			if ri~=ri_alt and ri_alt~=nil then
-				local ri_alt_pos=str_allPosPlain(s,ri_alt)
-				if #ri_pos>0 then
-					fnd=true
-					regs_pos=ri_pos
-				elseif  #ri_alt_pos>0 then
-					fnd=true
-					ri_fnd=ri_alt
-					regs_pos=ri_alt_pos
-				end
-			else
-				if #ri_pos>0 then
-					fnd=true
-					regs_pos=ri_pos
-				end
-			end
-			
-			if  fnd==true then
-				local rgs=registers['regs'][ri]
-				local arg_n=registers['regs_args'][ri]
-				local rg={}
-				if arg_n~=nil then
-					rg=registers['get_regs'][ri](registers['regs'][arg_n])
-				else
-					rg['dec']=rgs
-					local hx=string.format('%X',rgs)
-					rg['hex']=hx
-				end
-				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
-				table.insert(present_r,{ri_fnd,rg,regs_pos,ri})
-				present_r_lookup[ri_fnd]={#present_r,rg,regs_pos}
-			end
-		else
-			break
-		end
-	end
-		local prl=#present_r
-		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
-		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
-		local ascl=#asc
-		ja=ascl
-		jb=1
-		jc=-1
-		if jmpFirst==true then
-			local ja=1
-			local jb=ascl
-			local jc=1
-		end
-		local memJmp=false
-		for i=ja, jb, jc do
-			local ai=asc_nr[i]
-			local sa=string_arr(s)
-			local c=1
-			local mtc_hex="%x+"
-			local brk=false
-			while brk==false do
-				  local fa,fb=string.find(s,mtc_hex,c)
-				  if fa~=nil then
-					 sa[fa]='0x'..sa[fa]
-					 c=fb+1
-				  else
-					  brk=true
-				  end
-			end
-			
-			local ai3=ai[3]  -- pos of syntax
-			local ai3_1, ai3_2=ai3[1], ai3[2]
-			
-			for k=1, prl do --reintroduce decimal registers
-				rk=present_r[k]
-				local rkd=rk[2]['dec']
-				local rk3=rk[3]
-				local rk3l=#rk3
-				if rkd~=nil and #rk3>0 then	
-				for m=1, rk3l do
-						rk3_1=rk3[m][1]
-						rk3_2=rk3[m][2]
-						if rk3_1>=ai3_1 and rk3_2<=ai3_2 then
-							sa[ rk3_1 ]=rkd
-								for j=rk3_1+1, rk3_2 do
-									sa[j]=''
-								end
-						end
-					end
-				end
-			end
-
-			local a_dec=get_substring_tbl(sa,ai3_1,ai3_2)
-			local func= load("return ".. a_dec)
-			local b,r=pcall(func) -- r=calculated address
-
-			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
-                hx.address=r
-				memJmp=true
-				break
-			end
-		end
-
-		if memJmp==false then
-			hx.address=currRegsAddr
-		end
-		return
 end
 
 hv.OnSelectionChange=function (sender, address, address2)
