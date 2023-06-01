@@ -899,7 +899,7 @@ local function getAccessed(instruction)
 
 	local mtc='%[%s*[^%]]+%s*%]' -- [...]
 	local mtc2='[^%[%]]+' -- [(...)]
-	local pts={'byte%s+ptr%s*'..mtc,'dword%s+ptr%s*'..mtc,'qword%s+ptr%s*'..mtc,'word%s+ptr%s*'..mtc,mtc}
+	local pts={'byte%s+ptr[^%[]*'..mtc,'dword%s+ptr[^%[]*'..mtc,'qword%s+ptr[^%[]*'..mtc,'word%s+ptr[^%[]*'..mtc,mtc}
 	local ptsz={1,4,8,2,0}
 	for i=1, #pts do
 		local pi=pts[i]
