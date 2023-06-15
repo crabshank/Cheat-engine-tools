@@ -287,6 +287,105 @@ opcode_inj[script_ref]=nil
 
   **ref**: dump all the data stored at `opcode_inj[ref]` a.k.a. `opcode_inj[vars.script_ref]` go to the LUA engine to see the dump.
 
+To add a batch script for addresses with similar instructions, see the below example (for `movzx register,byte ptr[…]` instructions):
+```
+local function alloc(name,size,module_name,val)
+  local scrp=''
+  if module_name==nil or module_name=='' then
+      scrp=string.format('alloc(%s,%d)\nregistersymbol(%s)',name,size,name)
+  else
+      scrp=string.format('alloc(%s,%d,%s)\nregistersymbol(%s)',name,size,module_name,name)
+  end
+  if val~=nil then
+     scrp=scrp..string.format('\n%s:\n%s',name,val)
+  end
+  autoAssemble(scrp)
+  return getAddress(name)
+end
+
+local ads={0xDEADBEEF,0xDEADBEEG} --Address list to mod
+local al = getAddressList()
+
+local templ={} -- Separate string parts to avoid clashes with escaped characters in string.format
+
+templ[1]=[[{$lua}
+if syntaxcheck then return end
+local vars={}
+local module_names=''
+--OPTIONAL (Add as named element of 'vars' table to use in '${...}' notation)
+local suffix='_batch'..%d --[1]
+local parts={}
+
+vars.post={}]]
+
+templ[2]=[[vars.post[1]=function() -- get reg
+	local ogi=vars['og_instruction'] --og instruction
+	vars['reg']=string.match(ogi,'^%s*mov.*%s+([^,]+)%s*,')
+	vars['mov']=string.match(ogi,'^%s*(mov.*)%s+[^,]+%s*,')
+	return vars --IMPORTANT!
+end
+
+--COMPULSORY
+local newmem_name='newmem'..suffix
+local newmem_size='$1000'
+local script_ref=suffix --  opcode_inj[vars.script_ref] stores vars
+local inj_name='INJECT'..suffix
+local pattern='']]
+
+templ[3]=[[local aobs=0x%X --Address [2]
+local lookahead_n=32
+
+local inj_script=%s //[3]
+
+define(${inj_name},${address_string})
+    registersymbol(${inj_name})
+    alloc(${newmem_name}, ${newmem_size}, ${inj_name})
+
+	label(code)
+	label(return)
+
+	${newmem_name}:
+	code:
+	${overwritten}
+	${mov} ${reg}, byte ptr[modVal]
+    jmp return
+
+	${inj_name}:
+	  jmp ${newmem_name}
+	  ${post_jmp}
+	return:
+
+%s --[4]
+
+[ENABLE]
+opcode_inj.inject(script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pattern,aobs,lookahead_n,parts,module_names)
+
+[DISABLE]
+opcode_inj.disable(script_ref)
+opcode_inj[script_ref]=nil
+]]
+
+for i=0,#ads do
+  local rec = al.createMemoryRecord()
+  if i>0 then
+	local ad=ads[i]
+	local desc='template'..i
+	rec.setDescription(desc)
+	rec.Type=11
+	local sout={'',templ[2],''}
+	sout[1]=string.format(templ[1],i)
+	sout[3]=string.format(templ[3],ad,'[[',']]')
+	rec.script=table.concat(sout,'\n')
+  else --create 'modVal'
+	local desc='modVal'
+	rec.setDescription(desc)
+	local adrs=alloc(desc,1,'example.exe','db A')
+    	rec.Address=adrs
+	rec.Type=vtByte
+  end
+end
+```
+
 ## logpoint.lua
 
 #### Log specified registers at a breakpoint. Useful for shared instructions.
