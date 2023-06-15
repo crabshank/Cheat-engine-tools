@@ -255,7 +255,8 @@ opcode_inj.inject(script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pa
 
 [DISABLE]
 opcode_inj.disable(script_ref)
-opcode_inj[script_ref]=nil```
+opcode_inj[script_ref]=nil
+```
 
 * **nop(script_ref, inj_name, vars, pattern, aobs, module_names)** & **disable_nop(script_ref)**
 
