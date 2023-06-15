@@ -896,10 +896,11 @@ local function getAccessed(instruction)
 	local t={}
 	local instruction_arr=string_arr(instruction)
 	local instruction_arr_run=deepcopy(instruction_arr)
-
+	
+	local ptm='%s+ptr[^%[]*'
 	local mtc='%[%s*[^%]]+%s*%]' -- [...]
 	local mtc2='[^%[%]]+' -- [(...)]
-	local pts={'byte%s+ptr[^%[]*'..mtc,'dword%s+ptr[^%[]*'..mtc,'qword%s+ptr[^%[]*'..mtc,'word%s+ptr[^%[]*'..mtc,mtc}
+	local pts={'byte'..ptm..mtc,'dword'..ptm..mtc,'qword'..ptm..mtc,'word'..ptm..mtc,mtc}
 	local ptsz={1,4,8,2,0}
 	for i=1, #pts do
 		local pi=pts[i]
