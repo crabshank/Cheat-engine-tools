@@ -303,7 +303,7 @@ local function alloc(name,size,module_name,val)
   return getAddress(name)
 end
 
-local ads={0xDEADBEEF,0xDEADBEEG} --Address list to mod
+local ads={0xDEADBEEF,0xDEADBEED} --Address list to mod
 local al = getAddressList()
 
 local templ={} -- Separate string parts to avoid clashes with escaped characters in string.format
