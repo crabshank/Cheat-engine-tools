@@ -74,14 +74,18 @@ Example script:
 {$lua}
 if syntaxcheck then return end
 local vars={}
---OPTIONAL (Add as named element of 'vars' table to use in '$%s{...}' notation)
+--OPTIONAL (Add as named element of 'vars' table to use in '${...}' notation)
 local suffix='_5'
 vars.varis_1_n='mult'..suffix
-vars.varis_1_d='dd (float)1\ndd (float)1'
+
+local m1=1 -- mean
+local r1=0 -- range
+
+vars.varis_1_d='dd (float)'..m1..'\ndd (float)'..r1
 vars.varis_1_size=8   --(u +0, r +4, 0.5 +8, 1+C)
 
 local parts={{'[^%]]+',1,'localAddress'},{'%d+',1,'xreg_n'},{'xmm%d+',1,'x_reg'},{'mov.+',1,'mov_op'}}
-local module_names='FL_2023.exe'
+local module_names='PES2021.exe'
 vars.post={}
 
 vars.post[1]=function() --gives names "xmm~1" to "xmm~15" to all registers that are not 'x_reg'
@@ -97,22 +101,44 @@ vars.post[1]=function() --gives names "xmm~1" to "xmm~15" to all registers that 
 end
 
 -- token functions (below) run after ['post'] functions
-vars['push_xmm']=function(n) -- n, as all arguments used for token functions, is necessarily a string!
-    local s='sub rsp,10\nmovdqu [rsp], '
-    if n=='0' then
-		return s .. vars['x_reg']
-	else
-		return s .. vars['xmm~'..n]
-	end
+vars['push_xmm']=function(...) -- n, as all arguments used for token functions, is necessarily a string!
+  local n = select('#', ...) -- number of args
+  local s=16*n
+  local t={}
+  local p=string.format('sub rsp, %X',s)
+  table.insert(t,p)
+  local args = {...}
+  for _, v in pairs(args) do
+      s=s-16
+      local r=vars['xmm~'..v]
+      if v=='0' then
+	     r=vars['x_reg']
+      end
+      p=string.format('movdqu [rsp+%X],%s',s,r)
+      table.insert(t,p)
+  end
+  return table.concat(t,'\n')
 end
 
-vars['pop_xmm']=function(n) -- n, as all arguments used for token functions, is necessarily a string!
-    local s=',[rsp]\nadd rsp,10'
-    if n=='0' then
-		return 'movdqu '..vars['x_reg'] .. s
-	else
-		return 'movdqu '..vars['xmm~'..n] .. s
-	end
+vars['pop_xmm']=function(...) -- n, as all arguments used for token functions, is necessarily a string!
+  local n = select('#', ...) -- number of args
+  local s=16*n
+  local s_og=s
+  local t={}
+  local args = {...}
+  local p=''
+  for _, v in pairs(args) do
+      s=s-16
+      local r=vars['xmm~'..v]
+      if v=='0' then
+      	r=vars['x_reg']
+      end
+      p=string.format('movdqu %s,[rsp+%X]',r,s)
+      table.insert(t,p)
+  end
+  p=string.format('add rsp, %X',s_og)
+  table.insert(t,p)
+  return table.concat(t,'\n')
 end
 
 vars['stack_push']=function(n) -- n, as all arguments used for token functions, is necessarily a string!
@@ -159,12 +185,9 @@ local inj_script=[[
     imul rcx,rbx
     imul rcx,rax
     shr rcx,20 //ecx has the number
- ${push_xmm}(1)
-    ${push_xmm}(2)
-    ${push_xmm}(3)
-    ${push_xmm}(4)
-    ${push_xmm}(5)
+    ${push_xmm}(1,2,3,4,5)
     ${push_xmm}(0)
+
 
     cvtsi2ss ${x_reg}, rcx
     cvtss2sd ${x_reg}, ${x_reg}
@@ -212,11 +235,7 @@ local inj_script=[[
 
     ${pop_xmm}(0)
 	mulss ${x_reg},${xmm~4}
-    ${pop_xmm}(5)
-    ${pop_xmm}(4)
-    ${pop_xmm}(3)
-    ${pop_xmm}(2)
-    ${pop_xmm}(1)
+    ${pop_xmm}(1,2,3,4,5)
     pop rax
     pop rbx
     pop rcx
@@ -236,8 +255,7 @@ opcode_inj.inject(script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pa
 
 [DISABLE]
 opcode_inj.disable(script_ref)
-opcode_inj[script_ref]=nil
-```
+opcode_inj[script_ref]=nil```
 
 * **nop(script_ref, inj_name, vars, pattern, aobs, module_names)** & **disable_nop(script_ref)**
 
