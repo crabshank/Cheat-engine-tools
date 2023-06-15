@@ -287,7 +287,7 @@ opcode_inj[script_ref]=nil
 
   **ref**: dump all the data stored at `opcode_inj[ref]` a.k.a. `opcode_inj[vars.script_ref]` go to the LUA engine to see the dump.
 
-To add a batch script for addresses with similar instructions, see the below example (for `movzx register,byte ptr[…]` instructions):
+N.B. To add a batch script for addresses with similar instructions, see the below example (for `movzx register,byte ptr[…]` instructions):
 ```
 local function alloc(name,size,module_name,val)
   local scrp=''
