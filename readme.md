@@ -346,8 +346,8 @@ define(${inj_name},${address_string})
 
 	${newmem_name}:
 	code:
-	${overwritten}
 	${mov} ${reg}, byte ptr[modVal]
+	${overwritten}
     jmp return
 
 	${inj_name}:
