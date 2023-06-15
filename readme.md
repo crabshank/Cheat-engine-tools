@@ -369,6 +369,10 @@ for i=0,#ads do
   local rec = al.createMemoryRecord()
   if i>0 then
 	local ad=ads[i]
+	local typeAd=type(ad)
+	if typeAd=='string' then
+		ad=getAddress(ad)
+	end
 	local desc='template'..i
 	rec.setDescription(desc)
 	rec.Type=11
