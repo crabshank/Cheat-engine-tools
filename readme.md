@@ -289,7 +289,13 @@ opcode_inj[script_ref]=nil
 
 N.B. To add a batch script for addresses with similar instructions, see the below example (for `movzx register,byte ptr[…]` instructions):
 ```
+local function dealloc(name)
+  local scrp=string.format('dealloc(%s)\nunregistersymbol(%s)',name,name)
+  autoAssemble(scrp)
+end
+
 local function alloc(name,size,module_name,val)
+  dealloc(name)
   local scrp=''
   if module_name==nil or module_name=='' then
       scrp=string.format('alloc(%s,%d)\nregistersymbol(%s)',name,size,name)
