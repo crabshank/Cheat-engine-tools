@@ -2480,7 +2480,7 @@ local function onBp()
 										tml.ixs={string.format('#%d',ix)}
 										mem_accs_lookup[rxa]=tml
 									else
-										table.insert(mem_accs_lookup[rxa].ixs,ix)
+										table.insert(mem_accs_lookup[rxa].ixs,string.format('#%d',ix))
 									end
 								end
 							end
@@ -2527,7 +2527,7 @@ local function onBp()
 											tml.ixs={string.format('#%d',ix)}
 											mem_accs_lookup[rxa]=tml
 										else
-											table.insert(mem_accs_lookup[rxa].ixs,ix)
+											table.insert(mem_accs_lookup[rxa].ixs,string.format('#%d',ix))
 										end
 									end
 									
