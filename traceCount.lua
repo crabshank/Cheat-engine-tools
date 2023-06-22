@@ -740,6 +740,8 @@ local count=0
 local instRep=nil
 local hits={}
 local hits_lookup={}
+local mem_accs_lookup={}
+local mem_accs_sorted={}
 local hits_deref={}
 local hits_deref_lookup={}
 local currTraceDss={}
@@ -963,6 +965,8 @@ local function attach(a,c,s,n)
 	hits_lookup={}
 	hits_deref={}
 	hits_deref_lookup={}
+	mem_accs_lookup={}
+	mem_accs_sorted={}
 	hp={}
 	hpp={}
 	currTraceDss={}
@@ -1132,6 +1136,28 @@ local function printHits(m,p,n,l,f,t)
 			end
 			pt={}
 		end
+		
+		-- ADD MEMORY ACCESS INDEX
+		local ms=stn[10] --Sorted memory accesses
+		local msl=#ms --Sorted memory accesses
+		
+		if msl>0 then
+			for s=0, msl do
+				local ptct=''
+				if s==0 then
+					 ptct='\n\nMemory accesses index:'
+				else
+					local mss=ms[s]
+					 ptct=string.format('[ %s ]: %s',mss.hex,table.concat(mss.ixs,', '))
+				end
+				if pth~=nil then
+						pth:write(ptct..'\n')
+				else
+						print(ptct)
+				end
+			end
+		end
+		
 		if pth~=nil then
 				print('Trace saved!')
 		end
@@ -1216,7 +1242,16 @@ local function saveTrace()
 	for key, value in pairs(hpp_a) do
 		table.insert(hpp,value[1])
 	end
-
+	
+	
+	mem_accs_sorted={}
+	for key, value in pairs(mem_accs_lookup) do
+			table.insert(mem_accs_sorted,value)
+	end
+	if #mem_accs_sorted>0 then
+		table.sort( mem_accs_sorted, function(a, b) return a['dec'] < b['dec'] end ) -- Mem accesses table sorted (ascending);
+	end
+	
 	table.sort( hpp, function(a, b) return a['count'] < b['count'] end ) -- Converted results array now sorted by count (ascending);
 	local addr_hx=abp[1][2]
 	if count==hl then
@@ -1224,7 +1259,7 @@ local function saveTrace()
 	else
 		trace_info=addr_hx .. ', ' .. hl .. ' steps (' .. count .. ' specified),' .. sio
 	end
-	currTraceDss={hits, ds, hpp, trace_info, hp, hpp_a, hits_deref, hits_deref_lookup,hits_lookup}
+	currTraceDss={hits, ds, hpp, trace_info, hp, hpp_a, hits_deref, hits_deref_lookup,hits_lookup,mem_accs_sorted}
 end
 
 local function runStop(b,adx)
@@ -2433,6 +2468,21 @@ local function onBp()
 								local raat={rx,r,bz,byt} -- {hex address, decmal address, ptr size, byte table}
 								present_mem_lookup[rx]=raat
 								table.insert(present_mem,raat)
+								for x=r, r+bz-1 do
+									local rxa=rx
+									if x~=r then
+										rxa=string.format('%X',x)
+									end
+									if mem_accs_lookup[rxa]==nil then
+										local tml={}
+										tml.dec=x
+										tml.hex=rxa
+										tml.ixs={string.format('#%d',ix)}
+										mem_accs_lookup[rxa]=tml
+									else
+										table.insert(mem_accs_lookup[rxa].ixs,ix)
+									end
+								end
 							end
 							local fstx=asc[i][2]
 							local brkt=asc[i][1]
@@ -2464,6 +2514,23 @@ local function onBp()
 							
 								if insrt==true then
 									table.insert(present_mem,{key,rd,bzm,byt}) -- {hex address, decmal address, ptr size, (new) byte table}
+									
+									for x=rd, rd+bzm-1 do
+										local rxa=key
+										if x~=rd then
+											rxa=string.format('%X',x)
+										end
+										if mem_accs_lookup[rxa]==nil then
+											local tml={}
+											tml.dec=x
+											tml.hex=rxa
+											tml.ixs={string.format('#%d',ix)}
+											mem_accs_lookup[rxa]=tml
+										else
+											table.insert(mem_accs_lookup[rxa].ixs,ix)
+										end
+									end
+									
 								end
 						end
 					end
@@ -2532,7 +2599,7 @@ local function onBp()
 					deref['mem_accesses']=m_acc --List of accessed memory addresses; table of tables
 					deref['dec_address']=RIP
 					deref['isJump']=false
-					
+
 					if ix>1 then
 						local last_addr=hits[ix-1]
 						local nextInst_addr=getInstructionSize(last_addr)+last_addr
