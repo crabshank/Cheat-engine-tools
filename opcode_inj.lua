@@ -406,12 +406,58 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
       local fnd_it={}
 
       for i=1, #aob_tt do
-          local bi=aob_tt[i]
-          local aob_list=AOBScan(bi[1], "", 0)
-          local aob_count=aob_list.Count
+		local bi=aob_tt[i]
 
-          for j=1,aob_count do
-            local res=aob_list[j-1]
+		local aob_list={}
+
+		if module_names~=nil then
+			local mdn={}
+			local tmn=type(module_names)
+			if tmn=='string' then
+				mdn[1]=module_names
+			elseif tmn=='table' then
+				mdn=module_names
+			end
+
+			for m=1, #mdn do
+				local mdnm=mdn[m] -- module name
+
+				local boolf,adr=pcall(function ()
+					local addr=getAddress(mdnm)
+					return {addr,addr+getModuleSize(mdnm)-1}
+				end)
+
+				if boolf==true then -- SUCCESS (NO ERROR)!
+					local memscan = createMemScan()
+					memscan.firstScan(
+						  soExactValue, vtByteArray, nil,
+						  bi[1], nil, adr[1],adr[2], '',
+						  fsmNotAligned, '', true, true, false,false)
+					memscan.waitTillDone()
+					
+					local foundlist = createFoundList(memscan)
+					foundlist.initialize()
+					
+					for j = 0, foundlist.Count - 1 do
+						table.insert(aob_list,foundlist.Address[j])
+					end
+					
+					foundlist.destroy()
+					memscan.destroy()
+				end
+			end
+			
+		else
+			 local aob_list1=AOBScan(bi[1], "", 0)
+			 local aob_count=aob_list1.Count
+			 for j=1,aob_count do
+				aob_list[j]=aob_list1[j-1]
+			end
+			aob_list1.destroy()
+        end
+
+          for j=1,#aob_list do
+            local res=aob_list[j]
             local dec_res=tonumber(res,16)
             local rb=dec_res+bi[2]
             if rb<0 then
@@ -422,26 +468,7 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
                 local dsk = disassemble(k)
 				local extraField, instruction, bytes, address = splitDisassembledString(dsk)
 				local a = checkAdressOffset_ret_string(k,address)
-                local mb=true
-                local mdn={}
-                if module_names~=nil then
-                   mb=false
-                   local tmn=type(module_names)
-                   if tmn=='string' then
-                      mdn[1]=module_names
-                  elseif tmn=='table' then
-                     mdn=module_names
-                   end
-                   local mdnl=#mdn
-                   for m=1, mdnl do
-                       local mdnm=mdn[m]
-                       if string.find(a, mdnm, 1,true)~=nil then
-                          mb=true
-                          m=mdnl
-                       end
-                   end
-                end
-                if string.match(instruction,pattern)~=nil and mb==true then
+                if string.match(instruction,pattern)~=nil then
 					local pt={}
 					if parts~=nil then
 						for p=1,parts_tt_l do
@@ -469,8 +496,7 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
                    k=rg --EARLY TERMINATE!
                 end
             end
-          end
-		  	  aob_list.destroy()
+          end	  
       end
 
       for key, value in pairs(fnd) do
