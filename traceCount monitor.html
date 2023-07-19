@@ -1,0 +1,256 @@
+ <html>
+ <head>
+ </head>
+ <body>
+ <title>traceCount monitor</title>
+ <h1 style="text-align: center;">traceCount monitor</h1>
+ <label for="openFile1">Load file: </label><input  type="file"  id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
+ <pre id="preTag"></pre>
+  <style>
+	input[type="checkbox"]{
+		filter: hue-rotate(247deg) contrast(1.65) !important;
+	}
+  </style>
+  <script>
+  const registers={};
+  registers['list_regs']=[
+	['ST(0)','FP0',{occs:[]}],
+	['ST(1)','FP1',{occs:[]}],
+	['ST(2)','FP2',{occs:[]}],
+	['ST(3)','FP3',{occs:[]}],
+	['ST(4)','FP4',{occs:[]}],
+	['ST(5)','FP5',{occs:[]}],
+	['ST(6)','FP6',{occs:[]}],
+	['ST(7)','FP7',{occs:[]}],
+	['XMM10',{occs:[]}],
+	['XMM11',{occs:[]}],
+	['XMM12',{occs:[]}],
+	['XMM13',{occs:[]}],
+	['XMM14',{occs:[]}],
+	['XMM15',{occs:[]}],
+	['XMM0',{occs:[]}],
+	['XMM1',{occs:[]}],
+	['XMM2',{occs:[]}],
+	['XMM3',{occs:[]}],
+	['XMM4',{occs:[]}],
+	['XMM5',{occs:[]}],
+	['XMM6',{occs:[]}],
+	['XMM7',{occs:[]}],
+	['XMM8',{occs:[]}],
+	['XMM9',{occs:[]}],
+	['R10D',{occs:[]}],
+	['R10W',{occs:[]}],
+	['R10L','R10B',{occs:[]}],
+	['R10B',{occs:[]}],
+	['R11D',{occs:[]}],
+	['R11W',{occs:[]}],
+	['R11L','R11B',{occs:[]}],
+	['R11B',{occs:[]}],
+	['R12D',{occs:[]}],
+	['R12W',{occs:[]}],
+	['R12L','R12B',{occs:[]}],
+	['R12B',{occs:[]}],
+	['R13D',{occs:[]}],
+	['R13W',{occs:[]}],
+	['R13L','R13B',{occs:[]}],
+	['R13B',{occs:[]}],
+	['R14D',{occs:[]}],
+	['R14W',{occs:[]}],
+	['R14L','R14B',{occs:[]}],
+	['R14B',{occs:[]}],
+	['R15D',{occs:[]}],
+	['R15W',{occs:[]}],
+	['R15L','R15B',{occs:[]}],
+	['R15B',{occs:[]}],
+	['RAX',{occs:[]}],
+	['RBX',{occs:[]}],
+	['RCX',{occs:[]}],
+	['RDX',{occs:[]}],
+	['RDI',{occs:[]}],
+	['RSI',{occs:[]}],
+	['RBP',{occs:[]}],
+	['RSP',{occs:[]}],
+	['R10',{occs:[]}],
+	['R11',{occs:[]}],
+	['R12',{occs:[]}],
+	['R13',{occs:[]}],
+	['R14',{occs:[]}],
+	['R15',{occs:[]}],
+	['EAX',{occs:[]}],
+	['EBX',{occs:[]}],
+	['ECX',{occs:[]}],
+	['EDX',{occs:[]}],
+	['EDI',{occs:[]}],
+	['ESI',{occs:[]}],
+	['EBP',{occs:[]}],
+	['ESP',{occs:[]}],
+	['EIP',{occs:[]}],
+	['FP0',{occs:[]}],
+	['FP1',{occs:[]}],
+	['FP2',{occs:[]}],
+	['FP3',{occs:[]}],
+	['FP4',{occs:[]}],
+	['FP5',{occs:[]}],
+	['FP6',{occs:[]}],
+	['FP7',{occs:[]}],
+	['R8D',{occs:[]}],
+	['R8W',{occs:[]}],
+	['R8L','R8B',{occs:[]}],
+	['R8B',{occs:[]}],
+	['R9D',{occs:[]}],
+	['R9W',{occs:[]}],
+	['R9L','R9B',{occs:[]}],
+	['R9B',{occs:[]}],
+	['SIL',{occs:[]}],
+	['DIL',{occs:[]}],
+	['BPL',{occs:[]}],
+	['SPL',{occs:[]}],
+	['R8',{occs:[]}],
+	['R9',{occs:[]}],
+	['AX',{occs:[]}],
+	['AL',{occs:[]}],
+	['AH',{occs:[]}],
+	['BX',{occs:[]}],
+	['BL',{occs:[]}],
+	['BH',{occs:[]}],
+	['CX',{occs:[]}],
+	['CL',{occs:[]}],
+	['CH',{occs:[]}],
+	['DX',{occs:[]}],
+	['DL',{occs:[]}],
+	['DH',{occs:[]}],
+	['SI',{occs:[]}],
+	['DI',{occs:[]}],
+	['BP',{occs:[]}],
+	['SP',{occs:[]}],
+	['IP',{occs:[]}]
+];
+
+let chkCnt=0;
+let allChk=[];
+
+function sortByArrCols(arr, colsArr, dir){
+    arr.sort(sortFunction);
+		function sortFunction(a, b) {
+			for(let i = 0; i < arr.length; i++){
+					if(a[colsArr[i]]>b[colsArr[i]]){
+						return dir[i]*-1;
+					}else if(a[colsArr[i]]<b[colsArr[i]]){
+						return dir[i]*1;
+					}else if(i==arr.length-1){
+					return 0;
+				}
+			} 
+	}
+}
+
+function chkClick(event){
+	let t=event.target;
+	let rg=registers['list_regs'][parseInt(t.getAttribute('reg_ix'))];
+	let ocs=rg.at(-1).occs;
+	let st=parseInt(t.getAttribute('occ'));
+	let oc=allChk[ocs[st]];
+	let flg=true;
+	if(oc.checked===false){
+			flg=false;
+	}
+	for(let i=st+1, len=ocs.length; i<len; i++){
+		allChk[ocs[i]].checked=flg;
+	}
+}
+
+registers['list_regs_len']= registers['list_regs'].length;
+const pre_el=document.getElementById('preTag');
+	function proc(str){
+		//console.log(str);
+		let lns=str.split('\n');
+		let insts=[];
+		for (let i=0, len_i=lns.length; i<len_i; i++){
+			let lnsi_spl =[...lns[i]];
+			let out_spl =lnsi_spl;
+			let regexp1 = /(?<=\-)[^\t\r]+/g;
+			let mtcs_lns = [...lns[i].matchAll(regexp1)];
+			let inst_spl2=[];
+			if(mtcs_lns.length>0){ //match
+				let regexp2 = /\s*[^\s]+\s+/g;
+				let mtcs_lns2 = [...mtcs_lns[0][0].matchAll(regexp2)];
+				if(mtcs_lns2.length>0){ //match
+					let st=mtcs_lns[0].index+mtcs_lns2[0][0].length;
+					let ed=mtcs_lns[0].index+mtcs_lns[0][0].length-1;
+					let inst_spl=[];
+					for (let j=st; j<=ed; j++){
+						inst_spl.push(lns[i][j]);
+						inst_spl2.push(lns[i][j]);
+						out_spl[j]='';
+					}
+					inst=inst_spl.join('');
+					for (let k=0; k<registers['list_regs_len']; k++){
+						let rk=registers['list_regs'][k];			
+						let r=rk[0];			
+						let ra=(rk.length>2)?rk[1]:r;			
+						let regexp = new RegExp(r, 'ig');
+						let mtcs = [...inst.matchAll(regexp)];
+						if(mtcs.length>0){ //match
+							for (let c=0, len=mtcs.length; c<len; c++) {
+								let mtc=mtcs[c];
+								let s=mtc.index;
+								let d=s+mtc[0].length-1;
+								if(c===0){
+									let rk_obj=rk.at(-1);
+									let ol=rk_obj.occs.length;
+									rk_obj.occs.push(chkCnt);
+									inst_spl2[s]=`<input type="checkbox" reg_ix="${k}" ln="${i}" disp_reg="${r}" actual_reg="${ra}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
+									inst_spl2[d]+='</input>';
+									chkCnt++;
+								}
+								for(let n=s; n<=d; n++){
+									inst_spl[n]=' '
+								}
+								inst=inst_spl.join('');
+							}
+						}
+					}	
+					out_spl[st]=inst_spl2.join('');
+					inst=out_spl.join('');
+					}
+			}else{
+				inst='\n\n';
+			}
+			
+			insts.push(inst);			
+		}
+		
+		pre_el.innerHTML=insts.join('');
+			let ck=pre_el.getElementsByTagName('input');
+			let cki=[];
+		for(let k=0, len_k=ck.length;k<len_k;k++){
+			let ckk=ck[k];
+			cki[k]=[parseInt(ckk.getAttribute('ovr_occ')),ckk];
+		}
+		 sortByArrCols(cki,[0],[-1]);
+		 for(let k=0, len_k=cki.length;k<len_k;k++){
+			allChk[k]=cki[k][1];
+		 }
+			
+		
+	}
+		
+ document.getElementById("openFile1").addEventListener('change',  function () {
+	 var fr = new FileReader();
+	 fr.onload = function () {
+		let str = this.result;
+		
+		for (let k=0; k<registers['list_regs_len']; k++){
+			let rk=registers['list_regs'][k];
+			let rk_obj=rk.at(-1);
+			rk_obj.occs=[];
+		}
+		chkCnt=0;
+		allChk=[];
+		proc(str);
+	}
+	fr.readAsText(this.files[0]);
+}); 
+ </script>
+</body>
+</html>
