@@ -12,118 +12,119 @@
 	}
   </style>
   <script>
+  var firstDone=false;
   const registers={};
   registers['list_regs']=[
-	['ST(0)','FP0',{occs:[]}],
-	['ST(1)','FP1',{occs:[]}],
-	['ST(2)','FP2',{occs:[]}],
-	['ST(3)','FP3',{occs:[]}],
-	['ST(4)','FP4',{occs:[]}],
-	['ST(5)','FP5',{occs:[]}],
-	['ST(6)','FP6',{occs:[]}],
-	['ST(7)','FP7',{occs:[]}],
-	['XMM10',{occs:[]}],
-	['XMM11',{occs:[]}],
-	['XMM12',{occs:[]}],
-	['XMM13',{occs:[]}],
-	['XMM14',{occs:[]}],
-	['XMM15',{occs:[]}],
-	['XMM0',{occs:[]}],
-	['XMM1',{occs:[]}],
-	['XMM2',{occs:[]}],
-	['XMM3',{occs:[]}],
-	['XMM4',{occs:[]}],
-	['XMM5',{occs:[]}],
-	['XMM6',{occs:[]}],
-	['XMM7',{occs:[]}],
-	['XMM8',{occs:[]}],
-	['XMM9',{occs:[]}],
-	['R10D',{occs:[]}],
-	['R10W',{occs:[]}],
-	['R10L','R10B',{occs:[]}],
-	['R10B',{occs:[]}],
-	['R11D',{occs:[]}],
-	['R11W',{occs:[]}],
-	['R11L','R11B',{occs:[]}],
-	['R11B',{occs:[]}],
-	['R12D',{occs:[]}],
-	['R12W',{occs:[]}],
-	['R12L','R12B',{occs:[]}],
-	['R12B',{occs:[]}],
-	['R13D',{occs:[]}],
-	['R13W',{occs:[]}],
-	['R13L','R13B',{occs:[]}],
-	['R13B',{occs:[]}],
-	['R14D',{occs:[]}],
-	['R14W',{occs:[]}],
-	['R14L','R14B',{occs:[]}],
-	['R14B',{occs:[]}],
-	['R15D',{occs:[]}],
-	['R15W',{occs:[]}],
-	['R15L','R15B',{occs:[]}],
-	['R15B',{occs:[]}],
-	['RAX',{occs:[]}],
-	['RBX',{occs:[]}],
-	['RCX',{occs:[]}],
-	['RDX',{occs:[]}],
-	['RDI',{occs:[]}],
-	['RSI',{occs:[]}],
-	['RBP',{occs:[]}],
-	['RSP',{occs:[]}],
-	['R10',{occs:[]}],
-	['R11',{occs:[]}],
-	['R12',{occs:[]}],
-	['R13',{occs:[]}],
-	['R14',{occs:[]}],
-	['R15',{occs:[]}],
-	['EAX',{occs:[]}],
-	['EBX',{occs:[]}],
-	['ECX',{occs:[]}],
-	['EDX',{occs:[]}],
-	['EDI',{occs:[]}],
-	['ESI',{occs:[]}],
-	['EBP',{occs:[]}],
-	['ESP',{occs:[]}],
-	['EIP',{occs:[]}],
-	['FP0',{occs:[]}],
-	['FP1',{occs:[]}],
-	['FP2',{occs:[]}],
-	['FP3',{occs:[]}],
-	['FP4',{occs:[]}],
-	['FP5',{occs:[]}],
-	['FP6',{occs:[]}],
-	['FP7',{occs:[]}],
-	['R8D',{occs:[]}],
-	['R8W',{occs:[]}],
-	['R8L','R8B',{occs:[]}],
-	['R8B',{occs:[]}],
-	['R9D',{occs:[]}],
-	['R9W',{occs:[]}],
-	['R9L','R9B',{occs:[]}],
-	['R9B',{occs:[]}],
-	['SIL',{occs:[]}],
-	['DIL',{occs:[]}],
-	['BPL',{occs:[]}],
-	['SPL',{occs:[]}],
-	['R8',{occs:[]}],
-	['R9',{occs:[]}],
-	['AX',{occs:[]}],
-	['AL',{occs:[]}],
-	['AH',{occs:[]}],
-	['BX',{occs:[]}],
-	['BL',{occs:[]}],
-	['BH',{occs:[]}],
-	['CX',{occs:[]}],
-	['CL',{occs:[]}],
-	['CH',{occs:[]}],
-	['DX',{occs:[]}],
-	['DL',{occs:[]}],
-	['DH',{occs:[]}],
-	['SI',{occs:[]}],
-	['DI',{occs:[]}],
-	['BP',{occs:[]}],
-	['SP',{occs:[]}],
-	['IP',{occs:[]}]
+["ST(0)","FP0",71],
+["ST(1)","FP1",71],
+["ST(2)","FP2",71],
+["ST(3)","FP3",71],
+["ST(4)","FP4",71],
+["ST(5)","FP5",71],
+["ST(6)","FP6",71],
+["ST(7)","FP7",71],
+["XMM10",{"occs":[]}],
+["XMM11",{"occs":[]}],
+["XMM12",{"occs":[]}],
+["XMM13",{"occs":[]}],
+["XMM14",{"occs":[]}],
+["XMM15",{"occs":[]}],
+["XMM0",{"occs":[]}],
+["XMM1",{"occs":[]}],
+["XMM2",{"occs":[]}],
+["XMM3",{"occs":[]}],
+["XMM4",{"occs":[]}],
+["XMM5",{"occs":[]}],
+["XMM6",{"occs":[]}],
+["XMM7",{"occs":[]}],
+["XMM8",{"occs":[]}],
+["XMM9",{"occs":[]}],
+["R10D",{"occs":[]}],
+["R10W",{"occs":[]}],
+["R10L","R10B",1],
+["R10B",{"occs":[]}],
+["R11D",{"occs":[]}],
+["R11W",{"occs":[]}],
+["R11L","R11B",1],
+["R11B",{"occs":[]}],
+["R12D",{"occs":[]}],
+["R12W",{"occs":[]}],
+["R12L","R12B",1],
+["R12B",{"occs":[]}],
+["R13D",{"occs":[]}],
+["R13W",{"occs":[]}],
+["R13L","R13B",1],
+["R13B",{"occs":[]}],
+["R14D",{"occs":[]}],
+["R14W",{"occs":[]}],
+["R14L","R14B",1],
+["R14B",{"occs":[]}],
+["R15D",{"occs":[]}],
+["R15W",{"occs":[]}],
+["R15L","R15B",1],
+["R15B",{"occs":[]}],
+["RAX",{"occs":[]}],
+["RBX",{"occs":[]}],
+["RCX",{"occs":[]}],
+["RDX",{"occs":[]}],
+["RDI",{"occs":[]}],
+["RSI",{"occs":[]}],
+["RBP",{"occs":[]}],
+["RSP",{"occs":[]}],
+["R10",{"occs":[]}],
+["R11",{"occs":[]}],
+["R12",{"occs":[]}],
+["R13",{"occs":[]}],
+["R14",{"occs":[]}],
+["R15",{"occs":[]}],
+["EAX",{"occs":[]}],
+["EBX",{"occs":[]}],
+["ECX",{"occs":[]}],
+["EDX",{"occs":[]}],
+["EDI",{"occs":[]}],
+["ESI",{"occs":[]}],
+["EBP",{"occs":[]}],
+["ESP",{"occs":[]}],
+["EIP",{"occs":[]}],
+["FP0",{"occs":[]}],
+["FP1",{"occs":[]}],
+["FP2",{"occs":[]}],
+["FP3",{"occs":[]}],
+["FP4",{"occs":[]}],
+["FP5",{"occs":[]}],
+["FP6",{"occs":[]}],
+["FP7",{"occs":[]}],
+["R8D",{"occs":[]}],
+["R8W",{"occs":[]}],
+["R8L","R8B",1],
+["R8B",{"occs":[]}],
+["R9D",{"occs":[]}],
+["R9W",{"occs":[]}],
+["R9L","R9B",1],
+["R9B",{"occs":[]}],
+["SIL",{"occs":[]}],
+["DIL",{"occs":[]}],
+["BPL",{"occs":[]}],
+["SPL",{"occs":[]}],
+["R8",{"occs":[]}],
+["R9",{"occs":[]}],
+["AX",{"occs":[]}],
+["AL",{"occs":[]}],
+["AH",{"occs":[]}],
+["BX",{"occs":[]}],
+["BL",{"occs":[]}],
+["BH",{"occs":[]}],
+["CX",{"occs":[]}],
+["CL",{"occs":[]}],
+["CH",{"occs":[]}],
+["DX",{"occs":[]}],
+["DL",{"occs":[]}],
+["DH",{"occs":[]}],
+["SI",{"occs":[]}],
+["DI",{"occs":[]}],
+["BP",{"occs":[]}],
+["SP",{"occs":[]}],
+["IP",{"occs":[]}]
 ];
 
 let chkCnt=0;
@@ -185,9 +186,16 @@ const pre_el=document.getElementById('preTag');
 					}
 					inst=inst_spl.join('');
 					for (let k=0; k<registers['list_regs_len']; k++){
+						let ka=k;
 						let rk=registers['list_regs'][k];			
-						let r=rk[0];			
-						let ra=(rk.length>2)?rk[1]:r;			
+						let r=rk[0];
+						let ra=r;
+						if(rk.length>2){
+							ra=rk[1];
+							ka=k+rk[2];
+							rk=registers['list_regs'][ka]
+						}
+								
 						let regexp = new RegExp(r, 'ig');
 						let mtcs = [...inst.matchAll(regexp)];
 						if(mtcs.length>0){ //match
@@ -199,7 +207,7 @@ const pre_el=document.getElementById('preTag');
 									let rk_obj=rk.at(-1);
 									let ol=rk_obj.occs.length;
 									rk_obj.occs.push(chkCnt);
-									inst_spl2[s]=`<input type="checkbox" reg_ix="${k}" ln="${i}" disp_reg="${r}" actual_reg="${ra}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
+									inst_spl2[s]=`<input type="checkbox" reg_ix="${ka}" ln="${i}" disp_reg="${r}" actual_reg="${ra}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
 									inst_spl2[d]+='</input>';
 									chkCnt++;
 								}
@@ -239,15 +247,22 @@ const pre_el=document.getElementById('preTag');
 	 var fr = new FileReader();
 	 fr.onload = function () {
 		let str = this.result;
-		
+		if(firstDone===true){
 		for (let k=0; k<registers['list_regs_len']; k++){
 			let rk=registers['list_regs'][k];
 			let rk_obj=rk.at(-1);
-			rk_obj.occs=[];
+			if(typeof(rk_obj)==='object'){
+				rk_obj.occs=[];
+			}
 		}
 		chkCnt=0;
 		allChk=[];
 		proc(str);
+		}else{
+			proc(str);
+			firstDone=true;
+		}
+		
 	}
 	fr.readAsText(this.files[0]);
 }); 
