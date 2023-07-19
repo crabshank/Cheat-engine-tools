@@ -1,3 +1,7 @@
+## traceCount monitor.html
+
+Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; output showing executed instructions in the order they were executed); adds checkboxes for easier tracking of relevant registers (will toggle all checkboxes after the one inputted to).
+
 ## tprint.lua
 
 Allows you to print whole lua tables. Credit to ripter.
@@ -453,7 +457,7 @@ To add extended registers (i.e. sub-registers) to Cheat Engine's in-built condit
 
 If **m**==1: Prints all executed instructions in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. 
 
-**p** is a (full path to a) file name, where the trace will be saved; if unspecified or nil or `''`, the trace will be printed to the console (Use double backslashes instead on single ones).
+**p** is a (full path to a) file name, where the trace will be saved; if unspecified or nil or `''`, the trace will be printed to the console (Use double backslashes instead on single ones) (".asm" extension is recommended).
 
 If **n** is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. 
 
