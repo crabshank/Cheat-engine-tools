@@ -1,5 +1,16 @@
  <html>
  <head>
+ <style>
+div.notes {
+	display: inline-block;
+    border: #848484;
+    border-width: 1px 1px 1px;
+    min-width: 10.5ch;
+    border-style: outset;
+    margin-right: 0.7ch;
+	padding: 0.18ch;
+}
+ </style>
  </head>
  <body>
  <title>traceCount monitor</title>
@@ -167,6 +178,7 @@ const pre_el=document.getElementById('preTag');
 		let lns=str.split('\n');
 		let insts=[];
 		for (let i=0, len_i=lns.length; i<len_i; i++){
+			let empt=(lns[i].trim()==='')?true:false;
 			let lnsi_spl =[...lns[i]];
 			let out_spl =lnsi_spl;
 			let regexp1 = /(?<=\-)[^\t\r]+/g;
@@ -193,7 +205,7 @@ const pre_el=document.getElementById('preTag');
 						if(rk.length>2){
 							ra=rk[1];
 							ka=rk[2];
-							rk=registers['list_regs'][ka]
+							rk=registers['list_regs'][ka];
 						}
 								
 						let regexp = new RegExp(r, 'ig');
@@ -224,7 +236,7 @@ const pre_el=document.getElementById('preTag');
 			}else{
 				inst='\n\n';
 			}
-			
+			inst=(empt)?inst:`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
 			insts.push(inst);			
 		}
 		
