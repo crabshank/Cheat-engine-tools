@@ -1,6 +1,6 @@
 ## traceCount monitor.html
 
-Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; output showing executed instructions in the order they were executed); adds checkboxes for easier tracking of relevant registers (will toggle all checkboxes after the one inputted to).
+Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; output showing executed instructions in the order they were executed); adds checkboxes for easier tracking of relevant registers (will toggle all checkboxes after the one inputted to). Each line has a text box for making notes.
 
 ## tprint.lua
 
