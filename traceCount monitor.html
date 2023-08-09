@@ -29,6 +29,7 @@ span.memLink {
   </style>
   <script>
   var firstDone=false;
+  var isRN=true;
   const registers={};
   registers['list_regs']=[
 ["ST(0)","FP0",71],
@@ -181,11 +182,34 @@ registers['list_regs_len']= registers['list_regs'].length;
 const pre_el=document.getElementById('preTag');
 	function proc(str){
 		//console.log(str);
-		let lns=str.split('\n');
+		let lns=[];
+		let rn='';
+		if(isRN){
+			rn='\r\n';
+			lns=str.split(/\r\n\#\d+/);
+		}else{
+			rn='\n';
+			lns=str.split(/\n\#\d+/);
+		}
+		let lnl=lns.length;
+		let lst=lns[lnl-1];
+		let mSplt='Memory accesses index:';
+		let lstSpl=lst.split(rn+mSplt);
+		lns[lnl-1]=`#${lnl}${lstSpl[0]}${rn}`;
+		lns[0]+=rn;
+		for (let i=1; i<lnl-1; i++){
+			lns[i]=`#${i+1}${lns[i]}${rn}`;
+		}
+		let mems=(mSplt+lstSpl[1]).split(rn);
+		let memsL=mems.length;
+		for (let i=0; i<memsL; i++){
+			lns.push(mems[i]+rn);
+		}
+		lnl=lns.length;
 		let insts=[];
 		ntes=[];
 		let memAcc=false;
-		for (let i=0, len_i=lns.length; i<len_i; i++){
+		for (let i=0; i<lnl; i++){
 			if(memAcc===true){
 				let inst=lns[i];
 				let hits=inst.match(/\#\d+/g);
@@ -194,13 +218,14 @@ const pre_el=document.getElementById('preTag');
 						if(hl>0){
 							for (let k=0; k<hl; k++){
 								let hk=hits[k];
-								inst=inst.split(hk).join(`<span class="memLink" title="Go to ${hk}" onclick="ntes[${hk.split('#')[1]}].scrollIntoView();">${hk}</span>`);
+								inst=inst.split(hk).join(`<span class="memLink" title="Go to ${hk}" onclick="ntes[${hk.split('#')[1]-1}].scrollIntoView();">${hk}</span>`);
 							}
 							insts.push(inst);
 					}
 				}
 			}else if(lns[i].startsWith('Memory accesses index:')){
 				memAcc=true;
+				insts.push(lns[i]);
 				pre_el.innerHTML=insts.join('');
 			}else{
 				let empt=(lns[i].trim()==='')?true:false;
@@ -259,7 +284,7 @@ const pre_el=document.getElementById('preTag');
 						inst=out_spl.join('');
 						}
 				}else{
-					inst='\n\n';
+					inst=rn+rn;
 				}
 				inst=(empt)?inst:`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
 				insts.push(inst);
@@ -285,6 +310,7 @@ const pre_el=document.getElementById('preTag');
 	 var fr = new FileReader();
 	 fr.onload = function () {
 		let str = this.result;
+		isRN=(str.split('\r\n').length>=str.split('\n').length)?true:false;
 		if(firstDone===true){
 		for (let k=0; k<registers['list_regs_len']; k++){
 			let rk=registers['list_regs'][k];
