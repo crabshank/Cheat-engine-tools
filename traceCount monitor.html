@@ -10,6 +10,11 @@ div.notes {
     margin-right: 0.7ch;
 	padding: 0.18ch;
 }
+span.memLink {
+    text-decoration: underline;
+	cursor: pointer;
+    /* color: #167ac6; */
+}
  </style>
  </head>
  <body>
@@ -140,6 +145,7 @@ div.notes {
 
 let chkCnt=0;
 let allChk=[];
+let ntes=[];
 
 function sortByArrCols(arr, colsArr, dir){
     arr.sort(sortFunction);
@@ -177,70 +183,90 @@ const pre_el=document.getElementById('preTag');
 		//console.log(str);
 		let lns=str.split('\n');
 		let insts=[];
+		ntes=[];
+		let memAcc=false;
 		for (let i=0, len_i=lns.length; i<len_i; i++){
-			let empt=(lns[i].trim()==='')?true:false;
-			let lnsi_spl =[...lns[i]];
-			let out_spl =lnsi_spl;
-			let regexp1 = /(?<=\-)[^\t\r]+/g;
-			let mtcs_lns = [...lns[i].matchAll(regexp1)];
-			let inst_spl2=[];
-			if(mtcs_lns.length>0){ //match
-				let regexp2 = /\s*[^\s]+\s+/g;
-				let mtcs_lns2 = [...mtcs_lns[0][0].matchAll(regexp2)];
-				if(mtcs_lns2.length>0){ //match
-					let st=mtcs_lns[0].index+mtcs_lns2[0][0].length;
-					let ed=mtcs_lns[0].index+mtcs_lns[0][0].length-1;
-					let inst_spl=[];
-					for (let j=st; j<=ed; j++){
-						inst_spl.push(lns[i][j]);
-						inst_spl2.push(lns[i][j]);
-						out_spl[j]='';
-					}
-					inst=inst_spl.join('');
-					for (let k=0; k<registers['list_regs_len']; k++){
-						let ka=k;
-						let rk=registers['list_regs'][k];			
-						let r=rk[0];
-						let ra=r;
-						if(rk.length>2){
-							ra=rk[1];
-							ka=rk[2];
-							rk=registers['list_regs'][ka];
-						}
-								
-						let regexp = new RegExp(r, 'ig');
-						let mtcs = [...inst.matchAll(regexp)];
-						if(mtcs.length>0){ //match
-							for (let c=0, len=mtcs.length; c<len; c++) {
-								let mtc=mtcs[c];
-								let s=mtc.index;
-								let d=s+mtc[0].length-1;
-								if(c===0){
-									let rk_obj=rk.at(-1);
-									let ol=rk_obj.occs.length;
-									rk_obj.occs.push(chkCnt);
-									inst_spl2[s]=`<input type="checkbox" reg_ix="${ka}" ln="${i}" disp_reg="${r}" actual_reg="${ra}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
-									inst_spl2[d]+='</input>';
-									chkCnt++;
-								}
-								for(let n=s; n<=d; n++){
-									inst_spl[n]=' '
-								}
-								inst=inst_spl.join('');
+			if(memAcc===true){
+				let inst=lns[i];
+				let hits=inst.match(/\#\d+/g);
+				if(hits!==null){
+						let hl=hits.length;
+						if(hl>0){
+							for (let k=0; k<hl; k++){
+								let hk=hits[k];
+								inst=inst.split(hk).join(`<span class="memLink" title="Go to ${hk}" onclick="ntes[${hk.split('#')[1]}].scrollIntoView();">${hk}</span>`);
 							}
-						}
-					}	
-					out_spl[st]=inst_spl2.join('');
-					inst=out_spl.join('');
+							insts.push(inst);
 					}
+				}
+			}else if(lns[i].startsWith('Memory accesses index:')){
+				memAcc=true;
+				pre_el.innerHTML=insts.join('');
 			}else{
-				inst='\n\n';
-			}
-			inst=(empt)?inst:`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
-			insts.push(inst);			
+				let empt=(lns[i].trim()==='')?true:false;
+				let lnsi_spl =[...lns[i]];
+				let out_spl =lnsi_spl;
+				let regexp1 = /(?<=\-)[^\t\r]+/g;
+				let mtcs_lns = [...lns[i].matchAll(regexp1)];
+				let inst_spl2=[];
+				if(mtcs_lns.length>0){ //match
+					let regexp2 = /\s*[^\s]+\s+/g;
+					let mtcs_lns2 = [...mtcs_lns[0][0].matchAll(regexp2)];
+					if(mtcs_lns2.length>0){ //match
+						let st=mtcs_lns[0].index+mtcs_lns2[0][0].length;
+						let ed=mtcs_lns[0].index+mtcs_lns[0][0].length-1;
+						let inst_spl=[];
+						for (let j=st; j<=ed; j++){
+							inst_spl.push(lns[i][j]);
+							inst_spl2.push(lns[i][j]);
+							out_spl[j]='';
+						}
+						inst=inst_spl.join('');
+						for (let k=0; k<registers['list_regs_len']; k++){
+							let ka=k;
+							let rk=registers['list_regs'][k];			
+							let r=rk[0];
+							let ra=r;
+							if(rk.length>2){
+								ra=rk[1];
+								ka=rk[2];
+								rk=registers['list_regs'][ka];
+							}
+									
+							let regexp = new RegExp(r, 'ig');
+							let mtcs = [...inst.matchAll(regexp)];
+							if(mtcs.length>0){ //match
+								for (let c=0, len=mtcs.length; c<len; c++) {
+									let mtc=mtcs[c];
+									let s=mtc.index;
+									let d=s+mtc[0].length-1;
+									if(c===0){
+										let rk_obj=rk.at(-1);
+										let ol=rk_obj.occs.length;
+										rk_obj.occs.push(chkCnt);
+										inst_spl2[s]=`<input type="checkbox" reg_ix="${ka}" ln="${i}" disp_reg="${r}" actual_reg="${ra}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
+										inst_spl2[d]+='</input>';
+										chkCnt++;
+									}
+									for(let n=s; n<=d; n++){
+										inst_spl[n]=' '
+									}
+									inst=inst_spl.join('');
+								}
+							}
+						}	
+						out_spl[st]=inst_spl2.join('');
+						inst=out_spl.join('');
+						}
+				}else{
+					inst='\n\n';
+				}
+				inst=(empt)?inst:`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
+				insts.push(inst);
 		}
-		
+		}
 		pre_el.innerHTML=insts.join('');
+		ntes=[...pre_el.querySelectorAll('div.notes')];
 			let ck=pre_el.getElementsByTagName('input');
 			let cki=[];
 		for(let k=0, len_k=ck.length;k<len_k;k++){
