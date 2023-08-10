@@ -209,6 +209,7 @@ const pre_el=document.getElementById('preTag');
 		let insts=[];
 		ntes=[];
 		let memAcc=false;
+		let c=0;
 		for (let i=0; i<lnl; i++){
 			if(memAcc===true){
 				let inst=lns[i];
@@ -269,7 +270,7 @@ const pre_el=document.getElementById('preTag');
 										let rk_obj=rk.at(-1);
 										let ol=rk_obj.occs.length;
 										rk_obj.occs.push(chkCnt);
-										inst_spl2[s]=`<input type="checkbox" reg_ix="${ka}" ln="${i}" disp_reg="${r}" actual_reg="${ra}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
+										inst_spl2[s]=`<input type="checkbox" reg_ix="${ka}" ln="${c}" disp_reg="${r}" actual_reg="${ra}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
 										inst_spl2[d]+='</input>';
 										chkCnt++;
 									}
@@ -286,7 +287,10 @@ const pre_el=document.getElementById('preTag');
 				}else{
 					inst=rn+rn;
 				}
-				inst=(empt)?inst:`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
+				if(!empt){
+					inst=`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
+					c++;
+				}
 				insts.push(inst);
 		}
 		}
