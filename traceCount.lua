@@ -16,7 +16,33 @@ local present_m_last_lookup={}
 local present_mem_last_lookup={}
 local currModule=nil
 local currRegsAddr=nil
-local jmpFirst=falseo
+local jmpFirst=false
+
+local findWriteStep=nil
+local findWriteBp=false
+local findWriteLastWasCall=false
+local findWriteStart=nil
+local findWriteEnd=nil
+local findWriteFirst=nil
+local findWriteBp=false
+local findWriteAttached={}
+local findWriteLookup={}
+local findWriteAobs={}
+local findWritePatts={}
+local findWriteModules=nil
+local findWriteWasPatt=false
+local modulesList_findWrite={}
+local lastAddr_findWrite={}
+
+local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
+	for i=1, #list do
+	local v=list[i]
+		if address>=v.Address and address<=v.lastByte then
+			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
+		end
+	end
+	return {false,address_hex}
+end
 
 local function sameTable(t1,t2)
 	local t1l, t2l= #t1, #t2
@@ -3214,6 +3240,233 @@ end
 		
 end
 
+local function findWrite(n,aobs,m,b,f,p)
+
+	debug_getContext()
+	if type(aobs)=='string' then
+		findWriteAobs={aobs}
+	else
+		findWriteAobs=aobs
+	end
+	
+	if m=='' or m==nil then
+		findWriteModules=nil
+	else
+		findWriteModules={}
+		if type(m)=='string' then
+			findWriteModules[m]=true
+		else
+			for i=1, #m do
+				findWriteModules[ m[i] ]=true
+			end
+		end
+	end
+	
+	findWriteWasPatt=false
+	if p~=nil then
+		findWritePatts={}
+	elseif type(p)=='string' then
+		findWritePatts={p}
+	else
+		findWritePatts=p
+	end
+	
+	modulesList_findWrite={}
+	local modulesTable= enumModules()
+	for i,v in pairs(modulesTable) do
+		if findWriteModules==nil or findWriteModules[v.Name]~=nil then
+			local sz=getModuleSize(v.Name)
+				local tm={
+					['Size']=sz,
+					['Name']=v.Name,
+					['lastByte']=v.Address+sz-1,
+					['Address']=v.Address
+				}
+				table.insert(modulesList_findWrite,tm)
+		end
+	end
+	
+	if n==0 then --probe stack
+	
+		local RIPx=string.format('%X',RIP)
+		lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
+		local bp=nil
+		findWriteAttached={}
+		findWriteLookup={}
+		
+		if b==nil or b<0 then
+			bp=math.max(RBP-7,RSP)
+		else
+			if f==true then
+				bp=RSP+b
+			else
+				bp=math.max(math.min(RSP+b,RBP-7),RSP)
+			end
+		end
+		
+		for i=RSP, bp do
+			local rd=readQword(i)
+			if type(rd)=='number' and rd>=0 then
+				local dx=string.format('%X',rd)
+				local isRet=isInModule(rd,dx,modulesList_findWrite)
+				if isRet[1]==true then
+					table.insert(findWriteAttached,rd)
+					findWriteLookup[dx]=#findWriteAttached
+					debug_setBreakpoint(rd,1,bptExecute,bpmInt3,function()
+						debug_getContext()
+						local RIPx=string.format('%X',RIP)
+						for i=1, #findWriteAobs do
+							local ai=findWriteAobs[i]
+							local res=AOBScan(ai,"",0)
+							local rCnt= res.Count
+							if rCnt>0 then
+								for j=1, #findWriteAttached do
+									debug_removeBreakpoint(findWriteAttached[j])
+								end
+								print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],isInModule(RIP,RIPx,modulesList_findWrite)[2] ))
+								break
+							else
+								lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
+								table.remove(findWriteAttached,findWriteLookup[RIPx])
+								debug_removeBreakpoint(RIP)
+								findWriteLookup[RIPx]=nil
+							end
+							res.destroy()
+						end
+					end)
+				end
+			end
+		end
+	else --step into/over (2)
+		findWriteLastWasCall=false
+		local bn=b
+		if type(b)=='string' then
+			bn=getAddress(b)
+		end
+		local fn=f
+		if type(f)=='string' then
+			fn=getAddress(f)
+		end
+		findWriteStart=bn
+		findWriteEnd=fn
+		findWriteStep=n
+		lastAddr_findWrite={bn,isInModule(bn,string.format('%X',bn),modulesList_findWrite)[2]}
+		debug_setBreakpoint(bn,1,bptExecute)
+		findWriteBp=true
+	end
+end
+
+local function findWriteStack(aobs,m,b,f) --(n,aobs,m,b,f,p)
+	 findWrite(0,aobs,m,b,f,nil)
+end
+
+local function findWriteStep(i,aobs,b,f,p) --(n,aobs,m,b,f,p)
+	local stp=2
+	if i==true then
+		stp=1
+	end
+	 findWrite(stp,aobs,nil,b,f,p)
+end
+
+local function end_fw()
+	findWriteBp=false
+	for j=1, #findWriteAttached do
+		debug_removeBreakpoint(findWriteAttached[j])
+	end
+end
+
+local function onFindWriteBp()
+	debug_getContext()
+	if RIP==findWriteStart then
+		debug_removeBreakpoint(RIP)
+	end
+	
+	if RIP==findWriteEnd then
+		debug_continueFromBreakpoint(co_run)
+		print('findWrite reached end!')
+		return
+	end
+	
+	local RIPx=string.format('%X',RIP)
+	local ds = disassemble(RIP)
+	local extraField, instruction, bytes, address = splitDisassembledString(ds)
+	local isRet=false
+	local isPatt=false
+	local isCall=false
+	
+	if string.find(instruction,"%s+ret%s*$")~=nil or string.find(instruction,"^%s*ret%s*$")~=nil then
+		isRet=true
+	end
+	
+	if string.find(instruction,"^%s*call%s+")~=nil then
+		isCall=true
+	end
+	
+	if findWritePatts~=nil then
+		local pl=#findWritePatts
+		if pl>0 then
+			for i=1,pl do
+				if string.find(instruction,findWritePatts[i])~=nil then
+					isPatt=true
+					break
+				end
+			end
+		end
+	end
+	
+	local writeFound=false
+	local scanHere=false
+	if findWriteStep~=2 then --into
+		if findWriteLastWasCall==true or isRet==true or isPatt==true or findWriteWasPatt==true then
+			scanHere=true
+		end
+	else -- step over
+		if isCall==true or isRet==true or isPatt==true or findWriteWasPatt==true then
+			scanHere=true
+		end
+	end
+	
+	if scanHere==true then
+		for i=1, #findWriteAobs do
+			local ai=findWriteAobs[i]
+			local res=AOBScan(ai,"",0)
+			if res~=nil then
+				local rCnt= res.Count
+				if rCnt>0 then
+					print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],isInModule(RIP,RIPx,modulesList_findWrite)[2]))
+					writeFound=true
+					findWriteBp=false
+					break
+				else
+					lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
+				end
+				res.destroy()
+			end
+		end
+	end
+	
+	if isCall==true then
+		findWriteLastWasCall=true
+	else
+		findWriteLastWasCall=false
+	end
+	
+	if isPatt==true then
+		findWriteWasPatt=true
+	else
+		findWriteWasPatt=false
+	end
+	
+	if writeFound==true then
+		debug_continueFromBreakpoint(co_run)
+	elseif findWriteStep~=2 then --into
+		debug_continueFromBreakpoint(co_stepinto)
+	else -- step over
+		debug_continueFromBreakpoint(co_stepover)
+	end
+
+end
+
 hv.OnSelectionChange=function (sender, address, address2)
 	if debug_isBroken()==true then
 		jumpMem(address)
@@ -3228,7 +3481,9 @@ function onOpenProcess(processid)
 end
 
 function debugger_onBreakpoint()
-	if liteBp==true then
+	if findWriteBp==true then
+		onFindWriteBp()
+	elseif liteBp==true then
 		onLiteBp()
 	elseif prog==false and condBpProg==false then
 		if debug_isBroken()==true then
@@ -3253,3 +3508,6 @@ traceCount.query=query
 traceCount.condBp=condBp
 traceCount.lite=lite
 traceCount.litePrint=litePrint
+traceCount.findWriteStack=findWriteStack
+traceCount.findWriteStep=findWriteStep
+traceCount.end_fw=end_fw
