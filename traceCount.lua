@@ -3329,10 +3329,10 @@ local function findWrite(n,aobs,m,b,f,p)
 								print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],isInModule(RIP,RIPx,modulesList_findWrite)[2] ))
 								break
 							else
-								lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
-								findWriteAttached[findWriteLookup[RIPx]]=nil
 								debug_removeBreakpoint(RIP)
+								findWriteAttached[findWriteLookup[RIPx]]=nil
 								findWriteLookup[RIPx]=nil
+								lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
 							end
 							res.destroy()
 						end
@@ -3374,7 +3374,10 @@ end
 local function end_fw()
 	findWriteBp=false
 	for j=1, #findWriteAttached do
-		debug_removeBreakpoint(findWriteAttached[j])
+		local aj=findWriteAttached[j]
+		if aj~=nil then
+			debug_removeBreakpoint(aj)
+		end
 	end
 end
 
