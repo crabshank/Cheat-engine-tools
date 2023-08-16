@@ -3321,13 +3321,16 @@ local function findWrite(n,aobs,m,b,f,p)
 							local rCnt= res.Count
 							if rCnt>0 then
 								for j=1, #findWriteAttached do
-									debug_removeBreakpoint(findWriteAttached[j])
+									local aj=findWriteAttached[j]
+									if aj~=nil then
+										debug_removeBreakpoint(aj)
+									end
 								end
 								print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],isInModule(RIP,RIPx,modulesList_findWrite)[2] ))
 								break
 							else
 								lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
-								table.remove(findWriteAttached,findWriteLookup[RIPx])
+								findWriteAttached[findWriteLookup[RIPx]]=nil
 								debug_removeBreakpoint(RIP)
 								findWriteLookup[RIPx]=nil
 							end
