@@ -3317,8 +3317,11 @@ local function findWrite(n,aobs,m,b,f,p)
 						local RIPx=string.format('%X',RIP)
 						for i=1, #findWriteAobs do
 							local ai=findWriteAobs[i]
+							local rCnt=0
 							local res=AOBScan(ai,"",0)
-							local rCnt= res.Count
+							if res~=nil then
+								rCnt= res.Count
+							end
 							if rCnt>0 then
 								for j=1, #findWriteAttached do
 									local aj=findWriteAttached[j]
