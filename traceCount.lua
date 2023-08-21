@@ -3337,7 +3337,9 @@ local function findWrite(n,aobs,m,b,f,p)
 								findWriteLookup[RIPx]=nil
 								lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
 							end
-							res.destroy()
+							if res~=nil then
+								res.destroy()
+							end
 						end
 					end)
 				end
