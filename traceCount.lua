@@ -3333,8 +3333,11 @@ local function findWrite(n,aobs,m,b,f,p)
 								break
 							else
 								debug_removeBreakpoint(RIP)
-								findWriteAttached[findWriteLookup[RIPx]]=nil
-								findWriteLookup[RIPx]=nil
+								local lix=findWriteLookup[RIPx]
+								if lix~=nil then
+									findWriteAttached[lix]=nil
+									findWriteLookup[RIPx]=nil
+								end
 								lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
 							end
 							if res~=nil then
