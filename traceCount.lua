@@ -3293,6 +3293,7 @@ local function findWrite(n,aobs,m,b,f,p)
 	if n==0 then --probe stack
 	
 		local RIPx=string.format('%X',RIP)
+		debug_removeBreakpoint(RIP)
 		lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
 		local bp=nil
 		findWriteAttached={}
@@ -3307,7 +3308,7 @@ local function findWrite(n,aobs,m,b,f,p)
 				bp=math.max(math.min(RSP+b,RBP-7),RSP)
 			end
 		end
-		
+		local stackBPs={'findWriteStack(…) breakpoints:'}
 		for i=RSP, bp do
 			local rd=readQword(i)
 			if type(rd)=='number' and rd>=0 then
@@ -3316,6 +3317,7 @@ local function findWrite(n,aobs,m,b,f,p)
 				if isRet[1]==true then
 					table.insert(findWriteAttached,rd)
 					findWriteLookup[dx]=#findWriteAttached
+					table.insert(stackBPs,string.format("\t'%s'",isRet[2]))
 					debug_setBreakpoint(rd,1,bptExecute,bpmInt3,function()
 						debug_getContext()
 						local RIPx=string.format('%X',RIP)
@@ -3352,6 +3354,7 @@ local function findWrite(n,aobs,m,b,f,p)
 				end
 			end
 		end
+		print(table.concat(stackBPs,'\n'))
 	else --step into/over (2)
 		findWriteLastWasCall=false
 		local bn=b
