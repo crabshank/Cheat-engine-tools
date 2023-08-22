@@ -38,7 +38,8 @@ local function isInModule(address,address_hex,list) -- https://github.com/cheat-
 	for i=1, #list do
 	local v=list[i]
 		if address>=v.Address and address<=v.lastByte then
-			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
+			local inc=v.Included
+			return {inc,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
 		end
 	end
 	return {false,address_hex}
@@ -3274,15 +3275,19 @@ local function findWrite(n,aobs,m,b,f,p)
 	modulesList_findWrite={}
 	local modulesTable= enumModules()
 	for i,v in pairs(modulesTable) do
+		local inc=false
 		if findWriteModules==nil or findWriteModules[v.Name]~=nil then
-			local sz=getModuleSize(v.Name)
-				local tm={
-					['Size']=sz,
-					['Name']=v.Name,
-					['lastByte']=v.Address+sz-1,
-					['Address']=v.Address
-				}
-				table.insert(modulesList_findWrite,tm)
+			inc=true
+		end
+		local sz=getModuleSize(v.Name)
+			local tm={
+				['Size']=sz,
+				['Name']=v.Name,
+				['lastByte']=v.Address+sz-1,
+				['Address']=v.Address,
+				['Included']=inc
+			}
+		table.insert(modulesList_findWrite,tm)
 		end
 	end
 	
