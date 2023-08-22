@@ -3314,7 +3314,7 @@ local function findWrite(n,aobs,m,b,f,p)
 			if type(rd)=='number' and rd>=0 then
 				local dx=string.format('%X',rd)
 				local isRet=isInModule(rd,dx,modulesList_findWrite)
-				if isRet[1]==true then
+				if isRet[1]==true and findWriteLookup[dx]==nil then
 					table.insert(findWriteAttached,rd)
 					findWriteLookup[dx]=#findWriteAttached
 					table.insert(stackBPs,string.format("\t'%s'",isRet[2]))
