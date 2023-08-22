@@ -3288,7 +3288,6 @@ local function findWrite(n,aobs,m,b,f,p)
 				['Included']=inc
 			}
 		table.insert(modulesList_findWrite,tm)
-		end
 	end
 	
 	if n==0 then --probe stack
