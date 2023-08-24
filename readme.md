@@ -453,7 +453,7 @@ N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting
 
 This method breaks when a register in an instruction, or one changed by an instruction, matches any AOB string or number in **c**.
 
-N.B. To continue detection after a break, press "Step Into" in the Memory Viewer.
+N.B. To continue detection after a break, press "Step Into/Over" in the Memory Viewer.
 
 To add extended registers (i.e. sub-registers) to Cheat Engine's in-built conditional breakpoints, see: [https://gist.github.com/crabshank/549a67e52b6fc298912cf55532de5b9d](https://gist.github.com/crabshank/549a67e52b6fc298912cf55532de5b9d)
 
