@@ -101,7 +101,14 @@ local function isInModule(address,address_hex,list) -- https://github.com/cheat-
 	for i=1, #list do
 	local v=list[i]
 		if address>=v.Address and address<=v.lastByte then
-			return {true,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
+			local ofs=address-v.Address
+			local ofsNm=''
+			if ofs>0 then
+				ofsNm=v.Name..'+'..string.format('%X',ofs)
+			else
+				ofsNm=v.Name
+			end
+			return {true,ofsNm,v.Name}
 		end
 	end
 	return {false,address_hex}
@@ -746,7 +753,6 @@ local function rsp(b,m,f)
 		local k=rets_lookup2.ord[i]
 		local v=rets_lookup2[k]
 		tprint_kv(k,v,xcld,nil,true)
-		print('\n')
 	end
 end
 
