@@ -3400,7 +3400,7 @@ local function findWrite(n,aobs,m,b,f,p)
 			setupFWstack()
 		end
 		
-		print(table.concat(stackBPs,'\n'))
+		print(table.concat(stackBPs,'\n')..'\n')
 	else --step into/over (2)
 		findWriteLastWasCall=false
 		local bn=b
