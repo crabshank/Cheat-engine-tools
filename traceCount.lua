@@ -26,8 +26,10 @@ local findWriteEnd=nil
 local findWriteFirst=nil
 local findWriteBp=false
 local findWriteAttached={}
+local findWriteToAttach={}
 local findWriteLookup={}
 local findWriteAobs={}
+local findWriteStackBps={}
 local findWritePatts={}
 local findWriteModules=nil
 local findWriteWasPatt=false
@@ -39,7 +41,14 @@ local function isInModule(address,address_hex,list) -- https://github.com/cheat-
 	local v=list[i]
 		if address>=v.Address and address<=v.lastByte then
 			local inc=v.Included
-			return {inc,v.Name..'+'..string.format('%X',address-v.Address),v.Name}
+			local ofs=address-v.Address
+			local ofsNm=''
+			if ofs>0 then
+				ofsNm=v.Name..'+'..string.format('%X',ofs)
+			else
+				ofsNm=v.Name
+			end
+			return {inc,ofsNm,v.Name}
 		end
 	end
 	return {false,address_hex}
@@ -761,6 +770,58 @@ local function deepcopy(orig)
 		copy = orig
 	end
 	return copy
+end
+
+local function setupFWstack()
+	for j=findWriteStackBps[1], findWriteStackBps[2] do
+						table.insert(findWriteAttached,j) --store attached indexes of findWriteToAttach!
+						--print(string.format('%X added!',findWriteToAttach[j])) --DEBUG
+						debug_setBreakpoint(findWriteToAttach[j],1,bptExecute,function()
+								debug_getContext()
+								local RIPx=string.format('%X',RIP)
+								--print(RIPx.. ' hit!')
+								for i=1, #findWriteAobs do
+									local ai=findWriteAobs[i]
+									local rCnt=0
+									local res=AOBScan(ai,"",0)
+									if res~=nil then
+										rCnt= res.Count
+									end
+									if rCnt>0 then -- aob found!
+										--print('AOB found!')
+										for k=1, #findWriteAttached do
+											local ix= findWriteAttached[k]
+											local ak=findWriteToAttach[ix]
+											if ak~=nil then
+												debug_removeBreakpoint(ak)
+												--print(string.format('%X removed!',ak)) --DEBUG
+											end
+										end
+										findWriteAttached={}
+										print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],isInModule(RIP,RIPx,modulesList_findWrite)[2] ))
+										break
+									else -- aob not found!
+										--print('aob not found!') --DEBUG
+										local lix=findWriteLookup[RIPx]
+										for k=1, #findWriteAttached do
+											local ix= findWriteAttached[k]
+											local ak=findWriteToAttach[ix]
+											if ak~=nil then
+												debug_removeBreakpoint(ak)
+												--print(string.format('%X removed!',ak)) --DEBUG
+											end
+										end
+										findWriteAttached={}
+										findWriteStackBps={lix+1,math.min(lix+4,#findWriteToAttach)}
+										setupFWstack()
+										lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
+									end
+									if res~=nil then
+										res.destroy()
+									end
+							end
+				end)
+	end
 end
 
 local count=0
@@ -3292,11 +3353,19 @@ local function findWrite(n,aobs,m,b,f,p)
 	
 	if n==0 then --probe stack
 	
+		findWriteStackBps={}
 		local RIPx=string.format('%X',RIP)
-		debug_removeBreakpoint(RIP)
+		local bps=debug_getBreakpointList()
+		local bpl=#bps
+		if bpl>0 then
+			for i=1, bpl do
+				debug_removeBreakpoint(bps[i])
+			end
+		end
 		lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
 		local bp=nil
 		findWriteAttached={}
+		findWriteToAttach={}
 		findWriteLookup={}
 		
 		if b==nil or b<0 then
@@ -3315,45 +3384,19 @@ local function findWrite(n,aobs,m,b,f,p)
 				local dx=string.format('%X',rd)
 				local isRet=isInModule(rd,dx,modulesList_findWrite)
 				if isRet[1]==true and findWriteLookup[dx]==nil then
-					table.insert(findWriteAttached,rd)
-					findWriteLookup[dx]=#findWriteAttached
+					table.insert(findWriteToAttach,rd)
+					findWriteLookup[dx]=#findWriteToAttach
 					table.insert(stackBPs,string.format("\t'%s'",isRet[2]))
-					debug_setBreakpoint(rd,1,bptExecute,bpmInt3,function()
-						debug_getContext()
-						local RIPx=string.format('%X',RIP)
-						for i=1, #findWriteAobs do
-							local ai=findWriteAobs[i]
-							local rCnt=0
-							local res=AOBScan(ai,"",0)
-							if res~=nil then
-								rCnt= res.Count
-							end
-							if rCnt>0 then
-								for j=1, #findWriteAttached do
-									local aj=findWriteAttached[j]
-									if aj~=nil then
-										debug_removeBreakpoint(aj)
-									end
-								end
-								print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],isInModule(RIP,RIPx,modulesList_findWrite)[2] ))
-								break
-							else
-								debug_removeBreakpoint(RIP)
-								local lix=findWriteLookup[RIPx]
-								if lix~=nil then
-									findWriteAttached[lix]=nil
-									findWriteLookup[RIPx]=nil
-								end
-								lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
-							end
-							if res~=nil then
-								res.destroy()
-							end
-						end
-					end)
 				end
 			end
 		end
+		
+		if #findWriteToAttach>1 then
+			local lst=math.max(1,math.min(4,#findWriteToAttach))
+			findWriteStackBps={1,lst}
+			setupFWstack()
+		end
+		
 		print(table.concat(stackBPs,'\n'))
 	else --step into/over (2)
 		findWriteLastWasCall=false
