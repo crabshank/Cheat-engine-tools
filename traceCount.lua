@@ -3529,8 +3529,7 @@ local function onFindWriteBp()
 	end
 	
 	if writeFound==true then
-		return 1
-		--debug_continueFromBreakpoint(co_run)
+		debug_continueFromBreakpoint(co_run)
 	elseif findWriteStep~=2 then --into
 		debug_continueFromBreakpoint(co_stepinto)
 	else -- step over
