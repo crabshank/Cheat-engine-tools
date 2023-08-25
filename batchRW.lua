@@ -10,7 +10,7 @@ local bps={}
 local xcld={['Decimal address']=true}
 local jumpRes={['sel']='',['rsp']={},['stack']={}}
 
-local function tprint(tbl, lookup_exclude, indent)
+local function tprint(tbl, lookup_exclude, indent,suppressNL)
   local function do_tprint(tbl, lookup_exclude, indent) -- https://gist.github.com/ripter/4270799
 	if indent==nil then indent = 0 end
 	for k, v in pairs(tbl) do
@@ -49,7 +49,52 @@ local function tprint(tbl, lookup_exclude, indent)
 	end
   end
   do_tprint(tbl, lookup_exclude, indent)
-  print('\n')
+  if suppressNL~=true then
+	print('\n')
+  end
+end
+
+
+local function tprint_kv(k,v, lookup_exclude, indent,suppressNL)
+  local function do_tprint_kv(k,v, lookup_exclude, indent) -- https://gist.github.com/ripter/4270799
+	if indent==nil then indent = 0 end
+		local tyk=type(k)
+		local passthrough=false
+		if tyk~='string' then
+			passthrough=true
+		elseif type(lookup_exclude)=='table' then
+			if lookup_exclude[k]==nil then
+				passthrough=true
+			end
+		else
+			passthrough=true
+		end
+		if passthrough==true then
+			  formatting = string.rep("	", indent) .. k .. ": "
+			  local typv=type(v)
+			  if typv == "table" then
+				print(formatting)
+				tprint(v, lookup_exclude, indent+1,true)
+			  elseif typv == 'boolean' then
+				print(formatting .. tostring(v))
+			  elseif typv == 'string' then
+				local la, lb=string.find(v, "\n")
+				if la==nil then
+					print(formatting .. '"'.. v ..'"')
+				else
+					print(formatting .. '[['.. v ..']]')
+				end
+			  elseif typv == 'function' then
+				print(formatting .. 'function () … end')
+			  else
+				print(formatting .. v)
+			  end
+		end
+  end
+  do_tprint_kv(k,v, lookup_exclude, indent)
+  if suppressNL~=true then
+	print('\n')
+  end
 end
 
 local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
@@ -636,6 +681,7 @@ local function rsp(b,m,f)
 
 	debug_getContext()
 	local rets_lookup2={}
+	rets_lookup2.ord={}
 	local modulesList2={}
 	
 	local modulesTable= enumModules()
@@ -671,6 +717,7 @@ local function rsp(b,m,f)
 				local isRet=isInModule(rd,dx,modulesList2)
 				if isRet[1]==true then
 					if rets_lookup2[dx]==nil then
+						table.insert(rets_lookup2.ord,dx)
 						rets_lookup2[dx]={}
 						rets_lookup2[dx]['Count']=1
 						--rets_lookup2[dx]['address_dec']=rd
@@ -695,25 +742,37 @@ local function rsp(b,m,f)
 		end
 	jumpRes.rsp=rets_lookup2
 	jumpRes.sel='rsp'
-	tprint(rets_lookup2,xcld)
+	for i=1, #rets_lookup2.ord do
+		local k=rets_lookup2.ord[i]
+		local v=rets_lookup2[k]
+		tprint_kv(k,v,xcld,nil,true)
+		print('\n')
+	end
 end
 
 local function jump(i,s)
 	
 	local stk=jumpRes['sel']
-	if s==true then
-		stk='rsp'
-	elseif s==false then
-		stk='stack'
+	local js
+	local j
+	local lim
+	if s==true or (s~=true and stk=='rsp') then
+		js=jumpRes['rsp']
+		j=js[js.ord[i]]
+		lim=#js.ord
+	elseif s==false or (s~=false and stk=='stack') then
+		js=jumpRes['stack']
+		j=js[i]
+		lim=#js
 	end
-	local js=jumpRes[stk]
+	
 	if js==nil then
 		print(stk..' does not exist!')
 	else
 		
-		local j=js[i]
+		
 		if j==nil then
-			print(string.format('For %s: i must be between %d and %d',stk,1,#js))
+			print(string.format('For %s: i must be between %d and %d',stk,1,lim))
 		else
 			getMemoryViewForm().DisassemblerView.TopAddress=j['Decimal address']
 		end
