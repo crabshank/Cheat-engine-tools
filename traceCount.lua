@@ -3383,7 +3383,10 @@ local function findWrite(n,aobs,m,b,f,p)
 			if type(rd)=='number' and rd>=0 then
 				local dx=string.format('%X',rd)
 				local isRet=isInModule(rd,dx,modulesList_findWrite)
-				if isRet[1]==true and findWriteLookup[dx]==nil then
+				local lst=getPreviousOpcode(rd)
+				local dst = disassemble(lst)
+				local extraField, instruction, bytes, address = splitDisassembledString(dst)
+				if isRet[1]==true and findWriteLookup[dx]==nil and string.find(instruction,"^%s*call%s+")~=nil then
 					table.insert(findWriteToAttach,rd)
 					findWriteLookup[dx]=#findWriteToAttach
 					table.insert(stackBPs,string.format("\t'%s'",isRet[2]))
@@ -3421,12 +3424,12 @@ local function findWriteStack(aobs,m,b,f) --(n,aobs,m,b,f,p)
 	 findWrite(0,aobs,m,b,f,nil)
 end
 
-local function findWriteStep(i,aobs,b,f,p) --(n,aobs,m,b,f,p)
+local function findWriteStep(i,aobs,b,f,p,m) --(n,aobs,m,b,f,p)
 	local stp=2
 	if i==true then
 		stp=1
 	end
-	 findWrite(stp,aobs,nil,b,f,p)
+	 findWrite(stp,aobs,m,b,f,p)
 end
 
 local function end_fw()
@@ -3452,6 +3455,8 @@ local function onFindWriteBp()
 	end
 	
 	local RIPx=string.format('%X',RIP)
+	local modCurr=isInModule(RIP,RIPx,modulesList_findWrite)
+	--print(modCurr[2])
 	local ds = disassemble(RIP)
 	local extraField, instruction, bytes, address = splitDisassembledString(ds)
 	local isRet=false
@@ -3480,13 +3485,15 @@ local function onFindWriteBp()
 	
 	local writeFound=false
 	local scanHere=false
-	if findWriteStep~=2 then --into
-		if findWriteLastWasCall==true or isRet==true or isPatt==true or findWriteWasPatt==true then
-			scanHere=true
-		end
-	else -- step over
-		if isCall==true or isRet==true or isPatt==true or findWriteWasPatt==true then
-			scanHere=true
+	if modCurr[1]==true then
+		if findWriteStep~=2 then --into
+			if findWriteLastWasCall==true or isRet==true or isPatt==true or findWriteWasPatt==true then
+				scanHere=true
+			end
+		else -- step over
+			if isCall==true or isRet==true or isPatt==true or findWriteWasPatt==true then
+				scanHere=true
+			end
 		end
 	end
 	
@@ -3497,12 +3504,12 @@ local function onFindWriteBp()
 			if res~=nil then
 				local rCnt= res.Count
 				if rCnt>0 then
-					print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],isInModule(RIP,RIPx,modulesList_findWrite)[2]))
+					print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],modCurr[2]))
 					writeFound=true
 					findWriteBp=false
 					break
 				else
-					lastAddr_findWrite={RIP,isInModule(RIP,RIPx,modulesList_findWrite)[2]}
+					lastAddr_findWrite={RIP,modCurr[2]}
 				end
 				res.destroy()
 			end
@@ -3522,7 +3529,8 @@ local function onFindWriteBp()
 	end
 	
 	if writeFound==true then
-		debug_continueFromBreakpoint(co_run)
+		return 1
+		--debug_continueFromBreakpoint(co_run)
 	elseif findWriteStep~=2 then --into
 		debug_continueFromBreakpoint(co_stepinto)
 	else -- step over
