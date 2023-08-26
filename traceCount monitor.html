@@ -20,6 +20,7 @@ span.memLink {
  <body>
  <title>traceCount monitor</title>
  <h1 style="text-align: center;">traceCount monitor</h1>
+ <label for="revChk" style="margin-bottom: 0.47ch;display: -webkit-inline-box;">Reverse auto-check direction: <input  type="checkbox"  id="revChk" style="vertical-align: bottom;margin-bottom: 0.2ch;margin-left: 0.2ch;"></input></label><br>
  <label for="openFile1">Load file: </label><input  type="file"  id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
  <pre id="preTag"></pre>
   <style>
@@ -30,6 +31,7 @@ span.memLink {
   <script>
   var firstDone=false;
   var isRN=true;
+  var chkRev=false;
   const registers={};
   registers['list_regs']=[
 ["ST(0)","FP0",71],
@@ -173,8 +175,15 @@ function chkClick(event){
 	if(oc.checked===false){
 			flg=false;
 	}
-	for(let i=st+1, len=ocs.length; i<len; i++){
-		allChk[ocs[i]].checked=flg;
+	if(!chkRev){
+		for(let i=st+1, len=ocs.length; i<len; i++){
+			allChk[ocs[i]].checked=flg;
+		}
+	}else{
+		for(let i=st-1; i>=0; i--){
+			allChk[ocs[i]].checked=flg;
+		}
+
 	}
 }
 
@@ -310,7 +319,16 @@ const pre_el=document.getElementById('preTag');
 		
 	}
 		
+ document.getElementById("revChk").addEventListener('input',  function (e) {
+	 let t=e.target;
+	 chkRev=t.checked;
+ });
+ 
  document.getElementById("openFile1").addEventListener('change',  function () {
+	 let rc=document.getElementById("revChk");
+	 chkRev=rc.checked;
+	 /*rc.style.display="none";
+	 rc.parentElement.style.display="none";*/
 	 var fr = new FileReader();
 	 fr.onload = function () {
 		let str = this.result;
