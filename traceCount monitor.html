@@ -32,6 +32,7 @@ span.memLink {
   var firstDone=false;
   var isRN=true;
   var chkRev=false;
+  var rvc=document.getElementById("revChk");
   const registers={};
   registers['list_regs']=[
 ["ST(0)","FP0",71],
@@ -319,16 +320,12 @@ const pre_el=document.getElementById('preTag');
 		
 	}
 		
- document.getElementById("revChk").addEventListener('input',  function (e) {
-	 let t=e.target;
-	 chkRev=t.checked;
+ rvc.addEventListener('input',  function () {
+	 chkRev=rvc.checked;
  });
  
  document.getElementById("openFile1").addEventListener('change',  function () {
-	 let rc=document.getElementById("revChk");
-	 chkRev=rc.checked;
-	 /*rc.style.display="none";
-	 rc.parentElement.style.display="none";*/
+	 chkRev=rvc.checked;
 	 var fr = new FileReader();
 	 fr.onload = function () {
 		let str = this.result;
