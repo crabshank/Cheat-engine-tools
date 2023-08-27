@@ -298,6 +298,7 @@ local function dumpRegisters(k)
 	canJump=false
 		for j=1, #ks do
 			local ak=abp[j]
+			local p=ak['ptr']
 			if ak['count']==true then
 				
 				if j==1 then
@@ -305,7 +306,9 @@ local function dumpRegisters(k)
 				end
 				tprint(ak.regs.counts)
 			else
-			canJump=true
+			if p~=true then
+				canJump=true
+			end
 			local riv=ak.regs
 			local rivl=#riv
 				print('regs length = ' .. rivl)
@@ -315,7 +318,11 @@ local function dumpRegisters(k)
 						print( ak['calcs'][i] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
 						c=true
 					end
-					print('#'..i..':\t'..riv[i][1])
+					if p~=true then
+						print('#'..i..':\t'..riv[i][1])
+					else
+						print(riv[i][1])
+					end
 				end
 				if c==true then
 							   print('')
