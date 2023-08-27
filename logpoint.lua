@@ -6,6 +6,8 @@ local function trim_str(s)
 	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
 end
 local upperc=string.upper
+local canJump=false
+local jmpTbl={}
 
 local function tprint(tbl, indent)
   local function do_tprint(tbl, indent) -- https://gist.github.com/ripter/4270799
@@ -148,6 +150,21 @@ local function restoreGlobals()
 	SP=SP_bak
 end
 
+local function deepcopy(orig)
+	local orig_type = type(orig)
+	local copy
+	if orig_type == 'table' then
+		copy = {}
+		for orig_key, orig_value in next, orig, nil do
+			copy[deepcopy(orig_key)] = deepcopy(orig_value)
+		end
+		setmetatable(copy, deepcopy(getmetatable(orig)))
+	else -- number, string, boolean, etc
+		copy = orig
+	end
+	return copy
+end
+
 local function getSubRegDecBytes(x,g,a,b,n)
 	local xl=string.len(x)
     local out=''
@@ -213,10 +230,6 @@ local function printAttached()
 		end
 end
 
-local function count_dumpRegisters(akc)
-			tprint(akc)
-end
-
 local function rem_abp(i,b)
 	local out={}
 	if b==true then
@@ -256,6 +269,25 @@ local function removeAttached(i,b)
 	end
 end
 
+local function jump(x,k)
+	if canJump==true then
+			local ks={#jmpTbl}
+			if k~=nil then 
+				ks[1]=k
+			end
+			for j=1, #ks do
+				local ak=jmpTbl[j]
+				if ak['count']~=true then
+					local riv=ak.regs
+					local rivl=#riv
+					if x>=1 and x<=rivl then
+						 getMemoryViewForm().HexadecimalView.Address=riv[x][2]
+					end
+				end
+			end
+	end
+end
+
 local function dumpRegisters(k)
 	local c=false
 	local ks={#abp}
@@ -263,15 +295,17 @@ local function dumpRegisters(k)
 		ks[1]=k
 	end
 	
+	canJump=false
 		for j=1, #ks do
 			local ak=abp[j]
 			if ak['count']==true then
+				
 				if j==1 then
 					print('Counts (#'..j..'):')
 				end
-				count_dumpRegisters(ak.regs.counts)
+				tprint(ak.regs.counts)
 			else
-			
+			canJump=true
 			local riv=ak.regs
 			local rivl=#riv
 				print('regs length = ' .. rivl)
@@ -281,13 +315,16 @@ local function dumpRegisters(k)
 						print( ak['calcs'][i] ..' logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
 						c=true
 					end
-					print(riv[i])
+					print('#'..i..':\t'..riv[i][1])
 				end
 				if c==true then
 							   print('')
 				end
 			end
 	end
+	end
+	if canJump==true then
+		jmpTbl=deepcopy(abp)
 	end
 	removeAttached()
 end
@@ -445,7 +482,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,hexByteString)
+									table.insert(ar,{hexByteString,nil})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -468,7 +505,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,rx)
+									table.insert(ar,{rx,nil})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -492,7 +529,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,rxbt)
+									table.insert(ar,{rxbt,r})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -640,6 +677,7 @@ logpoint={
 	attach=attach,
 	count=count,
 	dumpRegisters=dumpRegisters,
+	jump=jump,
 	removeAttached=removeAttached,
 	stop=stop,
 	printAttached=printAttached
