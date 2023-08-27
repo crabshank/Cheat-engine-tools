@@ -57,62 +57,72 @@
 <body>
 	<title>Hex viewer</title>
 	<h1 id="ttl" style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex viewer</h1>
-					<div contenteditable="true" id="n_count_div" style="display: none; border: #7f7f7f 1px outset; padding-left: 0.73ch; padding-right: 0.73ch; zoom: 81.5%; border-style: dotted;">4</div>
-			<select  id="type_view" style="width: max-content;">
-				<optgroup label="Char (Unicode)">
-					<option id="nbc">n byte char</option>
-					<option id="spc">4 byte surrogate pair char</option>
-				</optgroup>
-				<optgroup label="Int">
-					<option id="nbyus">n byte int (unsigned, signed)</option>
-					<option id="nbys">n byte signed int</option>
-					<option id="nbyu">n byte unsigned int</option>
-					<option id="nbus">n bit int (unsigned, signed)</option>
-					<option id="nbs">n bit signed int</option>
-					<option id="nbu">n bit unsigned int</option>
-				</optgroup>
-				<optgroup label="Floating point">
-					<option id="flt">Float</option>
-					<option id="dbl">Double</option>
-				</optgroup>
-				<option id="col">RGB(A) byte hex</option>
-				<option id="bin">Binary</option>
-			</select>
-		<section id="rgba_sel" style="display: none;">
-			<select  id="rgba_sel1" style="width: max-content;">
-				<option>R</option>
-				<option>A</option>
-				<option>G</option>
-				<option>B</option>
-			</select>
-			<select  id="rgba_sel2" style="width: max-content;">
-				<option>G</option>
-				<option>B</option>
-				<option>R</option>
-				<option>A</option>
-			</select>
-			<select  id="rgba_sel3" style="width: max-content;">
-				<option>B</option>
-				<option>R</option>
-				<option>G</option>
-				<option>A</option>
-			</select>
-			<select  id="rgba_sel4" style="width: max-content;">
-				<option></option>
-				<option>A</option>
-				<option>B</option>
-				<option>R</option>
-				<option>G</option>
-			</select>
+		<section id="hex_scts"  style="display: inline-flex;flex-flow: row nowrap;place-content: flex-start;max-width: 100%;width: 100%;overflow-y: hidden;">
+		<section id="hex_bh"  style="flex-direction: column; width:50%;">
+			<section id="btns" style="width: 100% !important;">
+							<div contenteditable="true" id="n_count_div" style="display: none; border: #7f7f7f 1px outset; padding-left: 0.73ch; padding-right: 0.73ch; zoom: 81.5%; border-style: dotted;">4</div>
+					<select  id="type_view" style="width: max-content;">
+						<optgroup label="Char (Unicode)">
+							<option id="nbc">n byte char</option>
+							<option id="spc">4 byte surrogate pair char</option>
+						</optgroup>
+						<optgroup label="Int">
+							<option id="nbyus">n byte int (unsigned, signed)</option>
+							<option id="nbys">n byte signed int</option>
+							<option id="nbyu">n byte unsigned int</option>
+							<option id="nbus">n bit int (unsigned, signed)</option>
+							<option id="nbs">n bit signed int</option>
+							<option id="nbu">n bit unsigned int</option>
+						</optgroup>
+						<optgroup label="Floating point">
+							<option id="flt">Float</option>
+							<option id="dbl">Double</option>
+						</optgroup>
+						<option id="col">RGB(A) byte hex</option>
+						<option id="bin">Binary</option>
+					</select>
+				<section id="rgba_sel" style="display: none;">
+					<select  id="rgba_sel1" style="width: max-content;">
+						<option>R</option>
+						<option>A</option>
+						<option>G</option>
+						<option>B</option>
+					</select>
+					<select  id="rgba_sel2" style="width: max-content;">
+						<option>G</option>
+						<option>B</option>
+						<option>R</option>
+						<option>A</option>
+					</select>
+					<select  id="rgba_sel3" style="width: max-content;">
+						<option>B</option>
+						<option>R</option>
+						<option>G</option>
+						<option>A</option>
+					</select>
+					<select  id="rgba_sel4" style="width: max-content;">
+						<option></option>
+						<option>A</option>
+						<option>B</option>
+						<option>R</option>
+						<option>G</option>
+					</select>
+				</section>
+					<section id='be_box' style="display: contents; visibility: visible;	">
+						<input type="checkbox" id="big_end"></input>
+						<label for="big_end">Big endian</label>
+					</section>
+				<button id="conv" style="margin-left: 0.16ch;">Convert hex</button>
+				<section id='rv_box' style="display: inline-block;float:right;">
+					<input type="checkbox" id="revOut"></input>
+					<label for="revOut">Reverse output</label>
+				</section>
 		</section>
-			<section id='be_box' style="display: contents; visibility: visible;	">
-				<input type="checkbox" id="big_end"></input>
-				<label for="big_end">Big endian</label>
-			</section>
-		<button id="conv" style="margin-left: 0.16ch;">Convert hex</button>
-		<section id="hex_scts"  style="display: inline-flex; flex-flow: row nowrap; place-content: flex-start;max-width: 100%;width: 100%; overflow-y: hidden;">
-		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;">
+		
+		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 100%;width:100%;">
 			<div contenteditable id="hex" style="height: max-content;min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
+	</section>
+	
 	</section>
 	<section id="hex_sct2"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;min-height: 92%;">
 			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;min-height: 87vh;padding-left: 0.111em;"></div>
@@ -544,11 +554,13 @@ var bit_interps_be={};
 var bit_interps_hex=[];
 
 elems.hex_scts = document.getElementById('hex_scts');
+elems.btns = document.getElementById('btns');
 elems.hex_sct = document.getElementById('hex_sct');
 elems.hex_sct2 = document.getElementById('hex_sct2');
 elems.hex = document.getElementById('hex');
 elems.hex2 = document.getElementById('hex2');
 elems.big_end = document.getElementById('big_end');
+elems.revOut = document.getElementById('revOut');
 elems.be_box = document.getElementById('be_box');
 elems.doc_CSS2 = document.getElementById('doc_CSS2');
 elems.ttl = document.getElementById('ttl');
@@ -557,6 +569,11 @@ elems.conv = document.getElementById('conv');
 elems.rgba_sel=document.getElementById('rgba_sel');
 elems.n_count_div=document.getElementById('n_count_div');
 elems.n_count_div.title='Scroll over or type value (n bit/byte) here!';
+
+let hxr=absBoundingClientRect(elems.hex_sct);
+let hxr2=absBoundingClientRect(elems.hex_sct2);
+
+elems.hex_sct2.style.transform=`translateY(${hxr.top-hxr2.top+2}px)`;
 
 function copy_hdl(event){
   let selectedText = window.getSelection().toString(); 
@@ -1285,6 +1302,17 @@ elems.hex.oninput=(event)=>{
 	if(sp.length>0){
 		t.innerHTML=t.innerText;
 		selDivEditable(t);
+	}
+}
+
+elems.revOut.oninput=(event)=>{
+	let h2=elems.hex2;
+	if(elems.revOut.checked===true){
+		h2.style.flexDirection='row-reverse';
+		h2.style.justifyContent='left';
+	}else{
+		h2.style.flexDirection='';
+		h2.style.justifyContent='';
 	}
 }
 
