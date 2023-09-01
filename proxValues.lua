@@ -2,6 +2,7 @@ local ress={}
 local ress_comp={['rsl']=0,['res']={},['filt']={}}
 local boundedResParams={-1,0,false}
 local boundedRes={}
+local jmpList={}
 local narrow_err=true
 
 local function tprint(tbl, indent)
@@ -73,6 +74,8 @@ local function printFiltered(m,n)
 		   ags=1
 		end
 		
+		local cnt=1;
+		jmpList={}
 		for i = 1, brl do --iterate over boundedRes
 			local t = {}
 			local bri=boundedRes[i]
@@ -80,16 +83,22 @@ local function printFiltered(m,n)
 			local r=bri.range
 			local dle=#d
 			if (ags==0) or (ags==1 and r<=m) or (ags==2 and r>=m and r<=n) then
-					t[1]=d[1].Address .. ' (' .. d[1].Value .. ')'
+					local mn=d[1].addressConv;
+					t[1]='#'..cnt..':   '..d[1].Address .. ' (' .. d[1].Value .. ')'
+					cnt=cnt+1
 					if dle >= 2 then
 						for k = 2, dle do --iterate over boundedRes.data
+							if d[k].addressConv<mn then
+								mn=d[k].addressConv
+							end
 							t[k]= ' || ' .. d[k].Address .. ' (' .. d[k].Value .. ')'
 						end
 						t[dle+1]=' 〈Range: ' .. boundedRes[i].range .. ' bytes〉'
 					end
-
+					
 					local a = table.concat(t)
 					print(a)
+					table.insert(jmpList,mn)
 			end
 		end
 	else
@@ -341,6 +350,12 @@ local function compare(t,r)
 	end
 end
 
+local function jump(i)
+	if jmpList[i]~=nil then
+		getMemoryViewForm().HexadecimalView.Address=jmpList[i]
+	end
+end
+
 proxValues={
 	resetAllResults=resetAllResults,
 	addMemScan=addMemScan,
@@ -348,5 +363,6 @@ proxValues={
 	removeResult=removeResult,
 	printFiltered=printFiltered,
 	narrowDown=narrowDown,
-	fullScan=fullScan
+	fullScan=fullScan,
+	jump=jump
 }
