@@ -574,6 +574,8 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **fullScan( m --[[Optional]] )** -> Go through all added memscan results to find all instances where a result of all the memscans are found in an area of memory of max size **m** bytes (**m** must be positive integer >=1), or an unlimited size of memory if no argument is specified.
 
+* **jump(i)** -> Jump to last printed result (#**i**), in the hex view).
+
 * **narrowDown( n --[[Optional]] )** -> If you have done a full scan and then added another memscan result, use this to further filter the results given by 'fullScan(m)'
 
         narrowDown(n) : Only keep and output results with max. memory area size <=**n**
