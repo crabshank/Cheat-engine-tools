@@ -76,7 +76,8 @@ local function printFiltered(m,n)
 		
 		local cnt=1;
 		jmpList={}
-		for i = 1, brl do --iterate over boundedRes
+		local lns={}
+		for i = brl, 1, -1 do --iterate over boundedRes
 			local t = {}
 			local bri=boundedRes[i]
 			local d=bri.data
@@ -84,7 +85,7 @@ local function printFiltered(m,n)
 			local dle=#d
 			if (ags==0) or (ags==1 and r<=m) or (ags==2 and r>=m and r<=n) then
 					local mn=d[1].addressConv;
-					t[1]='#'..cnt..':   '..d[1].Address .. ' (' .. d[1].Value .. ')'
+					t[1]=d[1].Address .. ' (' .. d[1].Value .. ')'
 					cnt=cnt+1
 					if dle >= 2 then
 						for k = 2, dle do --iterate over boundedRes.data
@@ -97,9 +98,13 @@ local function printFiltered(m,n)
 					end
 					
 					local a = table.concat(t)
-					print(a)
+					table.insert(lns,a)
 					table.insert(jmpList,mn)
 			end
+		end
+		local l_lns=#lns
+		for i=1, l_lns do
+			print('#'..(l_lns-i+1)..':   '..lns[i])
 		end
 	else
 		print('No matching results')
@@ -351,8 +356,9 @@ local function compare(t,r)
 end
 
 local function jump(i)
-	if jmpList[i]~=nil then
-		getMemoryViewForm().HexadecimalView.Address=jmpList[i]
+	local k=#jmpList-i+1
+	if jmpList[k]~=nil then
+		getMemoryViewForm().HexadecimalView.Address=jmpList[k]
 	end
 end
 
