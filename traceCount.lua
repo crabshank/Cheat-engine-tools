@@ -749,7 +749,7 @@ local function tprint(tbl, indent)
 	  elseif typv == 'function' then
 		print(formatting .. 'function () … end')
 	  else
-		print(formatting .. v)
+		print(formatting .. tostring(v))
 	  end
 	end
   end
@@ -3456,7 +3456,7 @@ local function onFindWriteBp()
 	
 	local RIPx=string.format('%X',RIP)
 	local modCurr=isInModule(RIP,RIPx,modulesList_findWrite)
-	--print(modCurr[2])
+	print(modCurr[2])
 	local ds = disassemble(RIP)
 	local extraField, instruction, bytes, address = splitDisassembledString(ds)
 	local isRet=false
@@ -3504,6 +3504,7 @@ local function onFindWriteBp()
 			if res~=nil then
 				local rCnt= res.Count
 				if rCnt>0 then
+					print(res[0])
 					print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],modCurr[2]))
 					writeFound=true
 					findWriteBp=false

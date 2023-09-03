@@ -26,7 +26,7 @@ local function tprint(tbl, indent)
 	  elseif typv == 'function' then
 		print(formatting .. 'function () … end')
 	  else
-		print(formatting .. v)
+		print(formatting .. tostring(v))
 	  end
 	end
   end
