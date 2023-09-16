@@ -471,7 +471,6 @@ local function onBp()
 						local func= load("return function() return ".. abpxc[j] .." end")
 						local b,r=pcall(func())
 						restoreGlobals()
-						local rv={}
 						if abpx['ptr']==true then
 							local rb=r+abpx['bh']
 							local rf=r+abpx['fw']
