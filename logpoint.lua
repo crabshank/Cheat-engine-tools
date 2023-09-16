@@ -311,7 +311,7 @@ local function dumpRegisters(k)
 			end
 			local riv=ak.regs
 			local rivl=#riv
-				print('regs length = ' .. rivl)
+				--print('regs length = ' .. rivl)
 			 if rivl >0 then
 				for i = 1, rivl do
 					if c==false then
@@ -319,7 +319,7 @@ local function dumpRegisters(k)
 						c=true
 					end
 					if p~=true then
-						print('#'..i..':\t'..riv[i][1])
+						print('#'..i..' ('..riv[i][3]..')'..':\t'..riv[i][1])
 					else
 						print(riv[i][1])
 					end
@@ -489,7 +489,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{hexByteString,nil})
+									table.insert(ar,{hexByteString,nil,abpxc[j]})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -512,7 +512,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{rx,nil})
+									table.insert(ar,{rx,nil,abpxc[j]})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -536,7 +536,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{rxbt,r})
+									table.insert(ar,{rxbt,r,abpxc[j]})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
