@@ -408,11 +408,13 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (logpoint.…): 
 
-* **attach( {a, c, p --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). 
+* **attach( {a, c, p --[[Optional]] , le --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). 
 
 **c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). 
 
 Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are interpreted as a memory address(es) and the bytes from there will be logged.
+
+If **le** is set to *true*, logged: non-pointer and non-table registers; are printed as little endian hex rather than aob. 
 
 **bh** and **fw** extend the range of what is captured, e.g `logpoint.attach({0x14022E56F,'RCX',true,-0x40,0x60})` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). 
 
@@ -430,7 +432,7 @@ Also, the float registers are interpreted as byte tables, so using them with arg
 
 * **printAttached()** -> Print all attached breakpoints preceded by an index.
 
-N.B. all data is displayed as arrays of bytes for convenience. I suggest pasting the data into a notepad, removing everything except the byte hex and pasting it into a hex editor/viewer.
+N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situation described above. I suggest pasting the data into a notepad, removing everything except the byte hex and pasting it into a hex editor/viewer.
 
 ## traceCount.lua
 
