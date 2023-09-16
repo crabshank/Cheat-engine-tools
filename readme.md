@@ -414,7 +414,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are interpreted as a memory address(es) and the bytes from there will be logged.
 
-If **le** is set to *true*, logged: non-pointer and non-table registers; are printed as little endian hex rather than aob. 
+If **le** is set to *true*, logged: non-pointer and non-table registers; are printed as little endian hex rather than as arrays of bytes. 
 
 **bh** and **fw** extend the range of what is captured, e.g `logpoint.attach({0x14022E56F,'RCX',true,-0x40,0x60})` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). 
 
