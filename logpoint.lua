@@ -471,6 +471,7 @@ local function onBp()
 						local func= load("return function() return ".. abpxc[j] .." end")
 						local b,r=pcall(func())
 						restoreGlobals()
+						local rv={}
 						if abpx['ptr']==true then
 							local rb=r+abpx['bh']
 							local rf=r+abpx['fw']
@@ -520,11 +521,14 @@ local function onBp()
 									table.insert(fres,rx)
 								end
 								chk=true
-							else
+							else  -- non-table registers 
 								local rx=string.format('%X',r)
-								local rxb=hexToAOB(rx)
-								rxbt=table.concat(rxb," ") 
-								
+								if abpx['l_end']~=true then
+									local rxb=hexToAOB(rx)
+									rxbt=table.concat(rxb," ") 
+								else
+									rxbt=rx
+								end
 								if abp_cnt==true then
 									if rx~=nil then
 										if arc[rx]==nil then
@@ -582,7 +586,7 @@ local function onBp()
 			
 end
 
-local function attachLpAddr(a,c,p,bh,fw,bpst,cnt)
+local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 	abp=rem_abp(a)
 	local tyc=type(c)
 	local cu={}
@@ -594,10 +598,10 @@ local function attachLpAddr(a,c,p,bh,fw,bpst,cnt)
 					cu[1]=upperc(c)
 			end
 	if cnt==true then
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['c_type']=tyc,['count']=cnt})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['c_type']=tyc,['count']=cnt,['l_end']=le})
 		debug_setBreakpoint(a,onBp)
 	else
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt,['l_end']=le})
 		debug_setBreakpoint(a,onBp)
 	end
 	
@@ -617,9 +621,10 @@ local function attach(...)
 		end
 		local c=v[2]
 		local p=v[3]
-		local bh=v[4]
-		local fw=v[5]
-		local bpt=v[6]
+		local le=v[4]
+		local bh=v[5]
+		local fw=v[6]
+		local bpt=v[7]
 
 		if type(c)~='string' and type(c)~='table' then
 			print('Argument "c", must be specified!')
@@ -652,7 +657,7 @@ local function attach(...)
 		end
 		removeAttached()
 		stopped=false
-		attachLpAddr(a,c,p,bh,fw,bpst)
+		attachLpAddr(a,c,p,le,bh,fw,bpst)
 	end
 end
 
