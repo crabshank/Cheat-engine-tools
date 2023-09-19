@@ -470,7 +470,7 @@ local function onBp()
 						local newReg=false
 						local func= load("return function() return ".. abpxc[j] .." end")
 						local b,r=pcall(func())
-						restoreGlobals()
+						
 						if abpx['ptr']==true then
 							local rb=r+abpx['bh']
 							local rf=r+abpx['fw']
@@ -554,7 +554,7 @@ local function onBp()
 							print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
 						end
 				end
-
+				restoreGlobals()
 			end
 	end
 							local bpst=abpx['bpst']
