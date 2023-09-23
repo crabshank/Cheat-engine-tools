@@ -924,7 +924,7 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 			let x=hx_arr[i];
 			let bx=lookup_hex_bin[x[0]];
 			if(x.length>1){
-				bx+=lookup_hex_bin[x[1]];
+				bx=bx+lookup_hex_bin[x[1]];
 			}
 			if(be){
 				bx=reverse_string(bx);
@@ -1227,14 +1227,14 @@ elems.conv.onclick=(event)=>{
 		let isBit=(tp_id==='nbus' || tp_id==='nbs' || tp_id==='nbu')?true:false;
 		if(isBit){
 			bits_arr=[];
-			for (let i=0, len=hx_arr.length; i<len; ++i){
+			for (let i=hx_arr.length-1; i>=0; --i){
 				let x=hx_arr[i];
 				let bx=lookup_hex_bin[x[0]];
 				if(x.length>1){
 					bx+=lookup_hex_bin[x[1]];
 				}
 				for (let k=0, len_k=bx.length; k<len_k; ++k){
-					bits_arr.push({bit: parseInt(bx[k]), byte_hex: x, byte_ix: i });
+					bits_arr.unshift({bit: parseInt(bx[k]), byte_hex: x, byte_ix: i });
 				}
 			}
 		}
