@@ -1283,6 +1283,16 @@ elems.n_count_div.oninput=(event)=>{
 		tn=(Number.isNaN(tni))?1:tni;
 	}
 	t.innerHTML=tn;
+	let rnge = document.createRange();
+	let sel = window.getSelection();
+	let txn=t.childNodes[0];
+	let rn=ttx.length;
+	rnge.setStart(txn, rn);
+	//rnge.setEnd(txn, rn);
+	rnge.collapse(true);
+	sel.removeAllRanges();
+	sel.addRange(rnge);
+	t.focus();
 }
 
 elems.n_count_div.onwheel=(event)=>{
