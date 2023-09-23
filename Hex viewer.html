@@ -1283,6 +1283,7 @@ elems.n_count_div.oninput=(event)=>{
 		tn=(Number.isNaN(tni))?1:tni;
 	}
 	t.innerHTML=tn;
+	
 	let rnge = document.createRange();
 	let sel = window.getSelection();
 	let txn=t.childNodes[0];
@@ -1296,6 +1297,7 @@ elems.n_count_div.oninput=(event)=>{
 }
 
 elems.n_count_div.onwheel=(event)=>{
+	event.preventDefault();
 	let t=elems.n_count_div;
 	let tni=parseInt(t.innerText);
 	let tn=(Number.isNaN(tni))?4:tni;
