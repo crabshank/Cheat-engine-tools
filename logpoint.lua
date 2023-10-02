@@ -319,7 +319,7 @@ local function dumpRegisters(k)
 						c=true
 					end
 					if p~=true then
-						print('#'..i..' ('..riv[i][3]..')'..':\t'..riv[i][1])
+						print('#'..i..' '..riv[i][3]..':\t'..riv[i][1])
 					else
 						print(riv[i][1])
 					end
@@ -495,7 +495,7 @@ local function onBp()
 										end
 									end
 								else
-									local instr=abpxc[j]
+									local instr='('..abpxc[j]..')'
 									if addr~= nil then
 										instr='['..addr..']'
 									end
@@ -522,7 +522,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{rx,nil,abpxc[j]})
+									table.insert(ar,{rx,nil,'('..abpxc[j]..')'})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -549,7 +549,7 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{rxbt,r,abpxc[j]})
+									table.insert(ar,{rxbt,r,'('..abpxc[j]..')'})
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
