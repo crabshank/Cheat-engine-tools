@@ -465,7 +465,7 @@ local function onBp()
 			
 			ar=abpx.regs
 			arc=ar.counts
-			
+			local addedLines=0
 				for j=1, #abpxc do
 						local newReg=false
 						local mtc='%[%s*([^%]]+)%s*%]' -- [(...)]
@@ -500,6 +500,7 @@ local function onBp()
 										instr='['..addr..']'
 									end
 									table.insert(ar,{hexByteString,nil,instr})
+									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,instr)
@@ -523,6 +524,7 @@ local function onBp()
 									end
 								else
 									table.insert(ar,{rx,nil,'('..abpxc[j]..')'})
+									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -550,6 +552,7 @@ local function onBp()
 									end
 								else
 									table.insert(ar,{rxbt,r,'('..abpxc[j]..')'})
+									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
 										table.insert(abpx.calcs,abpxc[j])
@@ -563,6 +566,9 @@ local function onBp()
 						if #abpx.regs==1 then
 							print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
 						end
+				end
+				if addedLines>1 then
+					ar[#ar][1]=ar[#ar][1]..'\n'
 				end
 				restoreGlobals()
 			end
