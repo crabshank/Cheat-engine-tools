@@ -315,7 +315,7 @@ local function dumpRegisters(k)
 			 if rivl >0 then
 				for i = 1, rivl do
 					if c==false then
-						print( 'Logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' hits):')
+						print( 'Logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' results):')
 						c=true
 					end
 					if p~=true then
