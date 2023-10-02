@@ -468,10 +468,16 @@ local function onBp()
 			
 				for j=1, #abpxc do
 						local newReg=false
-						local func= load("return function() return ".. abpxc[j] .." end")
+						local mtc='%[%s*([^%]]+)%s*%]' -- [(...)]
+						local cj=abpxc[j]
+						local addr=string.match(abpxc[j],mtc)
+						if addr~= nil then
+							cj=addr
+						end
+						local func= load("return function() return "..cj.." end")
 						local b,r=pcall(func())
 						
-						if abpx['ptr']==true then
+						if abpx['ptr']==true or addr~=nil then
 							local rb=r+abpx['bh']
 							local rf=r+abpx['fw']
 							local rg=rf-rb+1
@@ -489,10 +495,14 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{hexByteString,nil,abpxc[j]})
+									local instr=abpxc[j]
+									if addr~= nil then
+										instr='['..addr..']'
+									end
+									table.insert(ar,{hexByteString,nil,instr})
 									if newReg==false then
 										newReg=true
-										table.insert(abpx.calcs,abpxc[j])
+										table.insert(abpx.calcs,instr)
 									end
 									table.insert(fres,hexByteString)
 								end
@@ -633,11 +643,15 @@ local function attach(...)
 		if bh~=nil and bh>0 then
 			print('Argument "bh", in table #'..i..', if specified, must be <=0')
 			return
+		elseif bh==nil then
+			bh=0
 		end
 		
 		if fw~=nil and fw<0 then
 			print('Argument "fw", in table #'..i..', if specified, must be >=0')
 			return
+		elseif fw==nil then
+			fw=0
 		end
 		tybt=type(bpt)
 		if bpt~=nil and ((tybt=='table' and #bpt<1) or (tybt~='string' and tybt~='table')) then
