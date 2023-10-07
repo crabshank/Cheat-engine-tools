@@ -346,6 +346,11 @@ local function stop(pr)
 			end
 			print('')
 		end
+	elseif stopped==false then
+			local abpl=#abp
+			for k=1, abpl do
+				debug_removeBreakpoint(abp[k].address)
+			end
 	end
 	stopped=true
 	restoreGlobals()
@@ -363,6 +368,7 @@ local function get_abp_el(a)
 end
 
 local function onBp()
+
 	local chk=false
 	local abpx=0
 	local ar={}
@@ -374,6 +380,7 @@ local function onBp()
 			if ix>=0 then
 				abpx=abp[ix]
 				local abpxc=abpx['calc']
+				local abpxc_s=abpx['calc_syntax']
 				local abp_cnt=abpx['count']
 
 				debug_getContext(true)
@@ -467,14 +474,18 @@ local function onBp()
 			arc=ar.counts
 			local addedLines=0
 				for j=1, #abpxc do
-						local newReg=false
-						local mtc='%[%s*([^%]]+)%s*%]' -- [(...)]
+						local newReg=false	
 						local cj=abpxc[j]
-						local addr=string.match(abpxc[j],mtc)
-						if addr~= nil then
-							cj=addr
+						local sj=abpxc_s[j]
+						local sj1=sj[1]
+						local sj2=sj[2]
+						local addr=nil
+						local clc=cj
+						if sj1==true then
+							clc=sj2
+							addr=sj2
 						end
-						local func= load("return function() return "..cj.." end")
+						local func= load("return function() return "..clc.." end")
 						local b,r=pcall(func())
 						
 						if abpx['ptr']==true or addr~=nil then
@@ -605,18 +616,34 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 	abp=rem_abp(a)
 	local tyc=type(c)
 	local cu={}
+	local cu_syntx={}
+	local mtc='%[%s*([^%]]+)%s*%]' -- [(...)]
 			if tyc=='table' then
-				for j=1, #c do
-						table.insert(cu,upperc(c[j]))
+					for j=1, #c do
+						local upj=upperc(c[j])
+						table.insert(cu,upj)
+						local typ=string.match(upj,mtc)
+						if typ~= nil then
+							table.insert(cu_syntx,{true,typ}) -- Address
+						else
+							table.insert(cu_syntx,{false,nil}) -- Register
+						end
 					end
 			else
-					cu[1]=upperc(c)
+					local upj=upperc(c)
+					table.insert(cu,upj)
+					local typ=string.match(upj,mtc)
+					if typ~= nil then
+						table.insert(cu_syntx,{true,typ}) -- Address
+					else
+						table.insert(cu_syntx,{false,nil}) -- Register
+					end
 			end
 	if cnt==true then
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['c_type']=tyc,['count']=cnt,['l_end']=le})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt,['l_end']=le})
 		debug_setBreakpoint(a,onBp)
 	else
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt,['l_end']=le})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt,['l_end']=le})
 		debug_setBreakpoint(a,onBp)
 	end
 	
