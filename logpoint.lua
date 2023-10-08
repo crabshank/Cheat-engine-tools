@@ -750,13 +750,13 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 	local isRet=false
 	local s=0
 	if tyc=='table' then
-		if (	( type(c[#c])=='number' ) or (	type(c[1])=='table' and type(c[2])~='nil'	) or (	type(c[2])=='table' )	) then
+		if (	(	type(c[1])=='table' and type(c[2])~='nil'	) or (	type(c[2])=='table' )	) then
 			isRet=true
 		end
 	end
 			if isRet==true then
-				if type(c[#c])=='number' then
-					s=c[#c]
+				if type(c[3])=='number' then
+					s=c[3]
 				end
 				for i=1,2 do
 					table.insert(cu,{})
@@ -768,7 +768,7 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 						for j=1, #ci do
 								local upj=upperc(ci[j])
 								table.insert(cui,upj)
-								local typ=string.match(upj,mtc)
+								local typ=str_match(upj,mtc)
 								if typ~= nil then
 									table.insert(cuis,{true,typ}) -- Address
 								else
@@ -778,7 +778,7 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 					else
 						local upj=upperc(ci)
 						table.insert(cui,upj)
-						local typ=string.match(upj,mtc)
+						local typ=str_match(upj,mtc)
 						if typ~= nil then
 							table.insert(cuis,{true,typ}) -- Address
 						else
@@ -790,7 +790,7 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 					for j=1, #c do
 						local upj=upperc(c[j])
 						table.insert(cu,upj)
-						local typ=string.match(upj,mtc)
+						local typ=str_match(upj,mtc)
 						if typ~= nil then
 							table.insert(cu_syntx,{true,typ}) -- Address
 						else
@@ -800,7 +800,7 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 			else
 					local upj=upperc(c)
 					table.insert(cu,upj)
-					local typ=string.match(upj,mtc)
+					local typ=str_match(upj,mtc)
 					if typ~= nil then
 						table.insert(cu_syntx,{true,typ}) -- Address
 					else
