@@ -412,13 +412,13 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 **c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (like argument **p**) (Set **bh** and **fw** for these, to specifiy the byte range you wish to log. If you do not do this, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code).
 
-To log values in functions and the return values of these:
+***To log values in functions and the return values of these:***
 
 If **c** is a table and:
 
  * **c**[3] is a number: **c**[3] represents the offset from RSP (RSP+**c**[3]) that will be read to get return address, this value (`s`) defaults to 0.
 
- * (**c**[1] is a table and **c**[2]~=nil) `OR` (**c**[2] is a table): The values in **c**[1] will be logged at the function address, and those in **c**[2] will be logged at the return address.
+ * ( **c**[1] is a table and **c**[2]~=nil ) `OR` ( **c**[2] is a table ): The values in **c**[1] will be logged at the function address, and those in **c**[2] will be logged at the return address.
 
 Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are all interpreted as a memory address(es) and the bytes from there will be logged without any extra information (e.g. indexes).
 
