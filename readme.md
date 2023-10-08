@@ -418,7 +418,7 @@ If **c** is a table and:
 
  * **c**[3] is a number: **c**[3] represents the offset from RSP (RSP+**c**[3]) that will be read to get return address, this value (`s`) defaults to 0.
 
- * **c**[1] is a table and **c**[2]~=nil `OR` **c**[2] is a table: The values in **c**[1] will be logged at the function address, and those in **c**[2] will be logged at the return address.
+ * (**c**[1] is a table and **c**[2]~=nil) `OR` (**c**[2] is a table): The values in **c**[1] will be logged at the function address, and those in **c**[2] will be logged at the return address.
 
 Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are all interpreted as a memory address(es) and the bytes from there will be logged without any extra information (e.g. indexes).
 
