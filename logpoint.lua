@@ -9,6 +9,14 @@ local upperc=string.upper
 local canJump=false
 local jmpTbl={}
 
+local function reverseTable(t)
+	local out={}
+	for i=#t,1, -1 do
+		table.insert(out,t[i])
+	end
+	return out
+end
+
 local function tprint(tbl, indent)
   local function do_tprint(tbl, indent) -- https://gist.github.com/ripter/4270799
 	if not indent then indent = 0 end
@@ -230,6 +238,25 @@ local function printAttached()
 		end
 end
 
+local function removeRetBps(k)
+	local i=k
+	local j=k
+	if k==nil then
+		i=1
+		j=#abp
+	end
+	for n=i, j do
+		if abp[n].retAddr~=nil then
+			local airt=abp[n].retAddr
+			for key, value in pairs(airt) do
+				if value[1]>0 then
+					debug_removeBreakpoint(value[2])
+				end
+			end
+		end
+	end
+end
+
 local function rem_abp(i,b)
 	local out={}
 	if b==true then
@@ -253,10 +280,12 @@ local function removeAttached(i,b)
 	local abpl=#abp
 	if b==true then
 		debug_removeBreakpoint(abp[i].address)
+		removeRetBps()
 		abp=rem_abp(i,true)
 	elseif i==nil then
 		for k=1, abpl do
 			debug_removeBreakpoint(abp[1].address)
+			removeRetBps(1)
 			abp=rem_abp(1,true)
 		end
 	else
@@ -288,21 +317,27 @@ local function jump(x,k)
 	end
 end
 
-local function dumpRegisters(k)
+local function dumpRegisters(k,f)
 	local c=false
 	local ks={#abp}
 	if k~=nil then 
 		ks[1]=k
 	end
 	
+	local pth=nil
+	local ptct=''
+	if f~=nil and f~=''  then
+		pth=io.open(f,'w')
+		print('Saving logs…')
+	end
+	
 	canJump=false
 		for j=1, #ks do
 			local ak=abp[j]
 			local p=ak['ptr']
-			if ak['count']==true then
-				
+			if ak['count']==true then	
 				if j==1 then
-					print('Counts (#'..j..'):')
+					print(ptct)
 				end
 				tprint(ak.regs.counts)
 			else
@@ -311,24 +346,45 @@ local function dumpRegisters(k)
 			end
 			local riv=ak.regs
 			local rivl=#riv
-				--print('regs length = ' .. rivl)
 			 if rivl >0 then
 				for i = 1, rivl do
 					if c==false then
-						print( 'Logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' results):')
+						ptct='Logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' results):'
+						if pth~=nil then
+							pth:write(ptct..'\n')
+						else
+							print(ptct)
+						end
 						c=true
 					end
 					if p~=true then
-						print('#'..i..' '..riv[i][3]..':\t'..riv[i][1])
+						ptct=riv[i][4]..'#'..i..' '..riv[i][3]..':\t'..riv[i][1]
+						if pth~=nil then
+							pth:write(ptct..'\n')
+						else
+							print(ptct)
+						end
 					else
-						print(riv[i][1])
+						ptct=riv[i][1]
+						if pth~=nil then
+							pth:write(ptct..'\n')
+						else
+							print(ptct)
+						end
 					end
 				end
 				if c==true then
-							   print('')
+						if pth~=nil then
+							pth:write('\n')
+						else
+							print('')
+						end
 				end
 			end
 	end
+	end
+	if pth~=nil then
+		print('Logs saved!')
 	end
 	if canJump==true then
 		jmpTbl=deepcopy(abp)
@@ -336,13 +392,13 @@ local function dumpRegisters(k)
 	removeAttached()
 end
 
-local function stop(pr)
+local function stop(pr,f)
 	if pr==true and stopped==false then
 		local abpl=#abp
 		if abpl>0 then
 			print('All logs:')
 			for  k = 1, abpl do
-				dumpRegisters(k)
+				dumpRegisters(k,f)
 			end
 			print('')
 		end
@@ -351,6 +407,7 @@ local function stop(pr)
 			for k=1, abpl do
 				debug_removeBreakpoint(abp[k].address)
 			end
+			removeRetBps()
 	end
 	stopped=true
 	restoreGlobals()
@@ -358,11 +415,23 @@ end
 
 local function get_abp_el(a)
 	local ix=-1
-	for k=1, #abp do
-			if abp[k].address==a then
-				ix=k
-				break
-			end
+	if type(a)=='string' then
+		for k=1, #abp do
+			local n=abp[k].retAddr[a][1] --lookup
+				if type(n)=='number' then
+					if n>0 then
+						ix=k
+						break
+					end
+				end
+		end
+	else
+		for k=1, #abp do
+				if abp[k].address==a then
+					ix=k
+					break
+				end
+		end
 	end
 	return ix
 end
@@ -375,10 +444,39 @@ local function onBp()
 	local arc={}
 	local fres={}
 	local abpl=#abp
+	local RIPx=string.format('%X',RIP)
+	local isRet=false -- hit on return address?
+	local isRetLog=false
 	if abpl >0 then
 		local ix=get_abp_el(RIP)
+			if ix==-1 then
+				ix=get_abp_el(RIPx)
+				if ix>=0 then
+					 isRet=true
+					 abp[ix].retAddr[RIPx][1]=abp[ix].retAddr[RIPx][1]-1 -- remove return address instance
+					 debug_removeBreakpoint(RIP)
+				end
+			end
+			
 			if ix>=0 then
 				abpx=abp[ix]
+					if abpx['retOfs']~=nil then
+						isRetLog=true
+					end
+				local abpx_rets
+				if isRetLog==true and isRet==false then -- if ret type logpoint
+					abpx_rets=abpx['retAddr']
+					local rd=readQword(RSP+abpx['retOfs']) -- Add return address
+					if type(rd)=='number' and rd>=0 then
+						local dx=string.format('%X',rd)
+						if abpx_rets[dx]==nil then
+							abpx_rets[dx]={1,rd}
+						else
+							abpx_rets[dx][1]=abpx_rets[dx][1]+1
+						end
+						debug_setBreakpoint(rd,onBp)
+					end
+				end
 				local abpxc=abpx['calc']
 				local abpxc_s=abpx['calc_syntax']
 				local abp_cnt=abpx['count']
@@ -473,7 +571,20 @@ local function onBp()
 			ar=abpx.regs
 			arc=ar.counts
 			local addedLines=0
-				for j=1, #abpxc do
+			local prfx=''
+			if isRetLog==true then -- if ret type logpoint
+				if isRet==true then
+					abpxc=abpx['calc'][2]
+					abpxc_s=abpx['calc_syntax'][2]
+					prfx='Return ('..RIPx..'):\n'
+				else
+					abpxc=abpx['calc'][1]
+					abpxc_s=abpx['calc_syntax'][1]
+					prfx='Function:\n'
+				end
+			end
+			
+				for j=1, #abpxc do --for each calc entry
 						local newReg=false	
 						local cj=abpxc[j]
 						local sj=abpxc_s[j]
@@ -495,7 +606,12 @@ local function onBp()
 							local byt=readBytes(rb,rg,true)
 							if type(byt) =='table' then
 								local decByteString = table.concat(byt, ' ')
+								local rByt=reverseTable(byt)
+								local rDecByteString = table.concat(rByt, ' ')
 								local hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
+								local rHexByteString = rDecByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
+								local le_hex = rHexByteString:gsub(' ',function (c) return '' end)
+								local dec=tonumber(le_hex,16)
 								if abp_cnt==true then
 									if hexByteString~=nil then
 										if arc[hexByteString]==nil then
@@ -510,7 +626,10 @@ local function onBp()
 									if addr~= nil then
 										instr='['..addr..']'
 									end
-									table.insert(ar,{hexByteString,nil,instr})
+									if addedLines>0 then
+										prfx=''
+									end
+									table.insert(ar,{hexByteString,dec,instr,prfx})
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -534,7 +653,10 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{rx,nil,'('..abpxc[j]..')'})
+									if addedLines>0 then
+										prfx=''
+									end
+									table.insert(ar,{rx,nil,'('..abpxc[j]..')',prfx})
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -562,7 +684,10 @@ local function onBp()
 										end
 									end
 								else
-									table.insert(ar,{rxbt,r,'('..abpxc[j]..')'})
+									if addedLines>0 then
+										prfx=''
+									end
+									table.insert(ar,{rxbt,r,'('..abpxc[j]..')',prfx})
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -578,8 +703,12 @@ local function onBp()
 							print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
 						end
 				end
-				if addedLines>1 then
-					ar[#ar][1]=ar[#ar][1]..'\n'
+				if addedLines>1 or isRetLog==true then
+					if isRetLog==true and isRet==true then
+						ar[#ar][1]=ar[#ar][1]..'\n\n'
+					else
+						ar[#ar][1]=ar[#ar][1]..'\n'
+					end
 				end
 				restoreGlobals()
 			end
@@ -618,7 +747,46 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 	local cu={}
 	local cu_syntx={}
 	local mtc='%[%s*([^%]]+)%s*%]' -- [(...)]
-			if tyc=='table' then
+	local isRet=false
+	local s=0
+	if tyc=='table' then
+		if (	( type(c[#c])=='number' ) or (	type(c[1])=='table' and type(c[2])~='nil'	) or (	type(c[2])=='table' )	) then
+			isRet=true
+		end
+	end
+			if isRet==true then
+				if type(c[#c])=='number' then
+					s=c[#c]
+				end
+				for i=1,2 do
+					table.insert(cu,{})
+					table.insert(cu_syntx,{})
+					local cui=cu[i]
+					local cuis=cu_syntx[i]
+					local ci=c[i]
+					if type(ci)=='table' then
+						for j=1, #ci do
+								local upj=upperc(ci[j])
+								table.insert(cui,upj)
+								local typ=string.match(upj,mtc)
+								if typ~= nil then
+									table.insert(cuis,{true,typ}) -- Address
+								else
+									table.insert(cuis,{false,nil}) -- Register
+								end
+						end
+					else
+						local upj=upperc(ci)
+						table.insert(cui,upj)
+						local typ=string.match(upj,mtc)
+						if typ~= nil then
+							table.insert(cuis,{true,typ}) -- Address
+						else
+							table.insert(cuis,{false,nil}) -- Register
+						end
+					end
+				end
+			elseif tyc=='table' then
 					for j=1, #c do
 						local upj=upperc(c[j])
 						table.insert(cu,upj)
@@ -639,13 +807,14 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 						table.insert(cu_syntx,{false,nil}) -- Register
 					end
 			end
-	if cnt==true then
+	if isRet==true then
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['retAddr']={},['retOfs']=s,['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt,['l_end']=le})
+	elseif cnt==true then
 		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt,['l_end']=le})
-		debug_setBreakpoint(a,onBp)
 	else
 		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt,['l_end']=le})
-		debug_setBreakpoint(a,onBp)
 	end
+	debug_setBreakpoint(a,onBp)
 	
 end
 
