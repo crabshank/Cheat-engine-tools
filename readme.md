@@ -410,7 +410,15 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **attach( {a, c, p --[[Optional]] , le --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). 
 
-**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (like argument **p**) (Set **bh** and **fw** for these, to specifiy the byte range you wish to log. If you do not do this, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). 
+**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (like argument **p**) (Set **bh** and **fw** for these, to specifiy the byte range you wish to log. If you do not do this, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code).
+
+To log values in functions and the return values of these:
+
+If **c** is a table and:
+
+`**c**[3] is a number`: **c**[3] represents the offset from RSP (RSP+**c**[3]) that will be read to get return address, this value (`s`) defaults to 0.
+
+`**c**[1] is a table and **c**[2]~=nil` OR `**c**[2] is a table`: The values in **c**[1] will be logged at the function address, and those in **c**[2] will be logged at the return address.
 
 Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are all interpreted as a memory address(es) and the bytes from there will be logged without any extra information (e.g. indexes).
 
@@ -428,9 +436,9 @@ If **le** is set to *true*, logged: non-pointer and non-table registers; are pri
 
 * **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address **i**, or, if b==true: the index **i** printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
 
-* **stop( pr --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **pr**==true (print), dump all the logged data in the console.
+* **stop( pr --[[Optional]], f --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **pr**==true (print), dump all the logged data. **f** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
 
-* **printAttached()** -> Print all attached breakpoints preceded by an index.
+* **printAttached( f --[[Optional]] )** -> Print all attached breakpoints preceded by an index. **f** is the same as in "logpoint.stop(…)".
 
 N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situation described above. I suggest pasting the data into a notepad, removing everything except the byte hex and pasting it into a hex editor/viewer.
 
@@ -442,8 +450,7 @@ N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situ
 
 * **attach( a, c, s --[[Optional]], n --[[Optional]] )** -> Attach breakpoints to **a**: address or table of addresses (either in number [Use '0x…' for addresses in hexadecimal] or string, e.g. 'example.exe+7AE', form) (**If a table of addresses, then it will attach a breakpoint to the 1st element, then when it is hit it will attach one to the 2nd and so on until the last breakpoint is hit and then it will start the trace. This is useful for when the trace cannot escape system modules.**), and keep logging for **c** steps afterwards ("step into/over"). If **c** is a table, the trace will continue until the address reprsesented in the first element of the table is executed up to an optional limit, if specified by the 2nd element. If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **s** is set to **true**, then the module will "step over" (calls), if **s** is a string or table of strings then the module will step into all modules specified by this string and "step out" of all addresses in modules not specified here, otherwise it will "step into".
 
-* **lite( a, c, s --[[Optional]] )** -> Like "traceCount.attach(…)" but only the instructions are logged, so it's quicker. **a** and **c** are the same as in "traceCount.attach(…). , **s**, if true, will "step over", otherwise
- it will step into.
+* **lite( a, c, s --[[Optional]] )** -> Like "traceCount.attach(…)" but only the instructions are logged, so it's quicker. **a** and **c** are the same as in "traceCount.attach(…). , **s**, if true, will "step over", otherwise it will step into.
  
 * **litePrint(fileName)** -> **fileName** is a (full path to a) file name (use double backslashes instead on single ones), where the last trace captured by "traceCount.lite(…)" will be saved; if unspecified or nil, the trace will be printed to the console.
 
