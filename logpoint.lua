@@ -600,8 +600,16 @@ local function onBp()
 						local b,r=pcall(func())
 						
 						if abpx['ptr']==true or addr~=nil then
-							local rb=r+abpx['bh']
-							local rf=r+abpx['fw']
+							local bw=abpx['bh']
+							local fd=abpx['fw']
+							if type(sj[3])=='number' then
+								bw=sj[3]
+							end
+							if type(sj[4])=='number' then
+								fd=sj[4]
+							end
+							local rb=r+bw
+							local rf=r+fd
 							local rg=rf-rb+1
 							local byt=readBytes(rb,rg,true)
 							if type(byt) =='table' then
@@ -747,6 +755,9 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 	local cu={}
 	local cu_syntx={}
 	local mtc='%[%s*([^%]]+)%s*%]' -- [(...)]
+	local mtcd='%[%s*[^%]]+%s*%]%(%s*([^%,]+%s*%,%s*[^%)]+)%s*%)' -- [...]((...,...))
+	local mtcd1='([^%,]+)%s*%,' -- 1st arg
+	local mtcd2=',%s*([^%)]+)' -- 2nd arg
 	local isRet=false
 	local s=0
 	if tyc=='table' then
@@ -770,7 +781,14 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 								table.insert(cui,upj)
 								local typ=str_match(upj,mtc)
 								if typ~= nil then
-									table.insert(cuis,{true,typ}) -- Address
+									local typd=str_match(upj,mtcd)
+									if typd~=nil then
+										local a1=tonumber(str_match(typd,mtcd1))
+										local a2=tonumber(str_match(typd,mtcd2))
+										table.insert(cuis,{true,typ,a1,a2}) -- Address
+									else
+										table.insert(cuis,{true,typ}) -- Address
+									end
 								else
 									table.insert(cuis,{false,nil}) -- Register
 								end
@@ -780,7 +798,14 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 						table.insert(cui,upj)
 						local typ=str_match(upj,mtc)
 						if typ~= nil then
-							table.insert(cuis,{true,typ}) -- Address
+							local typd=str_match(upj,mtcd)
+							if typd~=nil then
+								local a1=tonumber(str_match(typd,mtcd1))
+								local a2=tonumber(str_match(typd,mtcd2))
+								table.insert(cuis,{true,typ,a1,a2}) -- Address
+							else
+								table.insert(cuis,{true,typ}) -- Address
+							end
 						else
 							table.insert(cuis,{false,nil}) -- Register
 						end
@@ -792,7 +817,14 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 						table.insert(cu,upj)
 						local typ=str_match(upj,mtc)
 						if typ~= nil then
-							table.insert(cu_syntx,{true,typ}) -- Address
+							local typd=str_match(upj,mtcd)
+							if typd~=nil then
+								local a1=tonumber(str_match(typd,mtcd1))
+								local a2=tonumber(str_match(typd,mtcd2))
+								table.insert(cu_syntx,{true,typ,a1,a2}) -- Address
+							else
+								table.insert(cu_syntx,{true,typ}) -- Address
+							end
 						else
 							table.insert(cu_syntx,{false,nil}) -- Register
 						end
@@ -802,7 +834,14 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 					table.insert(cu,upj)
 					local typ=str_match(upj,mtc)
 					if typ~= nil then
-						table.insert(cu_syntx,{true,typ}) -- Address
+						local typd=str_match(upj,mtcd)
+						if typd~=nil then
+							local a1=tonumber(str_match(typd,mtcd1))
+							local a2=tonumber(str_match(typd,mtcd2))
+							table.insert(cu_syntx,{true,typ,a1,a2}) -- Address
+						else
+							table.insert(cu_syntx,{true,typ}) -- Address
+						end
 					else
 						table.insert(cu_syntx,{false,nil}) -- Register
 					end
