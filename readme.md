@@ -410,7 +410,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 * **attach( {a, c, p --[[Optional]] , le --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). 
 
-**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (like argument **p**) (Set **bh** and **fw** for these, to specifiy the byte range you wish to log. If you do not do this, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code).
+**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (like argument **p**) (You can also use set **bh** and **fw** for these, to specifiy the byte range you wish to log; or, you can use `[…](bh,fw)` syntax (e.g. `[RSP](0,7)` will log 8 bytes: RSP to RSP+7), to be specific for this log. If you do not do either of these, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code).
 
 ***To log values in functions and the return values of these:***
 
