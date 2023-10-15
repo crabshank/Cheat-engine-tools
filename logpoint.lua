@@ -782,7 +782,7 @@ local function onBp()
 			
 end
 
-local function attachLpAddr(a,c,bpst,cnt) --(a,c,p,le,bh,fw,bpst,cnt)
+local function attachLpAddr(a,c,bpst,cnt)
 	abp=rem_abp(a)
 	local tyc=type(c)
 	local cu={}
