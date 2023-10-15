@@ -408,9 +408,9 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (logpoint.…): 
 
-* **attach( {a, c, p --[[Optional]] , le --[[Optional]] , bh --[[Optional]] , fw --[[Optional]] , bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). 
+* **attach( { a, c, bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address. Attach logging breakpoint to address **a** (Use '0x…' for addresses in hexadecimal). 
 
-**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (like argument **p**) (You can also use set **bh** and **fw** for these, to specifiy the byte range you wish to log; or, you can use `[…](bh,fw)` syntax (e.g. `[RSP](0,7)` will log 8 bytes: RSP to RSP+7), to be specific for this log. If you do not do either of these, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code).
+**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (like argument **p**) (To specifiy the byte range you wish to log use `[…](b,f)` syntax {e.g. `[RSP](0,7)` will log 8 bytes: RSP to RSP+7}, to be specific for this log. If you do not do either of these, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code).
 
 ***To log values in functions and the return values of these:***
 
@@ -420,25 +420,29 @@ If **c** is a table and:
 
  * ( **c**[1] is a table and **c**[2]~=nil ) `OR` ( **c**[2] is a table ): The values in **c**[1] will be logged at the function address, and those in **c**[2] will be logged at the return address.
 
-Also, the float registers are interpreted as byte tables, so using them with argument **p** is undefined behaviour). If **p** is set to *true*, then the string(s) in **c** is/are all interpreted as a memory address(es) and the bytes from there will be logged without any extra information (e.g. indexes).
-
-If **le** is set to *true*, logged: non-pointer and non-table registers; are printed as little endian hex rather than as arrays of bytes. 
-
-**bh** and **fw** extend the range of what is captured, e.g `logpoint.attach({0x14022E56F,'RCX',true,-0x40,0x60})` will log memory from [RCX-40] to [RCX+60] ([RCX-64] to [RCX+96] in decimal). 
-
 **bpt** is a string or table of strings containing AOBs, that when any of the strings specified by **c** is present, the debugger will pause on the logpoint.
  
  * **count( {a, c}, {…}, … )** -> Takes a series of tables, one for each address. See ".attach(…)" for explanations of **a** and **c**. Use ".dumpRegisters(…)" to print counts of all values taken by **c**.
  
-* **dumpRegisters( k --[[Optional]] )** -> Force dump last stored registers to output. Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
+* **dumpRegisters( k --[[Optional]], bin --[[Optional]], f --[[Optional]] )** -> Force dump last stored registers to output. Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
+
+If **bin**==:
+
+1 -> Print only the data as raw hex, separated by `00` bytes
+
+2 -> Non-pointer and non-table registers are printed as little endian hex rather than as arrays of bytes.
+
+Otherwise (default) -> Print all logged data as arrays of bytes.
+
+**f** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
 
 * **jump( x, k --[[Optional]] )** -> Jump to last dumped (in the hex view) (if the dump was of a ".attach(…)" capture), #**x**'s array of bytes interpreted as an address. Argument **k** is the same as in ".dumpRegisters(…)".
 
 * **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address **i**, or, if b==true: the index **i** printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
 
-* **stop( pr --[[Optional]], f --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **pr**==true (print), dump all the logged data. **f** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
+* **stop( pr --[[Optional]], bin --[[Optional]], f --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **pr**==true (print), dump all the logged data. **bin** and **f** are the same as in ".dumpRegisters(…)".
 
-* **printAttached( f --[[Optional]] )** -> Print all attached breakpoints preceded by an index. **f** is the same as in "logpoint.stop(…)".
+* **printAttached()** -> Print all attached breakpoints preceded by an index.
 
 N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situation described above. I suggest pasting the data into a notepad, removing everything except the byte hex and pasting it into a hex editor/viewer.
 
