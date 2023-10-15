@@ -2,12 +2,42 @@ local abp={}
 local stopped=false
 local print=print
 local str_match = string.match
-local function trim_str(s)
-	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
-end
 local upperc=string.upper
 local canJump=false
 local jmpTbl={}
+local nullChr=string.char(0)
+
+local function trim_str(s)
+	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
+end
+
+local function memNum(s,neg)
+	local n=tonumber(s)
+	local tyn=type(n)
+	if (tyn~='number') or (neg==true and n>0) or (neg~=true and n<0) then
+		n=0
+	end
+	return n
+end
+
+local function tableToAOB_esc(t)
+	local out={}
+	for i=1, #t do
+		table.insert(out,string.char(t[i]))
+	end
+	return table.concat(out,'')
+end
+
+local function aobToEsc(s)
+      local hx={}
+      local out={}
+      s:gsub('%S+',function (c) table.insert(hx,c) end)
+      for i=1, #hx do
+	table.insert(out,string.char(tonumber(hx[i],16)))
+      end
+      return table.concat(out,'')
+
+end
 
 local function reverseTable(t)
 	local out={}
@@ -229,7 +259,7 @@ end
 local function printAttached()
 		local abpl=#abp
 		if abpl>0 then
-			print('Attached breakpoints: ')
+			print('Attached logpoints: ')
 			for  k = 1, abpl do
 				local ak=abp[k]
 				print(k .. ': ' .. ak['address_hex'])
@@ -317,13 +347,20 @@ local function jump(x,k)
 	end
 end
 
-local function dumpRegisters(k,f)
+local function dumpRegisters(k,bin,f)
 	local c=false
 	local ks={#abp}
 	if k~=nil then 
 		ks[1]=k
 	end
+	local bny
 	
+	if (type(bin)~='number') or (bin~=1 and bin~=2) then
+		bny=0
+	else
+		bny=bin
+	end
+
 	local pth=nil
 	local ptct=''
 	if f~=nil and f~=''  then
@@ -334,38 +371,42 @@ local function dumpRegisters(k,f)
 	canJump=false
 		for j=1, #ks do
 			local ak=abp[j]
-			local p=ak['ptr']
 			if ak['count']==true then	
 				if j==1 then
 					print(ptct)
 				end
 				tprint(ak.regs.counts)
 			else
-			if p~=true then
-				canJump=true
-			end
+			canJump=true
 			local riv=ak.regs
 			local rivl=#riv
 			 if rivl >0 then
 				for i = 1, rivl do
 					if c==false then
-						ptct='Logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' results):'
-						if pth~=nil then
-							pth:write(ptct..'\n')
-						else
-							print(ptct)
+						if bny~=1 then
+							ptct='Logged at ' .. ak['address_hex'] .. ' (' .. rivl .. ' results):'
+							if pth~=nil then
+								pth:write(ptct..'\n')
+							else
+								print(ptct)
+							end
 						end
 						c=true
 					end
-					if p~=true then
-						ptct=riv[i][4]..'#'..i..' '..riv[i][3]..':\t'..riv[i][1]
+					if bny==1 then -- binary file
+						ptct=riv[i][5]..nullChr
 						if pth~=nil then
-							pth:write(ptct..'\n')
+							pth:write(ptct)
 						else
 							print(ptct)
 						end
 					else
-						ptct=riv[i][1]
+						local x=riv[i][1]
+						local x6=riv[i][6]
+						if bny==2 and x6~=nil then
+							x=x6
+						end
+						ptct=riv[i][4]..'#'..i..' '..riv[i][3]..':\t'..x
 						if pth~=nil then
 							pth:write(ptct..'\n')
 						else
@@ -373,7 +414,7 @@ local function dumpRegisters(k,f)
 						end
 					end
 				end
-				if c==true then
+				if c==true and bny~=1 then
 						if pth~=nil then
 							pth:write('\n')
 						else
@@ -389,16 +430,16 @@ local function dumpRegisters(k,f)
 	if canJump==true then
 		jmpTbl=deepcopy(abp)
 	end
-	removeAttached()
+	--removeAttached()
 end
 
-local function stop(pr,f)
+local function stop(pr,bin,f)
 	if pr==true and stopped==false then
 		local abpl=#abp
 		if abpl>0 then
 			print('All logs:')
 			for  k = 1, abpl do
-				dumpRegisters(k,f)
+				dumpRegisters(k,bin,f)
 			end
 			print('')
 		end
@@ -599,15 +640,9 @@ local function onBp()
 						local func= load("return function() return "..clc.." end")
 						local b,r=pcall(func())
 						
-						if abpx['ptr']==true or addr~=nil then
-							local bw=abpx['bh']
-							local fd=abpx['fw']
-							if type(sj[3])=='number' then
-								bw=sj[3]
-							end
-							if type(sj[4])=='number' then
-								fd=sj[4]
-							end
+						if addr~=nil then
+							local bw=sj[3]
+							local fd=sj[4]
 							local rb=r+bw
 							local rf=r+fd
 							local rg=rf-rb+1
@@ -617,6 +652,7 @@ local function onBp()
 								local rByt=reverseTable(byt)
 								local rDecByteString = table.concat(rByt, ' ')
 								local hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
+								local hexByteString_esc = tableToAOB_esc(byt)
 								local rHexByteString = rDecByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
 								local le_hex = rHexByteString:gsub(' ',function (c) return '' end)
 								local dec=tonumber(le_hex,16)
@@ -637,7 +673,7 @@ local function onBp()
 									if addedLines>0 then
 										prfx=''
 									end
-									table.insert(ar,{hexByteString,dec,instr,prfx})
+									table.insert(ar,{hexByteString,dec,instr,prfx,hexByteString_esc}) -- [5] is raw bytes (escaped)
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -650,7 +686,7 @@ local function onBp()
 						else
 							if type(r)=='table' then
 								local rx=table.concat(r, ' '):gsub('%S+',function (c) return string.format('%02X',c) end)
-								
+								local hexByteString_esc = tableToAOB_esc(r)
 								if abp_cnt==true then
 									if rx~=nil then
 										if arc[rx]==nil then
@@ -664,7 +700,7 @@ local function onBp()
 									if addedLines>0 then
 										prfx=''
 									end
-									table.insert(ar,{rx,nil,'('..abpxc[j]..')',prfx})
+									table.insert(ar,{rx,nil,'('..abpxc[j]..')',prfx,hexByteString_esc})
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -675,12 +711,9 @@ local function onBp()
 								chk=true
 							else  -- non-table registers 
 								local rx=string.format('%X',r)
-								if abpx['l_end']~=true then
-									local rxb=hexToAOB(rx)
-									rxbt=table.concat(rxb," ") 
-								else
-									rxbt=rx
-								end
+								local rxb=hexToAOB(rx)
+								rxbt=table.concat(rxb," ") 
+								local rxbt_esc=aobToEsc(rxbt)
 								if abp_cnt==true then
 									if rx~=nil then
 										if arc[rx]==nil then
@@ -695,7 +728,7 @@ local function onBp()
 									if addedLines>0 then
 										prfx=''
 									end
-									table.insert(ar,{rxbt,r,'('..abpxc[j]..')',prfx})
+									table.insert(ar,{rxbt,r,'('..abpxc[j]..')',prfx,rxbt_esc,rx}) --[6] is little endian
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -749,7 +782,7 @@ local function onBp()
 			
 end
 
-local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
+local function attachLpAddr(a,c,bpst,cnt) --(a,c,p,le,bh,fw,bpst,cnt)
 	abp=rem_abp(a)
 	local tyc=type(c)
 	local cu={}
@@ -760,6 +793,7 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 	local mtcd2=',%s*([^%)]+)' -- 2nd arg
 	local isRet=false
 	local s=0
+	local typ,typd,a1,a2
 	if tyc=='table' then
 		if (	(	type(c[1])=='table' and type(c[2])~='nil'	) or (	type(c[2])=='table' )	) then
 			isRet=true
@@ -779,15 +813,15 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 						for j=1, #ci do
 								local upj=upperc(ci[j])
 								table.insert(cui,upj)
-								local typ=str_match(upj,mtc)
+								typ=str_match(upj,mtc)
 								if typ~= nil then
-									local typd=str_match(upj,mtcd)
+									typd=str_match(upj,mtcd)
 									if typd~=nil then
-										local a1=tonumber(str_match(typd,mtcd1))
-										local a2=tonumber(str_match(typd,mtcd2))
+										a1=memNum(str_match(typd,mtcd1))
+										a2=memNum(str_match(typd,mtcd2))
 										table.insert(cuis,{true,typ,a1,a2}) -- Address
 									else
-										table.insert(cuis,{true,typ}) -- Address
+										table.insert(cuis,{true,typ,0,0}) -- Address
 									end
 								else
 									table.insert(cuis,{false,nil}) -- Register
@@ -796,15 +830,15 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 					else
 						local upj=upperc(ci)
 						table.insert(cui,upj)
-						local typ=str_match(upj,mtc)
+						typ=str_match(upj,mtc)
 						if typ~= nil then
-							local typd=str_match(upj,mtcd)
+							typd=str_match(upj,mtcd)
 							if typd~=nil then
-								local a1=tonumber(str_match(typd,mtcd1))
-								local a2=tonumber(str_match(typd,mtcd2))
+								a1=memNum(str_match(typd,mtcd1))
+								a2=memNum(str_match(typd,mtcd2))
 								table.insert(cuis,{true,typ,a1,a2}) -- Address
 							else
-								table.insert(cuis,{true,typ}) -- Address
+								table.insert(cuis,{true,typ,0,0}) -- Address
 							end
 						else
 							table.insert(cuis,{false,nil}) -- Register
@@ -815,15 +849,15 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 					for j=1, #c do
 						local upj=upperc(c[j])
 						table.insert(cu,upj)
-						local typ=str_match(upj,mtc)
+						typ=str_match(upj,mtc)
 						if typ~= nil then
-							local typd=str_match(upj,mtcd)
+							typd=str_match(upj,mtcd)
 							if typd~=nil then
-								local a1=tonumber(str_match(typd,mtcd1))
-								local a2=tonumber(str_match(typd,mtcd2))
+								a1=memNum(str_match(typd,mtcd1))
+								a2=memNum(str_match(typd,mtcd2))
 								table.insert(cu_syntx,{true,typ,a1,a2}) -- Address
 							else
-								table.insert(cu_syntx,{true,typ}) -- Address
+								table.insert(cu_syntx,{true,typ,0,0}) -- Address
 							end
 						else
 							table.insert(cu_syntx,{false,nil}) -- Register
@@ -832,26 +866,26 @@ local function attachLpAddr(a,c,p,le,bh,fw,bpst,cnt)
 			else
 					local upj=upperc(c)
 					table.insert(cu,upj)
-					local typ=str_match(upj,mtc)
+					typ=str_match(upj,mtc)
 					if typ~= nil then
-						local typd=str_match(upj,mtcd)
+						typd=str_match(upj,mtcd)
 						if typd~=nil then
-							local a1=tonumber(str_match(typd,mtcd1))
-							local a2=tonumber(str_match(typd,mtcd2))
+							a1=memNum(str_match(typd,mtcd1))
+							a2=memNum(str_match(typd,mtcd2))
 							table.insert(cu_syntx,{true,typ,a1,a2}) -- Address
 						else
-							table.insert(cu_syntx,{true,typ}) -- Address
+							table.insert(cu_syntx,{true,typ,0,0}) -- Address
 						end
 					else
 						table.insert(cu_syntx,{false,nil}) -- Register
 					end
 			end
 	if isRet==true then
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['retAddr']={},['retOfs']=s,['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt,['l_end']=le})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['retAddr']={},['retOfs']=s,['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
 	elseif cnt==true then
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt,['l_end']=le})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt})
 	else
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['ptr']=p,['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bh']=bh,['fw']=fw,['bpst']=bpst,['count']=cnt,['l_end']=le})
+		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
 	end
 	debug_setBreakpoint(a,onBp)
 	
@@ -870,29 +904,11 @@ local function attach(...)
 			a=getAddress(a)
 		end
 		local c=v[2]
-		local p=v[3]
-		local le=v[4]
-		local bh=v[5]
-		local fw=v[6]
-		local bpt=v[7]
+		local bpt=v[3]
 
 		if type(c)~='string' and type(c)~='table' then
 			print('Argument "c", must be specified!')
 			return
-		end
-				
-		if bh~=nil and bh>0 then
-			print('Argument "bh", in table #'..i..', if specified, must be <=0')
-			return
-		elseif bh==nil then
-			bh=0
-		end
-		
-		if fw~=nil and fw<0 then
-			print('Argument "fw", in table #'..i..', if specified, must be >=0')
-			return
-		elseif fw==nil then
-			fw=0
 		end
 		tybt=type(bpt)
 		if bpt~=nil and ((tybt=='table' and #bpt<1) or (tybt~='string' and tybt~='table')) then
@@ -911,7 +927,7 @@ local function attach(...)
 		end
 		removeAttached()
 		stopped=false
-		attachLpAddr(a,c,p,le,bh,fw,bpst)
+		attachLpAddr(a,c,bpst)
 	end
 end
 
@@ -935,7 +951,7 @@ local function count(...)
 		end
 		removeAttached()
 		stopped=false
-		attachLpAddr(a,c,nil,nil,nil,nil,true)
+		attachLpAddr(a,c,nil,true)
 	end
 end
 
