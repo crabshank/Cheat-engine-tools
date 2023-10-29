@@ -1095,6 +1095,26 @@ unregistersymbol(${nmb})
 	  `;
 	  let i=1;
 	  let v=[...scls.hl.children];
+	  if(v.length===0){
+		  v=[...document.querySelectorAll('section#anly_info > section')];
+		   for(let k=0, len=v.length; k<len; k++){
+			   let vk=v[k];
+			   let vkFe=vk.firstElementChild;
+			   let vkFe_hod=vkFe.getAttribute('hod');
+			   let vkFe_bse='base'+vkFe_hod;
+			   
+				ct+=`<CheatEntry>
+				  <ID>${k+1}</ID>
+				  <Description>"${vkFe_bse} (default = ${vkFe.nextElementSibling.innerText})"</Description>
+				  <ShowAsHex>1</ShowAsHex>
+				  <ShowAsSigned>0</ShowAsSigned>
+				  <VariableType>Byte</VariableType>
+				  `;
+			  ct+=`<Address>${vkFe_bse}</Address>
+				</CheatEntry>
+				`;
+		   }
+	  }else{
 	  for(let k=0, len=v.length; k<len; k++){
 		  let dsc=[...v[k].querySelectorAll('.offset_addr_nm')][0];
 		  let sgn=dsc.nextElementSibling;
@@ -1142,6 +1162,7 @@ unregistersymbol(${nmb})
 			`;
 		i++;
 	  }
+	}
 	  ct+=`</CheatEntries>
     </CheatEntry>
   </CheatEntries>
@@ -1150,7 +1171,7 @@ unregistersymbol(${nmb})
 console.log(ct);
 	let dl_a=document.createElement('a');
 	document.body.appendChild(dl_a);
-	let nm=((t[1]==='')? '': (t[1]+'__') )+t[0]+'.CT';
+	let nm=((t[1]==='')? 'AOB_table': (t[1]+'__') )+t[0]+'.CT';
 	dl_a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(ct));
 	dl_a.setAttribute('download', nm);
 	dl_a.click();
