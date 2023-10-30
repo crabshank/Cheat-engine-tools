@@ -466,7 +466,7 @@ elems.hex_sct2 = document.getElementById('hex_sct2');
 elems.hex = document.getElementById('hex');
 elems.hex2 = document.getElementById('hex2');
 
-var tmplRow=`<tr class="notes">	<td oninput="changeAnn(event,0)" contenteditable="true">0</td>	<td oninput="changeAnn(event,1)" contenteditable="true">0</td>	<td contenteditable="true">1</td>	<td contenteditable="true">1</td>	<td style="min-width:12.7ch;"><input class="col" type="color" style="width: 4.808ch !important; margin-right: 0.48ch !important; height: 20px !important; background-color: #ffff00 !important; border: #ffff00 !important;" oninput="customCol(event)" id="vis" value="#ffff00">#FFFF00</input>	<td contenteditable="true" class="cmmt"></td>`;
+var tmplRow=`<tr class="notes">	<td oninput="changeAnn(event,1)" contenteditable="true">0</td>	<td oninput="changeAnn(event,0)" contenteditable="true">0</td>	<td contenteditable="true">1</td>	<td contenteditable="true">1</td>	<td style="min-width:12.7ch;"><input class="col" type="color" style="width: 4.808ch !important; margin-right: 0.48ch !important; height: 20px !important; background-color: #ffff00 !important; border: #ffff00 !important;" oninput="customCol(event)" id="vis" value="#ffff00">#FFFF00</input>	<td contenteditable="true" class="cmmt"></td>`;
 
 var addBtn=`<button class="newHl" style="filter: hue-rotate(212deg) saturate(10); width: 4.3ch;">➕</button>`;
 var initRow=`${tmplRow}</td>	<td>${addBtn}</td>	</tr>`;
@@ -558,16 +558,20 @@ function changeAnn(event,inp){
 			let lastNt=(tyn)?t.parentElement:ntes.at(-1);
 			if(event.ctrlKey || inp===1){
 				let n0=parseInt(tix);
-				lastNt.children[0].innerText=n0;
-				if(n0>parseInt(lastNt.children[1].innerText)){
-					lastNt.children[1].innerText=n0;
+				if(tyn===false){
+					lastNt.children[0].innerText=(isNaN(n0))?'':n0;
+					if(n0>parseInt(lastNt.children[1].innerText)){
+						lastNt.children[1].innerText=n0;
+					}
 				}
 				customCol({target: lastNt.children[4].firstElementChild});
 			}else if(event.altKey || inp===0){	
-				let n1=parseInt(tix);
-				lastNt.children[1].innerText=n1;
-				if(n1<parseInt(lastNt.children[0].innerText)){
-					lastNt.children[0].innerText=n1;
+				let n1=parseInt(tix);			
+				if(tyn===false){
+					lastNt.children[1].innerText=(isNaN(n1))?'':n1;
+					if(n1<parseInt(lastNt.children[0].innerText)){
+						lastNt.children[0].innerText=n1;
+					}
 				}
 				customCol({target: lastNt.children[4].firstElementChild});
 			}
