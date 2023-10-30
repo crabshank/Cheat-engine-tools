@@ -1,0 +1,735 @@
+<html>
+
+<head>
+<meta charset="UTF-8">
+	<style>
+		#rgba_sel select {
+			margin-right: 0.27ch;
+		}
+		body {
+			background-color: hsl(0 0% 8% / 1);
+			color: white;
+		}
+		input[type="checkbox"] {
+			background: buttonface;
+			margin-bottom: 2px;
+			margin-left: 3px;
+			vertical-align: bottom;
+			margin-right: 0.2ch;
+		}
+		#hex span{
+			margin: 0.115ch 0.115ch 0.123ch 0.1285ch;
+			white-space: nowrap;
+			border-width: 1px;
+			border-color: rgb(128 128 128);
+			border-style: dotted;
+			text-align: center;
+			place-self: center;
+			height: max-content;
+			padding: 0.24ch 0.24ch 0.24ch 0.24ch;
+		}
+		#hex span.isHovered {
+			background-color:hsl(129deg 55% 16%);
+			border-color: hsl(129deg 100% 50%);
+			border-style: dashed !important; 
+			border-width: 4px !important;
+		}		
+		#hex span.rgb.isHovered{
+			border-color: hsl(180deg 100% 50%) !important;
+			border-style: groove !important; 
+			border-width: 10px !important;
+			zoom: 139%;
+		}
+		input[type="color" i]::-webkit-color-swatch {
+			border-color: transparent !important;
+			background-color: transparent !important;
+		}
+		table *{
+			background: rgb(51, 51, 51);
+		}
+		th,td{
+			text-align: center;
+		}
+	</style>	
+	<style id="doc_CSS2"></style>
+</head>
+
+<body>
+	<title>Hex annotate</title>
+	<h1 id="ttl" style="margin: 0px; padding: 0px 0px 8px 0px; text-align: center;">Hex annotate</h1>
+		<section id="hex_scts"  style="display: inline-flex;flex-flow: row nowrap;place-content: flex-start;max-width: 100%;width: 100%;overflow-y: hidden;">
+		<section id="hex_bh"  style="flex-direction: column; width:50%;">
+			<section id="btns" style="width: 100% !important;">
+				<button id="conv" style="float:right;">Convert hex</button>
+		</section>
+		
+		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 100%;width:100%;">
+			<div contenteditable id="hex" style="height: max-content;min-height: 92%;display: inline-flex;border: 2px solid #886a0773;flex-flow: wrap;place-content: flex-start;min-height: 86.549vh;margin-top: 0.451%;"></div>
+	</section>
+	
+	</section>
+	<section id="hex_sct2"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 50%;width: 50%;min-height: 92%;">
+			<div id="hex2" style="min-height: 92%;display: inline-flex;border: 0;flex-flow: wrap;place-content: flex-start;min-height: 87vh;padding-left: 0.111em;"></div>
+	</section>
+	<section id="offset_info" title="Hovered offset" style="width: min-content;height: min-content;border:2px outset rgb(113 0 255);text-align: center;white-space: pre-wrap;margin-left: 0.07%;">Offset: </section>
+</section>
+
+<script>
+
+function elRemover(el){
+	if(typeof el!=='undefined' && !!el){
+	if(typeof el.parentNode!=='undefined' && !!el.parentNode){
+		el.parentNode.removeChild(el);
+	}
+	}
+}
+
+function customCol(event){
+	for (let k=hexSpans.length - 1; k >= 0; k--){
+		hexSpans[k].style.background='';	
+	}
+	let c=[...document.querySelectorAll('input.col')];
+	for(let i=0, len=c.length; i<len; i++){
+		let t=c[i];
+		t.style.backgroundColor=t.value;
+		t.style.border=t.value;
+		let cn=t.parentElement.childNodes;
+		cn[cn.length-1].textContent=t.value.toLocaleUpperCase();
+		
+		let tp=t.parentElement.parentElement;
+		let fr=tp.firstElementChild;
+		let frN=parseInt(fr.innerText);
+		let toa=fr.nextElementSibling;
+		let toaN=parseInt(toa.innerText);
+		let lng=toa.nextElementSibling;
+		let lngN=parseInt(lng.innerText);
+		let itv=lng.nextElementSibling;
+		let itvN=parseInt(itv.innerText);
+		
+		for (let i=frN; i<=toaN; i+=itvN){
+			for(let k=i; k<(i+lngN); k++){
+				hexSpans[k].style.background=t.value;
+			}
+		}
+	}
+}
+
+function reverse_string(s) {
+  let o = '';
+  for (let i=s.length - 1; i >= 0; i--){
+		o += s[i];
+	}
+  return o;
+}
+
+const lookup_hex={
+										'00':0,
+										'01':1,
+										'02':2,
+										'03':3,
+										'04':4,
+										'05':5,
+										'06':6,
+										'07':7,
+										'08':8,
+										'09':9,
+										'0A':10,
+										'0B':11,
+										'0C':12,
+										'0D':13,
+										'0E':14,
+										'0F':15,
+										'10':16,
+										'11':17,
+										'12':18,
+										'13':19,
+										'14':20,
+										'15':21,
+										'16':22,
+										'17':23,
+										'18':24,
+										'19':25,
+										'1A':26,
+										'1B':27,
+										'1C':28,
+										'1D':29,
+										'1E':30,
+										'1F':31,
+										'20':32,
+										'21':33,
+										'22':34,
+										'23':35,
+										'24':36,
+										'25':37,
+										'26':38,
+										'27':39,
+										'28':40,
+										'29':41,
+										'2A':42,
+										'2B':43,
+										'2C':44,
+										'2D':45,
+										'2E':46,
+										'2F':47,
+										'30':48,
+										'31':49,
+										'32':50,
+										'33':51,
+										'34':52,
+										'35':53,
+										'36':54,
+										'37':55,
+										'38':56,
+										'39':57,
+										'3A':58,
+										'3B':59,
+										'3C':60,
+										'3D':61,
+										'3E':62,
+										'3F':63,
+										'40':64,
+										'41':65,
+										'42':66,
+										'43':67,
+										'44':68,
+										'45':69,
+										'46':70,
+										'47':71,
+										'48':72,
+										'49':73,
+										'4A':74,
+										'4B':75,
+										'4C':76,
+										'4D':77,
+										'4E':78,
+										'4F':79,
+										'50':80,
+										'51':81,
+										'52':82,
+										'53':83,
+										'54':84,
+										'55':85,
+										'56':86,
+										'57':87,
+										'58':88,
+										'59':89,
+										'5A':90,
+										'5B':91,
+										'5C':92,
+										'5D':93,
+										'5E':94,
+										'5F':95,
+										'60':96,
+										'61':97,
+										'62':98,
+										'63':99,
+										'64':100,
+										'65':101,
+										'66':102,
+										'67':103,
+										'68':104,
+										'69':105,
+										'6A':106,
+										'6B':107,
+										'6C':108,
+										'6D':109,
+										'6E':110,
+										'6F':111,
+										'70':112,
+										'71':113,
+										'72':114,
+										'73':115,
+										'74':116,
+										'75':117,
+										'76':118,
+										'77':119,
+										'78':120,
+										'79':121,
+										'7A':122,
+										'7B':123,
+										'7C':124,
+										'7D':125,
+										'7E':126,
+										'7F':127,
+										'80':128,
+										'81':129,
+										'82':130,
+										'83':131,
+										'84':132,
+										'85':133,
+										'86':134,
+										'87':135,
+										'88':136,
+										'89':137,
+										'8A':138,
+										'8B':139,
+										'8C':140,
+										'8D':141,
+										'8E':142,
+										'8F':143,
+										'90':144,
+										'91':145,
+										'92':146,
+										'93':147,
+										'94':148,
+										'95':149,
+										'96':150,
+										'97':151,
+										'98':152,
+										'99':153,
+										'9A':154,
+										'9B':155,
+										'9C':156,
+										'9D':157,
+										'9E':158,
+										'9F':159,
+										'A0':160,
+										'A1':161,
+										'A2':162,
+										'A3':163,
+										'A4':164,
+										'A5':165,
+										'A6':166,
+										'A7':167,
+										'A8':168,
+										'A9':169,
+										'AA':170,
+										'AB':171,
+										'AC':172,
+										'AD':173,
+										'AE':174,
+										'AF':175,
+										'B0':176,
+										'B1':177,
+										'B2':178,
+										'B3':179,
+										'B4':180,
+										'B5':181,
+										'B6':182,
+										'B7':183,
+										'B8':184,
+										'B9':185,
+										'BA':186,
+										'BB':187,
+										'BC':188,
+										'BD':189,
+										'BE':190,
+										'BF':191,
+										'C0':192,
+										'C1':193,
+										'C2':194,
+										'C3':195,
+										'C4':196,
+										'C5':197,
+										'C6':198,
+										'C7':199,
+										'C8':200,
+										'C9':201,
+										'CA':202,
+										'CB':203,
+										'CC':204,
+										'CD':205,
+										'CE':206,
+										'CF':207,
+										'D0':208,
+										'D1':209,
+										'D2':210,
+										'D3':211,
+										'D4':212,
+										'D5':213,
+										'D6':214,
+										'D7':215,
+										'D8':216,
+										'D9':217,
+										'DA':218,
+										'DB':219,
+										'DC':220,
+										'DD':221,
+										'DE':222,
+										'DF':223,
+										'E0':224,
+										'E1':225,
+										'E2':226,
+										'E3':227,
+										'E4':228,
+										'E5':229,
+										'E6':230,
+										'E7':231,
+										'E8':232,
+										'E9':233,
+										'EA':234,
+										'EB':235,
+										'EC':236,
+										'ED':237,
+										'EE':238,
+										'EF':239,
+										'F0':240,
+										'F1':241,
+										'F2':242,
+										'F3':243,
+										'F4':244,
+										'F5':245,
+										'F6':246,
+										'F7':247,
+										'F8':248,
+										'F9':249,
+										'FA':250,
+										'FB':251,
+										'FC':252,
+										'FD':253,
+										'FE':254,
+										'FF':255
+									};
+
+function selDivEditable(el){
+	try{
+			let range = document.createRange();
+			let sel = window.getSelection();
+			let sp=[...el.childNodes];
+			let spe=(sp.length>0)?sp.at(-1):el;
+		  let spc=Math.max(spe?.nodeValue?.length || 1,1);
+		  el.focus();
+		   range.setStart(spe,spc);
+			range.collapse(true);
+			
+			sel.removeAllRanges();
+			sel.addRange(range);
+	}catch(e){;}
+}
+
+function absBoundingClientRect(el){
+	let st = [window?.scrollY,
+					window?.pageYOffset,
+					el?.ownerDocument?.documentElement?.scrollTop,
+					document?.documentElement?.scrollTop,
+					document?.body?.parentNode?.scrollTop,
+					document?.body?.scrollTop,
+					document?.head?.scrollTop];
+					
+		let sl = [window?.scrollX,
+						window?.pageXOffset,
+						el?.ownerDocument?.documentElement?.scrollLeft,
+						document?.documentElement?.scrollLeft,
+						document?.body?.parentNode?.scrollLeft,
+						document?.body?.scrollLeft,
+						document?.head?.scrollLeft];
+						
+				let scrollTop=0;
+				for(let k=0; k<st.length; k++){
+					if(!!st[k] && typeof  st[k] !=='undefined' && st[k]>0){
+						scrollTop=(st[k]>scrollTop)?st[k]:scrollTop;
+					}
+				}			
+
+				let scrollLeft=0;
+				for(let k=0; k<sl.length; k++){
+					if(!!sl[k] && typeof  sl[k] !=='undefined' && sl[k]>0){
+						scrollLeft=(sl[k]>scrollLeft)?sl[k]:scrollLeft;
+					}
+				}
+	
+	const rct=el.getBoundingClientRect();
+	let r={};
+
+	r.left=rct.left+scrollLeft;
+	r.right=rct.right+scrollLeft;
+	r.top=rct.top+scrollTop;
+	r.bottom=rct.bottom+scrollTop;
+	r.height=rct.height;
+	r.width=rct.width;
+	
+	return r;
+}
+
+var elems={};
+var hx_arr=[];
+var hx_arr_int=[];
+var bits_arr=[];
+var hx_arr_offs=[];
+var hovSpans=[];
+var hexSpans=[];
+
+var mxh=0;
+var mxw=0;
+
+var hx_interps={};
+var hx_interps_be={};
+
+var bit_interps={};
+var bit_interps_be={};
+var bit_interps_hex=[];
+
+elems.hex_scts = document.getElementById('hex_scts');
+elems.btns = document.getElementById('btns');
+elems.hex_sct = document.getElementById('hex_sct');
+elems.hex_sct2 = document.getElementById('hex_sct2');
+elems.hex = document.getElementById('hex');
+elems.hex2 = document.getElementById('hex2');
+
+var tmplRow=`<tr class="notes">	<td oninput="changeAnn(event,0)" contenteditable="true">0</td>	<td oninput="changeAnn(event,1)" contenteditable="true">0</td>	<td contenteditable="true">1</td>	<td contenteditable="true">1</td>	<td style="min-width:12.7ch;"><input class="col" type="color" style="width: 4.808ch !important; margin-right: 0.48ch !important; height: 20px !important; background-color: #ffff00 !important; border: #ffff00 !important;" oninput="customCol(event)" id="vis" value="#ffff00">#FFFF00</input>	<td contenteditable="true" class="cmmt"></td>`;
+
+var addBtn=`<button class="newHl" style="filter: hue-rotate(212deg) saturate(10); width: 4.3ch;">➕</button>`;
+var initRow=`${tmplRow}</td>	<td>${addBtn}</td>	</tr>`;
+
+var remBtn=`<button class="remHl" style="float:right;width: 4.3ch;color: red;background: black;border: 1px buttonface outset;margin-left: 0.02ch;">🗙</button>`;
+var remRow=`${tmplRow}</td>	<td>${remBtn}</td>	</tr>`;
+
+var initH2=`<section id="anns">
+					<section>
+							<table>
+							<tbody id="hlList">
+								<tr>	<th style="min-width: 4.25ch;">From</th>	<th style="min-width: 4.25ch;">To</th> <th style="min-width: 4.25ch;">Length</th> <th style="min-width: 4.25ch;">Interval</th>	<th>RGB</th> <th>Comments	</th>	</tr>
+								${initRow}
+							</tbody>
+							</table>	
+					</section>
+				</section>`;
+				
+elems.hex2.innerHTML=initH2;
+elems.big_end = document.getElementById('big_end');
+elems.hlList = document.getElementById('hlList');
+elems.revOut = document.getElementById('revOut');
+elems.be_box = document.getElementById('be_box');
+elems.doc_CSS2 = document.getElementById('doc_CSS2');
+elems.ttl = document.getElementById('ttl');
+elems.offset_info = document.getElementById('offset_info');
+elems.conv = document.getElementById('conv');
+elems.rgba_sel=document.getElementById('rgba_sel');
+elems.n_count_div=document.getElementById('n_count_div');
+elems.anns=document.getElementById('anns');
+
+let hxr=absBoundingClientRect(elems.hex_sct);
+let hxr2=absBoundingClientRect(elems.hex_sct2);
+
+elems.hex_sct2.style.transform=`translateY(${hxr.top-hxr2.top+2}px)`;
+
+function copy_hdl(event){
+  let selectedText = window.getSelection().toString(); 
+  selectedText = selectedText.split('\n').join(' ');
+
+  clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
+  clipboardData.setData('text/plain', selectedText);
+
+  event.preventDefault();
+}
+
+elems.hex.addEventListener("copy", (event) => { copy_hdl(event); });
+
+allLoadedSpans=false;
+var hexBoxRect=absBoundingClientRect(elems.hex);
+
+function doRsz(){
+	elems.hex.style.transform=`translateY(0px)`;
+	hexBoxRect=absBoundingClientRect(elems.hex);
+}
+
+elems.hex_scts = document.getElementById('hex_scts');
+
+elems.hex.addEventListener('pointerleave',(event)=>{
+	elems.hex.style.transform=`translateY(0px)`;
+});
+
+window.addEventListener('resize',(event)=>{
+	doRsz();
+});
+
+window.onscroll=(e)=>{
+	elems.offset_info.style.transform=`translateY(${Math.max(0,window.scrollY-absBoundingClientRect(elems.hex_scts).top+5)}px)`;
+}
+
+function p_enter(event,n){
+		let t=event.target;
+		for(let i=0, len=hovSpans.length; i<len; i++){
+			hovSpans[i].classList.remove('isHovered');
+		}
+			let ix=parseInt(t.getAttribute('ix'));
+			t.classList.add('isHovered');
+			elems.offset_info.innerHTML='Offset: '+t.title;
+			hovSpans=[t];
+			
+		changeAnn(event);
+}
+
+function changeAnn(event,inp){
+			let t=event.target;
+			let tyn=(typeof(inp)==='number')?true:false;
+			let tix=(tyn)?t.innerText:t.getAttribute('ix');
+			let ntes=[...document.querySelectorAll('#hlList tr.notes')];
+			let lastNt=(tyn)?t.parentElement:ntes.at(-1);
+			if(event.ctrlKey || inp===1){
+				let n0=parseInt(tix);
+				lastNt.children[0].innerText=n0;
+				if(n0>parseInt(lastNt.children[1].innerText)){
+					lastNt.children[1].innerText=n0;
+				}
+				customCol({target: lastNt.children[4].firstElementChild});
+			}else if(event.altKey || inp===0){	
+				let n1=parseInt(tix);
+				lastNt.children[1].innerText=n1;
+				if(n1<parseInt(lastNt.children[0].innerText)){
+					lastNt.children[0].innerText=n1;
+				}
+				customCol({target: lastNt.children[4].firstElementChild});
+			}
+}
+
+function p_leave(){
+		for(let i=0, len=hovSpans.length; i<len; i++){
+			hovSpans[i].classList.remove('isHovered');
+		}
+		elems.offset_info.innerHTML='Offset: ';
+		hovSpans=[];
+}
+
+
+
+function makeSpansBytes(){
+		let hxtm='';
+		hx_arr_offs=[];
+	for(let i=0, len=hx_arr.length; i<len; i++){
+		let ih=hx_arr[i];
+		let x=(i>9)?('+'+i+' {+'+(i.toString(16).toLocaleUpperCase() )+'}'):('+'+i);
+		hx_arr_offs.push(x);
+			hxtm+='<span onpointerenter="p_enter(event,1);" onpointerenter="p_enter(event,1);" onpointerleave="p_leave();"  title="'+x+'" ix="'+i+'">'+ih+' </span>';
+	}
+	
+	elems.hex.innerHTML=hxtm;
+	//elems.hex.style.height = 'inherit';
+	//elems.hex.style.height = (elems.hex.scrollHeight+4)+"px";
+	hexSpans=[...elems.hex.getElementsByTagName('SPAN')];	
+	
+	for(let i=0, len=hexSpans.length; i<len; i++){
+		let h=hexSpans[i].clientHeight;
+		let w=hexSpans[i].clientWidth;
+		mxh=(h>mxh)?h:mxh;
+		mxw=(w>mxw)?h:mxw;
+	}
+	elems.doc_CSS2.innerHTML=`#hex span{min-width: ${mxw}px !important; width: fit-content !important;}`;
+}
+
+
+window.onkeydown=(event)=>{
+	let t=event.target;
+	let p=t;
+	let isTable=false;
+	while(p.tagName!=='BODY'){
+		p=p.parentElement;
+		if(p.tagName==='TBODY'){
+			isTable=true;
+			break;
+		}
+	}
+	if(isTable===false){
+		let hv=document.querySelectorAll('#hex span.isHovered ')[0];
+		if(typeof(hv)!=='undefined'){
+			changeAnn({target:hv, ctrlKey:event.ctrlKey, altKey:event.altKey});
+		}
+	}
+}
+
+window.onclick=(event)=>{
+	let t=event.target;
+	if(t.matches('button.newHl')){
+		elems.hlList.insertAdjacentHTML('beforeend',initRow);
+		let rws=[...elems.hlList.children];
+		rws[1].lastElementChild.innerHTML=remBtn;
+		
+			for(let i=2, len=rws.length-1; i<len;i++){
+				let ls=rws[i];
+				let c=ls.getElementsByClassName('cmmt')[0];
+				let ed=false;
+				while(ed===false){
+					if(c.nextElementSibling===ls.lastElementChild){
+						ed=true
+					}else{
+						elRemover(c.nextElementSibling);
+					}
+				}
+				c.nextElementSibling.outerHTML=`<td>${remBtn}</td>`;
+			}
+		
+		let ls=rws.at(-1);
+		let c=ls.getElementsByClassName('cmmt')[0];
+		let ed=false;
+		while(ed===false){
+			if(c.nextElementSibling===ls.lastElementChild){
+				ed=true
+			}else{
+				elRemover(c.nextElementSibling);
+			}
+		}
+		c.nextElementSibling.outerHTML=`<td>${addBtn}</td><td>${remBtn}</td>`;
+	}else if(t.matches('button.remHl')){
+		elRemover(t.parentElement.parentElement);
+		let rws=[...elems.hlList.children];
+		if(rws.length>2){
+					
+			let ls=rws.at(-1);
+			let c=ls.getElementsByClassName('cmmt')[0];
+			let ed=false;
+			while(ed===false){
+				if(c.nextElementSibling===ls.lastElementChild){
+					ed=true
+				}else{
+					elRemover(c.nextElementSibling);
+				}
+			}
+			c.nextElementSibling.outerHTML=`<td>${addBtn}</td><td>${remBtn}</td>`;
+			
+			ls=rws[1];
+			c=ls.getElementsByClassName('cmmt')[0];
+			ed=false;
+			while(ed===false){
+				if(c.nextElementSibling===ls.lastElementChild){
+					ed=true
+				}else{
+					elRemover(c.nextElementSibling);
+				}
+			}
+			c.nextElementSibling.outerHTML=`<td>${remBtn}</td>`;
+		}else{
+			let c=rws[1].getElementsByClassName('cmmt')[0];
+			let ed=false;
+			while(ed===false){
+				if(c.nextElementSibling===rws[1].lastElementChild){
+					ed=true
+				}else{
+					elRemover(c.nextElementSibling);
+				}
+			}
+			c.nextElementSibling.outerHTML=`<td>${addBtn}</td>`;
+		}
+		customCol();
+	}
+}
+
+elems.conv.onclick=(event)=>{
+  elems.hex2.innerHTML=initH2;
+  elems.hlList = document.getElementById('hlList');
+  elems.anns=document.getElementById('anns');
+  elems.offset_info.innerHTML='Offset: ';
+	let t=elems.hex;
+	let hx_arr_chk=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
+	if(hx_arr_chk !==null && typeof hx_arr_chk!=='undefined' && hx_arr_chk.length>0){
+		hx_arr=hx_arr_chk;
+		hx_arr_int=hx_arr.map((x)=>{return lookup_hex[x]});
+		makeSpansBytes();
+	}else{
+		elems.hex.innerHTML='';
+	}
+}
+
+elems.hex.oninput=(event)=>{
+	let t=elems.hex;
+	let sp=t.getElementsByTagName('SPAN');
+	if(sp.length>0){
+		t.innerHTML=t.innerText;
+		selDivEditable(t);
+	}
+}
+
+</script>
+
+</body>
+
+</html>
