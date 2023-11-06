@@ -424,7 +424,7 @@ If **c** is a table and:
  
  * **count( {a, c}, {…}, … )** -> Takes a series of tables, one for each address. See ".attach(…)" for explanations of **a** and **c**. Use ".dumpRegisters(…)" to print counts of all values taken by **c**.
  
-* **dumpRegisters( k --[[Optional]], bin --[[Optional]], f --[[Optional]] )** -> Force dump last stored registers to output. Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
+* **dumpRegisters( bin --[[Optional]], f --[[Optional]], k --[[Optional]] )** -> Force dump last stored registers to output.
 
 If **bin**==:
 
@@ -435,6 +435,8 @@ If **bin**==:
 Otherwise (default) -> Print all logged data as arrays of bytes.
 
 **f** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
+
+Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no argument specified, it will dump last stored registers for all breakpoints.
 
 * **jump( x, k --[[Optional]] )** -> Jump to last dumped (in the hex view) (if the dump was of a ".attach(…)" capture), #**x**'s array of bytes interpreted as an address. Argument **k** is the same as in ".dumpRegisters(…)".
 
