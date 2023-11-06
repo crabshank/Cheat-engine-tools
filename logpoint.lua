@@ -348,10 +348,11 @@ local function jump(x,k)
 end
 
 local function dumpRegisters(bin,f,k)
-	local c=false
-	local ks={#abp}
+	local ks=#abp
+	local k1=1
 	if k~=nil then 
-		ks[1]=k
+		ks=k
+		k1=k
 	end
 	local bny
 	
@@ -369,10 +370,11 @@ local function dumpRegisters(bin,f,k)
 	end
 	
 	canJump=false
-		for j=1, #ks do
+		for j=k1, ks do
+			local c=false
 			local ak=abp[j]
 			if ak['count']==true then	
-				if j==1 then
+				if j==k1 then
 					print(ptct)
 				end
 				tprint(ak.regs.counts)
