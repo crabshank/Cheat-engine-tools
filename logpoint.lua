@@ -893,6 +893,7 @@ end
 
 local function attach(...)
    local args = {...}
+   removeAttached()
    for i,v in ipairs(args) do
 		if type(v)~='table' then
 			print('Arguments to this function are tables!')
@@ -925,7 +926,6 @@ local function attach(...)
 				end
 			end
 		end
-		removeAttached()
 		stopped=false
 		attachLpAddr(a,c,bpst)
 	end
@@ -933,6 +933,7 @@ end
 
 local function count(...)
    local args = {...}
+   removeAttached()
    for i,v in ipairs(args) do
 		if type(v)~='table' then
 			print('Arguments to this function are tables!')
@@ -949,7 +950,6 @@ local function count(...)
 			print('Argument "c", must be specified!')
 			return
 		end
-		removeAttached()
 		stopped=false
 		attachLpAddr(a,c,nil,true)
 	end
