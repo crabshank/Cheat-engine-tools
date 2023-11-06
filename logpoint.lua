@@ -347,7 +347,7 @@ local function jump(x,k)
 	end
 end
 
-local function dumpRegisters(k,bin,f)
+local function dumpRegisters(bin,f,k)
 	local c=false
 	local ks={#abp}
 	if k~=nil then 
@@ -439,7 +439,7 @@ local function stop(pr,bin,f)
 		if abpl>0 then
 			print('All logs:')
 			for  k = 1, abpl do
-				dumpRegisters(k,bin,f)
+				dumpRegisters(bin,f,k)
 			end
 			print('')
 		end
