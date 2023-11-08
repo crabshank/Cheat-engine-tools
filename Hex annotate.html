@@ -60,7 +60,9 @@
 		<section id="hex_scts"  style="display: inline-flex;flex-flow: row nowrap;place-content: flex-start;max-width: 100%;width: 100%;overflow-y: hidden;">
 		<section id="hex_bh"  style="flex-direction: column; width:50%;">
 			<section id="btns" style="width: 100% !important;">
-				<button id="conv" style="float:right;">Convert hex</button>
+				<label for="load_json" style="">Load file: </label><input  type="file"  id="load_json" style="margin-left: 4px;vertical-align: top;"></input>
+				<button id="conv" style="float:right">Convert hex</button>
+				<button id="save_json" style="float:right;margin-right: 0.17ch;">Save JSON</button>
 		</section>
 		
 		<section id="hex_sct"  style="display: inline-flex; flex-flow: column nowrap; place-content: flex-start;max-width: 100%;width:100%;">
@@ -93,8 +95,8 @@ function customCol(event){
 		let t=c[i];
 		t.style.backgroundColor=t.value;
 		t.style.border=t.value;
-		let cn=t.parentElement.childNodes;
-		cn[cn.length-1].textContent=t.value.toLocaleUpperCase();
+		let cn=[...t.parentElement.childNodes];
+		cn.at(-1).textContent=t.value.toLocaleUpperCase();
 		
 		let tp=t.parentElement.parentElement;
 		let fr=tp.firstElementChild;
@@ -465,8 +467,10 @@ elems.hex_sct = document.getElementById('hex_sct');
 elems.hex_sct2 = document.getElementById('hex_sct2');
 elems.hex = document.getElementById('hex');
 elems.hex2 = document.getElementById('hex2');
+elems.load_json = document.getElementById('load_json');
+elems.save_json = document.getElementById('save_json');
 
-var tmplRow=`<tr class="notes">	<td oninput="changeAnn(event,1)" contenteditable="true">0</td>	<td oninput="changeAnn(event,0)" contenteditable="true">0</td>	<td contenteditable="true">1</td>	<td contenteditable="true">1</td>	<td style="min-width:12.7ch;"><input class="col" type="color" style="width: 4.808ch !important; margin-right: 0.48ch !important; height: 20px !important; background-color: #886a07 !important; border: #886a07 !important;" oninput="customCol(event)" id="vis" value="#886a07">#886A07</input>	<td contenteditable="true" class="cmmt"></td>`;
+var tmplRow=`<tr class="notes">	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,0)" oninput="changeAnn(event,1)" contenteditable="true">0</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,0)" oninput="changeAnn(event,0)" contenteditable="true">0</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,1)" oninput="customCol(event)" contenteditable="true">1</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,1)" contenteditable="true"  oninput="customCol(event)">1</td>	<td style="min-width:12.7ch;"><input class="col" type="color" style="width: 4.808ch !important; margin-right: 0.48ch !important; height: 20px !important; background-color: #886a07 !important; border: #886a07 !important;" oninput="customCol(event)" id="vis" value="#886a07">#886A07</input>	<td contenteditable="true" class="cmmt"></td>`;
 
 var addBtn=`<button class="newHl" style="filter: hue-rotate(212deg) saturate(10); width: 4.3ch;">➕</button>`;
 var initRow=`${tmplRow}</td>	<td>${addBtn}</td>	</tr>`;
@@ -550,6 +554,19 @@ function p_enter(event,n){
 		changeAnn(event);
 }
 
+function whlVal(event,mn){
+	let t=event.target;
+	let v=parseInt(t.innerText);
+	if (event.deltaY < 0){
+		t.innerText=v+1;
+		t.dispatchEvent(new Event('input'));
+	}
+	if (event.deltaY > 0){
+		t.innerText=Math.max(mn,v-1);
+		t.dispatchEvent(new Event('input'));
+	}
+}
+
 function changeAnn(event,inp){
 			let t=event.target;
 			let tyn=(typeof(inp)==='number')?true:false;
@@ -584,8 +601,6 @@ function p_leave(){
 		elems.offset_info.innerHTML='Offset: ';
 		hovSpans=[];
 }
-
-
 
 function makeSpansBytes(){
 		let hxtm='';
@@ -707,7 +722,67 @@ window.onclick=(event)=>{
 	}
 }
 
-elems.conv.onclick=(event)=>{
+elems.load_json.onchange=(event)=>{
+	 var fr = new FileReader();
+	 fr.onload = function () {
+		let str = this.result;
+		let j_str=JSON.parse(str);
+		elems.hex.innerText=j_str[0];
+		doConv(event);
+		if(j_str.length>1){
+			let lst;
+			for(let i=1, len=j_str.length; i<len; i++){
+				let si=j_str[i];
+				let ni=elems.hlList.lastElementChild;
+				ni.children[0].innerText=si[0];
+				ni.children[1].innerText=si[1];
+				ni.children[2].innerText=si[2];
+				ni.children[3].innerText=si[3];
+					let nic4=ni.children[4];
+					let nic4_1c=nic4.firstElementChild;
+					lst=nic4_1c;
+					nic4.firstElementChild.value=si[4];
+					nic4_1c.style.backgroundColor=si[4];
+					nic4_1c.style.border=si[4];
+					let cn=[...nic4.childNodes];
+					cn.at(-1).textContent=si[4].toLocaleUpperCase();
+				ni.children[5].innerText=si[5];
+				if(i<len-1){
+					ni.getElementsByClassName('newHl')[0].click();
+				}
+			}
+			customCol(lst);
+		}
+	}
+	fr.readAsText(elems.load_json.files[0]);
+}; 
+
+elems.save_json.onclick=(event)=>{
+	let tx=elems.hex.textContent.trim();
+	let ntes=[...document.querySelectorAll('#hlList tr.notes')];
+	let notes_data=[tx];
+	for(let i=0, len=ntes.length; i<len; i++){
+		let ni=ntes[i];
+		notes_data.push([ 
+			ni.children[0].innerText,
+			ni.children[1].innerText,
+			ni.children[2].innerText,
+			ni.children[3].innerText,
+			ni.children[4].firstElementChild.value,
+			ni.children[5].innerText
+		]);
+	}
+	let dlb_a=document.createElement('a');
+	elems.save_json.insertAdjacentElement('beforebegin',dlb_a);
+	let nm='hex_annotation.json';
+	let setterTxt=`${JSON.stringify(notes_data)}`;
+	dlb_a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(setterTxt));
+	dlb_a.setAttribute('download', nm);
+	dlb_a.click();
+	elRemover(dlb_a);
+}
+
+let doConv=(event)=>{
   elems.hex2.innerHTML=initH2;
   elems.hlList = document.getElementById('hlList');
   elems.anns=document.getElementById('anns');
@@ -722,6 +797,10 @@ elems.conv.onclick=(event)=>{
 		elems.hex.innerHTML='';
 	}
 }
+
+elems.conv.onclick=(event)=>{
+	doConv(event);
+};
 
 elems.hex.oninput=(event)=>{
 	let t=elems.hex;
