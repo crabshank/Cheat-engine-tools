@@ -470,7 +470,7 @@ elems.hex2 = document.getElementById('hex2');
 elems.load_json = document.getElementById('load_json');
 elems.save_json = document.getElementById('save_json');
 
-var tmplRow=`<tr class="notes">	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,0)" oninput="changeAnn(event,1)" contenteditable="true">0</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,0)" oninput="changeAnn(event,0)" contenteditable="true">0</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,1)" oninput="customCol(event)" contenteditable="true">1</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,1)" contenteditable="true"  oninput="customCol(event)">1</td>	<td style="min-width:12.7ch;"><input class="col" type="color" style="width: 4.808ch !important; margin-right: 0.48ch !important; height: 20px !important; background-color: #886a07 !important; border: #886a07 !important;" oninput="customCol(event)" id="vis" value="#886a07">#886A07</input>	<td contenteditable="true" class="cmmt"></td>`;
+var tmplRow=`<tr class="notes">	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,0,1)" oninput="changeAnn(event,1)" contenteditable="true">0</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,0,2)" oninput="changeAnn(event,0)" contenteditable="true">0</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,1,3)" oninput="customCol(event)" contenteditable="true">1</td>	<td title="Use mouse wheel to increment/decrement value" onwheel="whlVal(event,1,4)" contenteditable="true"  oninput="customCol(event)">1</td>	<td style="min-width:12.7ch;"><input class="col" type="color" style="width: 4.808ch !important; margin-right: 0.48ch !important; height: 20px !important; background-color: #886a07 !important; border: #886a07 !important;" oninput="customCol(event)" id="vis" value="#886a07">#886A07</input>	<td contenteditable="true" class="cmmt"></td>`;
 
 var addBtn=`<button class="newHl" style="filter: hue-rotate(212deg) saturate(10); width: 4.3ch;">➕</button>`;
 var initRow=`${tmplRow}</td>	<td>${addBtn}</td>	</tr>`;
@@ -554,15 +554,27 @@ function p_enter(event,n){
 		changeAnn(event);
 }
 
-function whlVal(event,mn){
+function whlVal(event,mn,ix){
 	let t=event.target;
 	let v=parseInt(t.innerText);
 	if (event.deltaY < 0){
-		t.innerText=v+1;
+		if(ix===2){
+			t.innerText=Math.max(v+1,parseInt(t.previousElementSibling.innerText));
+		}else if(ix===1){
+			t.innerText=Math.min(v+1,parseInt(t.nextElementSibling.innerText));
+		}else{
+			t.innerText=v+1;
+		}
 		t.dispatchEvent(new Event('input'));
 	}
 	if (event.deltaY > 0){
-		t.innerText=Math.max(mn,v-1);
+		if(ix===2){
+			t.innerText=Math.max(Math.max(mn,v-1),parseInt(t.previousElementSibling.innerText));
+		}else if(ix===1){
+			t.innerText=Math.min(Math.max(mn,v-1),parseInt(t.nextElementSibling.innerText));
+		}else{
+			t.innerText=Math.max(mn,v-1);
+		}
 		t.dispatchEvent(new Event('input'));
 	}
 }
