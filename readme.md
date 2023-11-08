@@ -1,3 +1,9 @@
+## Hex annotate.html
+
+Webpage that lets you highlight hex to help you to present the structures in data. You can save your annottions to a .json file.
+
+You can hover over hex with the mouse and hole the Ctrl/Alt keys to change the `From`/`To` values of the last entry in the annotations table.
+
 ## traceCount monitor.html
 
 Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; output showing executed instructions in the order they were executed); adds checkboxes for easier tracking of relevant registers (will toggle all checkboxes after the one inputted to). Each line has a text box for making notes. The 'Memory accesses index' section has links to all relevant line for each memory address.
