@@ -854,6 +854,9 @@ local mri_skipCond=false
 local mri_isCallCond=true
 local mrc_retAdrCond=nil
 
+local stopTraceEnd=false
+local lite_stopTraceEnd=false
+
 local liteAddr=0
 local liteAbp={}
 local liteIx=1
@@ -1010,7 +1013,7 @@ local function getAccessed(instruction)
 	return t -- {  --[[ just the bracket contents (string) ]] , { --[[ full syntax "[...]" string ]] }, {start, end}, ptr size syntax, ptr size }
 end
 
-local function attach(a,c,s,n)
+local function attach(a,c,z,s,n)
 	debug_removeBreakpoint(addr)
 	local tyc=type(c)
 	local tyct=false
@@ -1048,6 +1051,10 @@ local function attach(a,c,s,n)
 					table.insert(abp,{a[i],string.format('%X',a[i])})
 				end
 			end
+	end
+	stopTraceEnd=false
+	if z==true then
+		stopTraceEnd=true
 	end
 	hits={}
 	hits_lookup={}
@@ -2113,18 +2120,30 @@ local function onLiteBp()
 						print('Trace count limit reached!\n')
 					end
 					liteFormattedCount=getLiteCounts()
-					debug_continueFromBreakpoint(co_run)
+					if lite_stopTraceEnd==true then
+						return 1
+					else
+						debug_continueFromBreakpoint(co_run) --END OF TRACE!
+					end
 				elseif liteStepOver==true then --Step over or Out of specified modules
 					if cnt_done==true then
 						liteFormattedCount=getLiteCounts()
-						debug_continueFromBreakpoint(co_run)
+						if lite_stopTraceEnd==true then
+							return 1
+						else
+							debug_continueFromBreakpoint(co_run) --END OF TRACE!
+						end
 					else
 						debug_continueFromBreakpoint(co_stepover)
 					end
 				else
 					if cnt_done==true then
 						liteFormattedCount=getLiteCounts()
-						debug_continueFromBreakpoint(co_run)
+						if lite_stopTraceEnd==true then
+							return 1
+						else
+							debug_continueFromBreakpoint(co_run) --END OF TRACE!
+						end
 					else
 						debug_continueFromBreakpoint(co_stepinto)
 					end
@@ -2133,7 +2152,7 @@ local function onLiteBp()
 		end
 end
 
-local function lite(a,c,s)
+local function lite(a,c,z,s)
 	debug_removeBreakpoint(liteAddr)
 	liteBp=false
 	local tyc=type(c)
@@ -2182,7 +2201,11 @@ local function lite(a,c,s)
 		liteRep=nil
 		liteCount=c
 	end
-		
+	
+	lite_stopTraceEnd=false
+	if z==true then
+		lite_stopTraceEnd=true
+	end
 	liteBp=true
 	liteFirst=true
 	mri_skip=false
@@ -2713,11 +2736,19 @@ local function onBp()
 					
 					if rpt==false then
 						if cnt_done==true then
-							debug_continueFromBreakpoint(co_run)
+							if stopTraceEnd==true then
+								return 1
+							else
+								debug_continueFromBreakpoint(co_run) --END OF TRACE!
+							end
 							runStop(true)
 							ended=true
 						elseif runToRet==true then
-								debug_continueFromBreakpoint(co_run)
+								if stopTraceEnd==true then
+									return 1
+								else
+									debug_continueFromBreakpoint(co_run) --END OF TRACE!
+								end
 						elseif stp==1 then
 							if cnt_done==false then
 								debug_continueFromBreakpoint(co_stepover)
@@ -2728,7 +2759,11 @@ local function onBp()
 							end
 						end
 					elseif endTrace==true and ended==false then -- End of trace!
-						debug_continueFromBreakpoint(co_run)
+						if stopTraceEnd==true then
+							return 1
+						else
+							debug_continueFromBreakpoint(co_run) --END OF TRACE!
+						end
 						if rpt==true then
 							runStop(false,string.format('%X',instRep))
 						else
