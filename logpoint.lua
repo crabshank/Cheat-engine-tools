@@ -443,6 +443,14 @@ local function dumpRegisters(bin,f,k)
 			stopped=true
 			restoreGlobals()
 		end
+	else
+		for n=1,ks do
+			debug_removeBreakpoint(abp[n].address)
+			removeRetBps(n)
+		end
+		abp={}
+		stopped=true
+		restoreGlobals()
 	end
 end
 
