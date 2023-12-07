@@ -854,8 +854,8 @@ local mri_skipCond=false
 local mri_isCallCond=true
 local mrc_retAdrCond=nil
 
-local stopTraceEnd={false,false}
-local lite_stopTraceEnd={false,false}
+local stopTraceEnd=false
+local lite_stopTraceEnd=false
 
 local liteAddr=0
 local liteAbp={}
@@ -1052,9 +1052,9 @@ local function attach(a,c,z,s,n)
 				end
 			end
 	end
-	stopTraceEnd={false,false}
+	stopTraceEnd=false
 	if z==true then
-		stopTraceEnd={true,false}
+		stopTraceEnd=true
 	end
 	hits={}
 	hits_lookup={}
@@ -2071,11 +2071,6 @@ end
 
 local function onLiteBp()
 
-	if lite_stopTraceEnd[2]==true then
-		lite_stopTraceEnd[2]=false
-		return 1  
-	end
-	
 	debug_getContext()
 
 	local ai1=0
@@ -2103,7 +2098,7 @@ local function onLiteBp()
 						return
 					end
 				end
-								
+				
 				liteTrace[liteIx]=RIP
 				liteIx=liteIx+1
 				
@@ -2125,18 +2120,16 @@ local function onLiteBp()
 						print('Trace count limit reached!\n')
 					end
 					liteFormattedCount=getLiteCounts()
-					if lite_stopTraceEnd[1]==true then
-						lite_stopTraceEnd[2]=true
-						debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
+					if lite_stopTraceEnd==true then
+						return 1
 					else
 						debug_continueFromBreakpoint(co_run) --END OF TRACE!
 					end
 				elseif liteStepOver==true then --Step over or Out of specified modules
 					if cnt_done==true then
 						liteFormattedCount=getLiteCounts()
-						if lite_stopTraceEnd[1]==true then
-							lite_stopTraceEnd[2]=true
-							debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
+						if lite_stopTraceEnd==true then
+							return 1
 						else
 							debug_continueFromBreakpoint(co_run) --END OF TRACE!
 						end
@@ -2146,9 +2139,8 @@ local function onLiteBp()
 				else
 					if cnt_done==true then
 						liteFormattedCount=getLiteCounts()
-						if lite_stopTraceEnd[1]==true then
-							lite_stopTraceEnd[2]=true
-							debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
+						if lite_stopTraceEnd==true then
+							return 1
 						else
 							debug_continueFromBreakpoint(co_run) --END OF TRACE!
 						end
@@ -2210,9 +2202,9 @@ local function lite(a,c,z,s)
 		liteCount=c
 	end
 	
-	lite_stopTraceEnd={false,false}
+	lite_stopTraceEnd=false
 	if z==true then
-		lite_stopTraceEnd={true,false}
+		lite_stopTraceEnd=true
 	end
 	liteBp=true
 	liteFirst=true
@@ -2229,11 +2221,6 @@ end
 
 local function onBp()
 
-	if stopTraceEnd[2]==true then
-		stopTraceEnd[2]=false
-		return 1  
-	end
-	
 	debug_getContext(true)
 	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
 	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
@@ -2339,6 +2326,7 @@ local function onBp()
 					end
 				end
 				
+			
 			if count~=nil then
 				count=count-1
 				local cnt_done=false
@@ -2748,18 +2736,17 @@ local function onBp()
 					
 					if rpt==false then
 						if cnt_done==true then
-							if stopTraceEnd[1]==true then
-								stopTraceEnd[2]=true
-								debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
-							else
+							if stopTraceEnd~=true then
 								debug_continueFromBreakpoint(co_run) --END OF TRACE!
 							end
 							runStop(true)
 							ended=true
+							if stopTraceEnd==true then
+								return 1
+							end
 						elseif runToRet==true then
-								if stopTraceEnd[1]==true then
-									stopTraceEnd[2]=true
-									debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
+								if stopTraceEnd==true then
+									return 1
 								else
 									debug_continueFromBreakpoint(co_run) --END OF TRACE!
 								end
@@ -2773,10 +2760,7 @@ local function onBp()
 							end
 						end
 					elseif endTrace==true and ended==false then -- End of trace!
-						if stopTraceEnd[1]==true then
-							stopTraceEnd[2]=true
-							debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
-						else
+						if stopTraceEnd~=true then
 							debug_continueFromBreakpoint(co_run) --END OF TRACE!
 						end
 						if rpt==true then
@@ -2784,6 +2768,9 @@ local function onBp()
 						else
 							runStop(true)
 						end	
+						if stopTraceEnd==true then
+							return 1
+						end
 				end
 				end
 	end
