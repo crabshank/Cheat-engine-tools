@@ -2230,7 +2230,7 @@ end
 local function onBp()
 
 	if stopTraceEnd[2]==true then
-		topTraceEnd[2]=false
+		stopTraceEnd[2]=false
 		return 1  
 	end
 	
