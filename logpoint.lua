@@ -310,7 +310,7 @@ local function removeAttached(i,b)
 	local abpl=#abp
 	if b==true then
 		debug_removeBreakpoint(abp[i].address)
-		removeRetBps()
+		removeRetBps(i)
 		abp=rem_abp(i,true)
 	elseif i==nil then
 		for k=1, abpl do
@@ -438,6 +438,7 @@ local function dumpRegisters(bin,f,k)
 	if rem~=nil then
 		debug_removeBreakpoint(abp[k].address)
 		removeRetBps(k)
+		abp=rem_abp(k,true)
 		if ks==1 then
 			stopped=true
 			restoreGlobals()
@@ -461,6 +462,7 @@ local function stop(pr,bin,f)
 				debug_removeBreakpoint(abp[k].address)
 			end
 			removeRetBps()
+			abp={}
 	end
 	stopped=true
 	restoreGlobals()
