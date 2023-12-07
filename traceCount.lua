@@ -854,8 +854,8 @@ local mri_skipCond=false
 local mri_isCallCond=true
 local mrc_retAdrCond=nil
 
-local stopTraceEnd=false
-local lite_stopTraceEnd=false
+local stopTraceEnd={false,false}
+local lite_stopTraceEnd={false,false}
 
 local liteAddr=0
 local liteAbp={}
@@ -1052,9 +1052,9 @@ local function attach(a,c,z,s,n)
 				end
 			end
 	end
-	stopTraceEnd=false
+	stopTraceEnd={false,false}
 	if z==true then
-		stopTraceEnd=true
+		stopTraceEnd={true,false}
 	end
 	hits={}
 	hits_lookup={}
@@ -2099,6 +2099,11 @@ local function onLiteBp()
 					end
 				end
 				
+				if lite_stopTraceEnd[2]==true then
+					lite_stopTraceEnd[2]=false
+					return 1  
+				end
+				
 				liteTrace[liteIx]=RIP
 				liteIx=liteIx+1
 				
@@ -2120,16 +2125,18 @@ local function onLiteBp()
 						print('Trace count limit reached!\n')
 					end
 					liteFormattedCount=getLiteCounts()
-					if lite_stopTraceEnd==true then
-						return 1
+					if lite_stopTraceEnd[1]==true then
+						lite_stopTraceEnd[2]=true
+						debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
 					else
 						debug_continueFromBreakpoint(co_run) --END OF TRACE!
 					end
 				elseif liteStepOver==true then --Step over or Out of specified modules
 					if cnt_done==true then
 						liteFormattedCount=getLiteCounts()
-						if lite_stopTraceEnd==true then
-							return 1
+						if lite_stopTraceEnd[1]==true then
+							lite_stopTraceEnd[2]=true
+							debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
 						else
 							debug_continueFromBreakpoint(co_run) --END OF TRACE!
 						end
@@ -2139,8 +2146,9 @@ local function onLiteBp()
 				else
 					if cnt_done==true then
 						liteFormattedCount=getLiteCounts()
-						if lite_stopTraceEnd==true then
-							return 1
+						if lite_stopTraceEnd[1]==true then
+							lite_stopTraceEnd[2]=true
+							debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
 						else
 							debug_continueFromBreakpoint(co_run) --END OF TRACE!
 						end
@@ -2202,9 +2210,9 @@ local function lite(a,c,z,s)
 		liteCount=c
 	end
 	
-	lite_stopTraceEnd=false
+	lite_stopTraceEnd={false,false}
 	if z==true then
-		lite_stopTraceEnd=true
+		lite_stopTraceEnd={true,false}
 	end
 	liteBp=true
 	liteFirst=true
@@ -2326,6 +2334,11 @@ local function onBp()
 					end
 				end
 				
+			
+			if stopTraceEnd[2]==true then
+				topTraceEnd[2]=false
+				return 1  
+			end
 			
 			if count~=nil then
 				count=count-1
@@ -2736,16 +2749,18 @@ local function onBp()
 					
 					if rpt==false then
 						if cnt_done==true then
-							if stopTraceEnd==true then
-								return 1
+							if stopTraceEnd[1]==true then
+								stopTraceEnd[2]=true
+								debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
 							else
 								debug_continueFromBreakpoint(co_run) --END OF TRACE!
 							end
 							runStop(true)
 							ended=true
 						elseif runToRet==true then
-								if stopTraceEnd==true then
-									return 1
+								if stopTraceEnd[1]==true then
+									stopTraceEnd[2]=true
+									debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
 								else
 									debug_continueFromBreakpoint(co_run) --END OF TRACE!
 								end
@@ -2759,8 +2774,9 @@ local function onBp()
 							end
 						end
 					elseif endTrace==true and ended==false then -- End of trace!
-						if stopTraceEnd==true then
-							return 1
+						if stopTraceEnd[1]==true then
+							stopTraceEnd[2]=true
+							debug_continueFromBreakpoint(co_stepinto) --END OF TRACE!
 						else
 							debug_continueFromBreakpoint(co_run) --END OF TRACE!
 						end
