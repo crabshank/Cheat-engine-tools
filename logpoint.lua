@@ -438,7 +438,7 @@ local function dumpRegisters(bin,f,k)
 	if rem~=nil then
 		debug_removeBreakpoint(abp[k].address)
 		removeRetBps(k)
-		abp=rem_abp(k,true)
+		--abp=rem_abp(k,true)
 		if ks==1 then
 			stopped=true
 			restoreGlobals()
@@ -448,7 +448,7 @@ local function dumpRegisters(bin,f,k)
 			debug_removeBreakpoint(abp[n].address)
 			removeRetBps(n)
 		end
-		abp={}
+		--abp={}
 		stopped=true
 		restoreGlobals()
 	end
