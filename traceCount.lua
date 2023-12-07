@@ -2071,6 +2071,11 @@ end
 
 local function onLiteBp()
 
+	if lite_stopTraceEnd[2]==true then
+		lite_stopTraceEnd[2]=false
+		return 1  
+	end
+	
 	debug_getContext()
 
 	local ai1=0
@@ -2098,12 +2103,7 @@ local function onLiteBp()
 						return
 					end
 				end
-				
-				if lite_stopTraceEnd[2]==true then
-					lite_stopTraceEnd[2]=false
-					return 1  
-				end
-				
+								
 				liteTrace[liteIx]=RIP
 				liteIx=liteIx+1
 				
@@ -2229,6 +2229,11 @@ end
 
 local function onBp()
 
+	if stopTraceEnd[2]==true then
+		topTraceEnd[2]=false
+		return 1  
+	end
+	
 	debug_getContext(true)
 	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
 	registers['regs']['R9G']=getSubRegDecBytes(string.format("%X", R9), 8,1,8)
@@ -2334,12 +2339,6 @@ local function onBp()
 					end
 				end
 				
-			
-			if stopTraceEnd[2]==true then
-				topTraceEnd[2]=false
-				return 1  
-			end
-			
 			if count~=nil then
 				count=count-1
 				local cnt_done=false
