@@ -350,9 +350,11 @@ end
 local function dumpRegisters(bin,f,k)
 	local ks=#abp
 	local k1=1
+	local rem=nil
 	if k~=nil then 
 		ks=k
 		k1=k
+		rem=k
 	end
 	local bny
 	
@@ -433,6 +435,14 @@ local function dumpRegisters(bin,f,k)
 		jmpTbl=deepcopy(abp)
 	end
 	--removeAttached()
+	if rem~=nil then
+		debug_removeBreakpoint(abp[k].address)
+		removeRetBps(k)
+		if ks==1 then
+			stopped=true
+			restoreGlobals()
+		end
+	end
 end
 
 local function stop(pr,bin,f)
