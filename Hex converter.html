@@ -212,7 +212,7 @@ function getBarSepStr(a,m,x){
 			}else if(typeof a[i]==='number'){
 				let d=getNoDigits(a[i]);
 				let lb=parseFloat(`1e-${x}`);
-				let lb2=parseFloat(`5e-${x-1}`);
+				let lb2=parseFloat(`5e-${x+1}`);
 				if(d>=x || (a[i]<lb2 && a[i]>0) || (a[i]>-lb2 && a[i]<0) ){
 					ot=a[i].toExponential(x);
 				}else{
