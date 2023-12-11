@@ -872,7 +872,7 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						let d=getNoDigits(f);
 						let lb=Math.pow(10,-x);
 						let lb2=lb-lb/2;
-						if(d>=x || (d<lb2 && d>0) || (d>-lb2 && d<0) ){
+						if(d>=x || (f<lb2 && f>0) || (f>-lb2 && f<0) ){
 							hx_interps_curr[tp_name].push( [f.toExponential(x),4] );
 						}else{
 							opts.maximumFractionDigits=Math.max(0, x+1-d );
@@ -906,7 +906,7 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						let d=getNoDigits(f);
 						let lb=Math.pow(10,-x)
 						let lb2=lb-lb/2;
-						if(d>=x || (d<lb2 && d>0) || (d>-lb2 && d<0) ){
+						if(d>=x || f<lb2 && f>0) || (f>-lb2 && f<0) ){
 							hx_interps_curr[tp_name].push( [f.toExponential(x),8] );
 						}else{
 							opts.maximumFractionDigits=Math.max(0, x+1-d );
