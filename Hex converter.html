@@ -213,7 +213,7 @@ function getBarSepStr(a,m,x){
 				let d=getNoDigits(a[i]);
 				let lb=Math.pow(10,-x);
 				let lb2=lb-lb/2;
-				if(d>=x || (d<lb2 && d>0) || (d>-lb2 && d<0) ){
+				if(d>=x || (a[i]<lb2 && a[i]>0) || (a[i]>-lb2 && a[i]<0) ){
 					ot=a[i].toExponential(x);
 				}else{
 						opts.maximumFractionDigits=Math.max(0, x+1-d );
