@@ -870,8 +870,8 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						let x=7;
 						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
 						let d=getNoDigits(f);
-						let lb=Math.pow(10,-x);
-						let lb2=lb-lb/2;
+						let lb=1e-7;
+						let lb2=5e-8;
 						if(d>=x || (f<lb2 && f>0) || (f>-lb2 && f<0) ){
 							hx_interps_curr[tp_name].push( [f.toExponential(x),4] );
 						}else{
@@ -904,8 +904,8 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						let x=15;
 						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
 						let d=getNoDigits(f);
-						let lb=Math.pow(10,-x)
-						let lb2=lb-lb/2;
+						let lb=1e-15;
+						let lb2=5e-16;
 						if(d>=x || (f<lb2 && f>0) || (f>-lb2 && f<0) ){
 							hx_interps_curr[tp_name].push( [f.toExponential(x),8] );
 						}else{
