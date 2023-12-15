@@ -600,10 +600,6 @@ hsrch.onblur=(e)=>{
 	plhSet(t);
 }
 
-hsrch.oninput=(e)=>{
-	let t=e.target;
-	plhSet(t);
-}
 
 function clk_hx(event){
 	    let t=event.target;
@@ -625,7 +621,7 @@ function clk_hx(event){
 
 hsrch.oninput=(e)=>{
 	let t=e.target;
-	if(t.innerText!==''){
+	if(t.innerText!=='' && plh===false){
 		//t.style.color='white';
 		let b=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
 		t.innerText=b.join(' ');
@@ -677,8 +673,14 @@ hsrch.oninput=(e)=>{
 			aobd.innerText=at;
 		}
 		
+	}else{
+	    plh=true;
+	    t.innerText='Search for AOB';
+		t.style.color='buttonface';
 	}
+	if(e.skipSelDiv!==true){
 	 selDivEditable(t);
+	}
 }
 
 
@@ -1562,8 +1564,11 @@ hx.oninput=(event)=>{
 			aobd.innerHTML='';
 		}catch(e){;}
 	}
-
+    
     selDivEditable(hx);
+    let evt=new Event('input');
+    evt.skipSelDiv=true;
+    hsrch.dispatchEvent(evt);
 }
 
 
