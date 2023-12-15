@@ -630,7 +630,7 @@ hsrch.oninput=(e)=>{
 		let b=t.innerText.toLocaleUpperCase().split(/\s+/).join('').match(/([0-9]|[A-F]){1,2}/g);
 		t.innerText=b.join(' ');
 		let s=[...document.querySelectorAll('#hex span')];
-		
+		let st=s.map(p=>{return p.innerText.trim();});
 		for(let i=0, len=s.length; i<len;i++){
 			let sc=s[i];
 			if(sc.classList.contains('AOB_found')){
@@ -638,22 +638,23 @@ hsrch.oninput=(e)=>{
 			}
 		}
 		
-		let si=0; let s_end=s.length-1;
-		let bi=0; let b_end=b.length-1;
+		let si=0; let s_end=st.length-1;
+		let bi=0; let bl=b.length; let b_end=bl-1;
 		let fnd_AOB=[];
 		
-		while(si<=s_end){
-			if(b[bi]===s[si].innerText.trim()){
-				if(bi===b_end){
-					bi=0;
-					fnd_AOB.push([ si-b_end , si ]);
-				}else{
-					bi++;
-				}
-			}else{
-				bi=0;
-			}
-			si++
+		
+		for(let i=0; i<=s_end-b_end; ++i){
+		    let mtc=true;
+		    for(let j=0; j<bl; ++j){
+		        if(b[j]!==st[i+j]){
+		            mtc=false;
+		            j=bl;
+		        }
+		    }
+		    if(mtc===true){
+		        fnd_AOB.push([ i , i+b_end ]);
+		        break;
+		    }
 		}
 		
 		if(fnd_AOB.length>0){
