@@ -1,8 +1,8 @@
 ## Hex annotate.html
 
-Webpage that lets you highlight hex to help you to present the structures in data. You can save your annottions to a .json file.
+Webpage that lets you highlight hex to help you to present the structures in data. You can save your annotations to a .json file.
 
-You can hover over hex with the mouse and hole the Ctrl/Alt keys to change the `From`/`To` values of the last entry in the annotations table.
+You can hover over hex with the mouse and hold the Ctrl/Alt keys to change the `From`/`To` values of the last entry in the annotations table.
 
 ## traceCount monitor.html
 
