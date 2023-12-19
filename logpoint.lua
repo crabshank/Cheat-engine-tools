@@ -1,11 +1,21 @@
 local abp={}
+local chrono={}
 local stopped=false
 local print=print
 local str_match = string.match
 local upperc=string.upper
-local canJump=false
+local canJump=0 --0/false, 1/yes, 2/chrono
 local jmpTbl={}
 local nullChr=string.char(0)
+
+local function table_ix(t,n)
+	for i=1, #t do
+		if t[i]==n then
+			return i
+		end
+	end
+	return 0
+end
 
 local function trim_str(s)
 	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
@@ -259,7 +269,7 @@ end
 local function printAttached()
 		local abpl=#abp
 		if abpl>0 then
-			print('Attached logpoints: ')
+			print('Attached/logged logpoints: ')
 			for  k = 1, abpl do
 				local ak=abp[k]
 				print(k .. ': ' .. ak['address_hex'])
@@ -287,21 +297,40 @@ local function removeRetBps(k)
 	end
 end
 
-local function rem_abp(i,b)
+local function rem_abp(i,b,s)
 	local out={}
+	local chrono_rem={}
 	if b==true then
 		for k=1, #abp do
 			if k~=i then
-				table.insert(out,abp[k])
+				table.insert(out,abp[k]) --Keep non-removed
+				table.insert(chrono_rem,{k,#out})
+			else
+				table.insert(chrono_rem,{k})
 			end
 		end
 	else
 		for k=1, #abp do
 			local ak=abp[k]
 			if ak.address~=i then
-				table.insert(out,ak)
+				table.insert(out,ak) --Remove by address
+				table.insert(chrono_rem,{k,#out})
+			else
+				table.insert(chrono_rem,{k})
 			end
 		end
+	end
+	if #chrono_rem>0 and s~=true then
+		local nw_chrono={}
+		for k=1, #chrono do
+			local ck=chrono[k]
+			local ck_ix=ck[1]
+			local crx2=chrono_rem[ck_ix][2]
+			if crx2~=nil then
+				table.insert(nw_chrono,{crx2,ck[2]})
+			end
+		end
+		chrono=nw_chrono
 	end
 	return out
 end
@@ -311,16 +340,28 @@ local function removeAttached(i,b)
 	if b==true then
 		debug_removeBreakpoint(abp[i].address)
 		removeRetBps(i)
-		abp=rem_abp(i,true)
+		if abpl==1 then
+			abp=rem_abp(i,true,true)
+			chrono={}
+		else
+			abp=rem_abp(i,true)
+		end
 	elseif i==nil then
 		for k=1, abpl do
 			debug_removeBreakpoint(abp[1].address)
 			removeRetBps(1)
-			abp=rem_abp(1,true)
+			abp=rem_abp(1,true,true)
 		end
+		chrono={}
 	else
 		debug_removeBreakpoint(i)
-		abp=rem_abp(i)
+		if abpl==1 then
+			abp=rem_abp(i,false,true)
+			chrono={}
+		else
+			abp=rem_abp(i)
+		end
+		
 	end
 	abpl=#abp
 	if abpl>0 then
@@ -329,21 +370,23 @@ local function removeAttached(i,b)
 end
 
 local function jump(x,k)
-	if canJump==true then
-			local ks={#jmpTbl}
-			if k~=nil then 
-				ks[1]=k
+	if canJump==1 then
+			local j=jmpTbl[1]
+			if type(k)~=nil then 
+				j=k
 			end
-			for j=1, #ks do
-				local ak=jmpTbl[j]
-				if ak['count']~=true then
-					local riv=ak.regs
-					local rivl=#riv
-					if x>=1 and x<=rivl then
-						 getMemoryViewForm().HexadecimalView.Address=riv[x][2]
-					end
+			local ak=jmpTbl[2][j]
+			if ak['count']~=true then
+				local riv=ak.regs
+				local rivl=#riv
+				if x>=1 and x<=rivl then
+					 getMemoryViewForm().HexadecimalView.Address=riv[x][2]
 				end
 			end
+	elseif canJump==2 then
+		if x>=1 and x<=#jmpTbl then
+			getMemoryViewForm().HexadecimalView.Address=jmpTbl[x]
+		end
 	end
 end
 
@@ -371,7 +414,7 @@ local function dumpRegisters(bin,f,k)
 		print('Saving logs…')
 	end
 	
-	canJump=false
+	canJump=0
 		for j=k1, ks do
 			local c=false
 			local ak=abp[j]
@@ -381,7 +424,7 @@ local function dumpRegisters(bin,f,k)
 				end
 				tprint(ak.regs.counts)
 			else
-			canJump=true
+			canJump=1
 			local riv=ak.regs
 			local rivl=#riv
 			 if rivl >0 then
@@ -431,8 +474,8 @@ local function dumpRegisters(bin,f,k)
 	if pth~=nil then
 		print('Logs saved!')
 	end
-	if canJump==true then
-		jmpTbl=deepcopy(abp)
+	if canJump==1 then
+		jmpTbl={ks,deepcopy(abp)}
 	end
 	--removeAttached()
 	if rem~=nil then
@@ -448,9 +491,73 @@ local function dumpRegisters(bin,f,k)
 			debug_removeBreakpoint(abp[n].address)
 			removeRetBps(n)
 		end
-		--abp={}
+		--abp={} --Remove all indexes
+		--chrono={}
 		stopped=true
 		restoreGlobals()
+	end
+end
+
+local function dumpRegistersChrono(k,bin,f)
+	if stopped==true then
+		local kt={}
+		local kt_cnt={}
+		if type(k)~='table' then
+			kt={k}
+		else
+			kt=k
+		end
+		for i=1, #k do
+			table.insert(kt_cnt,0)
+		end
+		local bny
+		
+		if (type(bin)~='number') or (bin~=1) then
+			bny=0
+		else
+			bny=bin
+		end
+
+		local pth=nil
+		local ptct=''
+		if f~=nil and f~=''  then
+			pth=io.open(f,'w')
+			print('Saving logs in chronological order…')
+		end
+		
+		canJump=2
+		jmpTbl={}
+	
+		local cl=#chrono
+		local cnt=0
+		for c=1, cl do
+			local cc1=chrono[c][1]
+			local tix=table_ix(kt,cc1)
+			if tix>0 then
+				kt_cnt[tix]=kt_cnt[tix]+1
+				cnt=cnt+1
+				local cc2=chrono[c][2]
+				local ak=abp[cc1]
+				local riv=ak.regs
+				local rivc=riv[cc2]
+				local x=rivc[1]
+				local x6=rivc[6]
+				if bny==1 and x6~=nil then 
+					x=x6 
+				end
+				ptct='#'..cnt..' - '..rivc[4]..'('..ak['address_hex']..' - #'..kt_cnt[tix]..') '..rivc[3]..':\t'..x
+				table.insert(jmpTbl,rivc[2])
+				if pth~=nil then
+					pth:write(ptct..'\n')
+				else
+					print(ptct)
+				end
+			end
+		end
+	if pth~=nil then
+		print('Logs saved!')
+	end
+	
 	end
 end
 
@@ -470,7 +577,8 @@ local function stop(pr,bin,f)
 				debug_removeBreakpoint(abp[k].address)
 			end
 			removeRetBps()
-			abp={}
+			--abp={} --Remove all indexes
+			--chrono={}
 	end
 	stopped=true
 	restoreGlobals()
@@ -695,7 +803,8 @@ local function onBp()
 									if addedLines>0 then
 										prfx=''
 									end
-									table.insert(ar,{hexByteString,dec,instr,prfx,hexByteString_esc}) -- [5] is raw bytes (escaped)
+									table.insert(ar,{hexByteString,dec,instr,prfx,hexByteString_esc}) -- [5] is raw bytes (escaped)+
+									table.insert(chrono,{ix,#ar})
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -723,6 +832,7 @@ local function onBp()
 										prfx=''
 									end
 									table.insert(ar,{rx,nil,'('..abpxc[j]..')',prfx,hexByteString_esc})
+									table.insert(chrono,{ix,#ar})
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -751,6 +861,7 @@ local function onBp()
 										prfx=''
 									end
 									table.insert(ar,{rxbt,r,'('..abpxc[j]..')',prfx,rxbt_esc,rx}) --[6] is little endian
+									table.insert(chrono,{ix,#ar})
 									addedLines=addedLines+1
 									if newReg==false then
 										newReg=true
@@ -981,6 +1092,7 @@ logpoint={
 	attach=attach,
 	count=count,
 	dumpRegisters=dumpRegisters,
+	dumpRegistersChrono=dumpRegistersChrono,
 	jump=jump,
 	removeAttached=removeAttached,
 	stop=stop,
