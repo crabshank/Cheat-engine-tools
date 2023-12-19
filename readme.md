@@ -454,7 +454,7 @@ If **bin**==:
 
 Otherwise (default) -> Print all logged data as arrays of bytes.
 
-***f** is the same as in ".dumpRegisters(…)".
+**f** is the same as in ".dumpRegisters(…)".
 
 * **jump( x, k --[[Optional]] )** -> Jump to last dumped (in the hex view) (if the dump was of a ".attach(…)" capture), #**x**'s array of bytes interpreted as an address. Argument **k** is the same as in ".dumpRegisters(…)", and only works when the last dump was not made using ".dumpRegistersChrono(…)" (even when it printed to file).
 
