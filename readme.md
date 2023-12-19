@@ -444,11 +444,23 @@ Otherwise (default) -> Print all logged data as arrays of bytes.
 
 Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"), the breakpoint of this log will be removed. If no argument specified, it will dump last stored registers for all breakpoints and remove the breakpoints for them all.
 
-* **jump( x, k --[[Optional]] )** -> Jump to last dumped (in the hex view) (if the dump was of a ".attach(…)" capture), #**x**'s array of bytes interpreted as an address. Argument **k** is the same as in ".dumpRegisters(…)".
+* **dumpRegistersChrono( k --[[Optional]], bin --[[Optional]], f --[[Optional]] )** -> Force dump last stored registers to output in chronological order.
+
+**k** is an index or table of indexes (as printed by *printAttached()*) to be dumped.
+  
+If **bin**==:
+
+1 -> Non-pointer and non-table registers are printed as little endian hex rather than as arrays of bytes.
+
+Otherwise (default) -> Print all logged data as arrays of bytes.
+
+***f** is the same as in ".dumpRegisters(…)".
+
+* **jump( x, k --[[Optional]] )** -> Jump to last dumped (in the hex view) (if the dump was of a ".attach(…)" capture), #**x**'s array of bytes interpreted as an address. Argument **k** is the same as in ".dumpRegisters(…)", and only works when the last dump was not made using ".dumpRegistersChrono(…)" (even when it printed to file).
 
 * **removeAttached( i --[[Optional]], b --[[Optional]] )** -> Remove attached breakpoint with address **i**, or, if b==true: the index **i** printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"). If no arguments specified, it will remove all attached breakpoints.
 
-* **stop( pr --[[Optional]], bin --[[Optional]], f --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **pr**==true (print), dump all the logged data. **bin** and **f** are the same as in ".dumpRegisters(…)".
+* **stop( pr --[[Optional]], bin --[[Optional]], f --[[Optional]] )** -> Removes all breakpoints made by this extension and, if **pr**==true (print), dump all the logged data using ".dumpRegisters(…)". **bin** and **f** are the same as in ".dumpRegisters(…)".
 
 * **printAttached()** -> Print all attached breakpoints preceded by an index.
 
