@@ -500,12 +500,12 @@ end
 
 local function dumpRegistersChrono(k,bin,f)
 	if stopped==true then
-		local kt={}
+		local kt=k
 		local kt_cnt={}
-		if type(k)~='table' then
-			kt={k}
-		else
-			kt=k
+		local tyk=type(k)
+		if tyk~='table' or (tyk=='table' and #k<2) then
+			print('Argument "k" must be a table containing at least 2 elements!')
+			return
 		end
 		for i=1, #k do
 			table.insert(kt_cnt,0)
