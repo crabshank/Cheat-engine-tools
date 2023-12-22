@@ -446,7 +446,7 @@ Argument **k** is the index printed by *printAttached()* before the address (e.g
 
 * **dumpRegistersChrono( k --[[Optional]], bin --[[Optional]], f --[[Optional]] )** -> Force dump last stored registers to output in chronological order.
 
-**k** is an index or table of indexes (as printed by *printAttached()*) to be dumped.
+**k** is a table of at least 2 indexes (as printed by *printAttached()*) to be dumped.
   
 If **bin**==:
 
