@@ -607,8 +607,8 @@ local function get_abp_el(a)
 	return ix
 end
 
-local function onBp()
-
+local function onBp(rw)
+	debug_getContext(true)
 	local chk=false
 	local abpx=0
 	local ar={}
@@ -619,18 +619,26 @@ local function onBp()
 	local isRet=false -- hit on return address?
 	local isRetLog=false
 	if abpl >0 then
-		local ix=get_abp_el(RIP)
+		local bp_addr=RIP
+		local bp_addr_x=RIPx
+		if rw~=nil then
+			bp_addr=rw
+			bp_addr_x=string.format('%X',bp_addr)
+		end
+		local ix=get_abp_el(bp_addr)
 			if ix==-1 then
-				ix=get_abp_el(RIPx)
+				ix=get_abp_el(bp_addr_x)
 				if ix>=0 then
 					 isRet=true
-					 abp[ix].retAddr[RIPx][1]=abp[ix].retAddr[RIPx][1]-1 -- remove return address instance
-					 debug_removeBreakpoint(RIP)
+					 abp[ix].retAddr[bp_addr_x][1]=abp[ix].retAddr[bp_addr_x][1]-1 -- remove return address instance
+					 debug_removeBreakpoint(bp_addr)
 				end
 			end
 			
 			if ix>=0 then
 				abpx=abp[ix]
+				local dst = disassemble(RIP)
+				--local extraField, instruction, bytes, address = splitDisassembledString(dst)
 					if abpx['retOfs']~=nil then
 						isRetLog=true
 					end
@@ -652,8 +660,6 @@ local function onBp()
 				local abpxc_s=abpx['calc_syntax']
 				local abp_cnt=abpx['count']
 
-				debug_getContext(true)
-				
 				backupGlobals()
 				
 				local r8g=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
@@ -747,12 +753,17 @@ local function onBp()
 				if isRet==true then
 					abpxc=abpx['calc'][2]
 					abpxc_s=abpx['calc_syntax'][2]
-					prfx='Return ('..RIPx..'):\n'
+					prfx='Return ('..bp_addr_x..'):\n'
 				else
 					abpxc=abpx['calc'][1]
 					abpxc_s=abpx['calc_syntax'][1]
 					prfx='Function:\n'
 				end
+			end
+			
+			if abpx['address_bpt']>0 then
+				table.insert(ar,{dst,nil,'(Disassembly)','',dst})
+				table.insert(chrono,{ix,#ar})
 			end
 			
 				for j=1, #abpxc do --for each calc entry
@@ -915,7 +926,8 @@ local function onBp()
 			
 end
 
-local function attachLpAddr(a,c,bpst,cnt)
+local function attachLpAddr(atb,c,bpst,cnt)
+	local a=atb[1]
 	abp=rem_abp(a)
 	local tyc=type(c)
 	local cu={}
@@ -1013,15 +1025,23 @@ local function attachLpAddr(a,c,bpst,cnt)
 						table.insert(cu_syntx,{false,nil}) -- Register
 					end
 			end
+			local ab_type=atb[2]
 	if isRet==true then
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['retAddr']={},['retOfs']=s,['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
+		table.insert(abp,{['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['retAddr']={},['retOfs']=s,['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
 	elseif cnt==true then
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt})
+		table.insert(abp,{['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt})
 	else
-		table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
+		table.insert(abp,{['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
 	end
-	debug_setBreakpoint(a,onBp)
-	
+	if ab_type==0 then
+		debug_setBreakpoint(a,onBp)
+	else
+		if ab_type==1 then
+			debug_setBreakpoint(a, 1, bptAccess, bpmDebugRegister, function() onBp(a) end)
+		elseif ab_type==2 then
+			debug_setBreakpoint(a, 1, bptWrite, bpmDebugRegister, function() onBp(a) end)
+		end
+	end
 end
 
 local function attach(...)
@@ -1034,8 +1054,15 @@ local function attach(...)
 		end
 		
 		local a=v[1]
-		if type(a)=='string' then
-			a=getAddress(a)
+		local tya=type(a)
+		if tya=='table' then
+			local ab=1 -- 1-> on access
+			if a[2]==true then
+				ab=2 -- 2-> on write
+			end
+			a={getAddress(a[1]),ab}
+		elseif tya=='string' then
+			a={getAddress(a),0}
 		end
 		local c=v[2]
 		local bpt=v[3]
