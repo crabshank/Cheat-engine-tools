@@ -1038,7 +1038,7 @@ local function attachLpAddr(atb,c,bpst,cnt)
 		if ab_type==1 then
 			debug_setBreakpoint(a, 1, bptAccess, bpmDebugRegister, function() onBp(a) end)
 		elseif ab_type==2 then
-			debug_setBreakpoint(a, 1, bptWrite, bpmDebugRegister,  function() onBp(a) end)
+			debug_setBreakpoint(a, 1, bptWrite, bpmDebugRegister, function() onBp(a) end)
 		end
 	end
 end
