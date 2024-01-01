@@ -1063,6 +1063,8 @@ local function attach(...)
 			a={getAddress(a[1]),ab}
 		elseif tya=='string' then
 			a={getAddress(a),0}
+		else
+			a={a,0}
 		end
 		local c=v[2]
 		local bpt=v[3]
