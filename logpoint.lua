@@ -922,8 +922,7 @@ local function onBp(rw)
 							else
 								debug_continueFromBreakpoint(co_run)
 							end
-							
-			
+
 end
 
 local function attachLpAddr(atb,c,bpst,cnt)
@@ -1039,7 +1038,7 @@ local function attachLpAddr(atb,c,bpst,cnt)
 		if ab_type==1 then
 			debug_setBreakpoint(a, 1, bptAccess, bpmDebugRegister, function() onBp(a) end)
 		elseif ab_type==2 then
-			debug_setBreakpoint(a, 1, bptWrite, bpmDebugRegister, function() onBp(a) end)
+			debug_setBreakpoint(a, 1, bptWrite, bpmDebugRegister,  function() onBp(a) end)
 		end
 	end
 end
@@ -1103,8 +1102,17 @@ local function count(...)
 		end
 		
 		local a=v[1]
-		if type(a)=='string' then
-			a=getAddress(a)
+		local tya=type(a)
+		if tya=='table' then
+			local ab=1 -- 1-> on access
+			if a[2]==true then
+				ab=2 -- 2-> on write
+			end
+			a={getAddress(a[1]),ab}
+		elseif tya=='string' then
+			a={getAddress(a),0}
+		else
+			a={a,0}
 		end
 		local c=v[2]
 
