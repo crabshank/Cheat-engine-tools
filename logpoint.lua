@@ -765,7 +765,7 @@ local function onBp(rw)
 				if addedLines>0 then
 						prfx=''
 				end
-				table.insert(ar,{dst,nil,'(Disassembly)','',dst})
+				table.insert(ar,{dst,nil,'(Disassembly)',prfx,dst})
 				table.insert(chrono,{ix,#ar})
 				addedLines=addedLines+1
 			end
