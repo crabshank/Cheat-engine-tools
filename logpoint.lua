@@ -762,8 +762,12 @@ local function onBp(rw)
 			end
 			
 			if abpx['address_bpt']>0 then
+				if addedLines>0 then
+						prfx=''
+				end
 				table.insert(ar,{dst,nil,'(Disassembly)','',dst})
 				table.insert(chrono,{ix,#ar})
+				addedLines=addedLines+1
 			end
 			
 				for j=1, #abpxc do --for each calc entry
