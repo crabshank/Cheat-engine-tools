@@ -887,10 +887,9 @@ local function onBp(rw)
 								chk=true
 							end
 						end
-						
-						if #abpx.regs==1 then
-							print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
-						end
+				end
+				if #ar==1 then
+					print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
 				end
 				if addedLines>1 or isRetLog==true then
 					if isRetLog==true and isRet==true then
@@ -1011,7 +1010,7 @@ local function attachLpAddr(atb,c,bpst,cnt)
 							table.insert(cu_syntx,{false,nil}) -- Register
 						end
 					end
-			else
+			elseif c~=nil then
 					local upj=upperc(c)
 					table.insert(cu,upj)
 					typ=str_match(upj,mtc)
@@ -1072,7 +1071,7 @@ local function attach(...)
 		local c=v[2]
 		local bpt=v[3]
 
-		if type(c)~='string' and type(c)~='table' then
+		if type(c)~='string' and type(c)~='table' and a[1]==0 then
 			print('Argument "c", must be specified!')
 			return
 		end
@@ -1120,7 +1119,7 @@ local function count(...)
 		end
 		local c=v[2]
 
-		if type(c)~='string' and type(c)~='table' then
+		if type(c)~='string' and type(c)~='table' and a[1]==0 then
 			print('Argument "c", must be specified!')
 			return
 		end
