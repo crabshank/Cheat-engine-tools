@@ -242,9 +242,13 @@ local function removeAttachedBp(i,b)
 end
 
 local function attachBpAddr(a)
-	abp=rem_abp(a)
-	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',a),['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
-	debug_setBreakpoint(a,onBp_attached)
+	local ad=getAddress(a)
+	abp=rem_abp(ad)
+	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',ad),['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
+	debug_setBreakpoint(ad,onBp_attached)
+	if debug_isBroken()==true and RIP==ad then
+		onBp_attached()
+	end
 end
 
 local function attachBp(t)
