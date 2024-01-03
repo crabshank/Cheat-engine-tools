@@ -18,13 +18,14 @@ local currModule=nil
 local currRegsAddr=nil
 local jmpFirst=false
 
+local midTrace=false
+
 local findWriteStep=nil
 local findWriteBp=false
 local findWriteLastWasCall=false
 local findWriteStart=nil
 local findWriteEnd=nil
 local findWriteFirst=nil
-local findWriteBp=false
 local findWriteAttached={}
 local findWriteToAttach={}
 local findWriteLookup={}
@@ -1124,6 +1125,7 @@ local function attach(a,c,z,s,n)
 	prog=true
 	first=true
 	debug_setBreakpoint(abp[1][1], 1, bptExecute)
+	midTrace=true
 end
 
 local function get_disassembly(hi,i)
@@ -1358,6 +1360,7 @@ local function saveTrace()
 end
 
 local function runStop(b,adx)
+	midTrace=false
 	if condBpProg==true then
 		condBpProg=false
 		if condBpAddr~= nil and #condBpAddr>0 then
@@ -1366,7 +1369,6 @@ local function runStop(b,adx)
 		end
 		return
 	end
-	condBpProg=false
 	prog=false
 	liteBp=false
 	if abp~= nil and #abp>1 then
@@ -2114,6 +2116,7 @@ local function onLiteBp()
 				
 				if ( cnt_done==true or rpt==true ) then -- End of trace!
 					liteBp=false
+					midTrace=false
 					if rpt==true then
 						print('Specified address ( '..string.format('%X',RIP)..' ) executed!\n')
 					else
@@ -2155,6 +2158,7 @@ end
 local function lite(a,c,z,s)
 	debug_removeBreakpoint(liteAddr)
 	liteBp=false
+	midTrace=false
 	local tyc=type(c)
 	local tyct=false
 	if tyc=='table' then
@@ -2217,6 +2221,7 @@ local function lite(a,c,z,s)
 	liteFormattedCount={}
 	
 	debug_setBreakpoint(liteAbp[1][1], 1, bptExecute)
+	midTrace=true
 end
 
 local function onBp()
@@ -2866,6 +2871,7 @@ local function condBp(a, c, s, bf)
 	present_m_last_lookup={}
 	condBpProg=true
 	debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
+	midTrace=true
 end
 
 local function onCondBp()
@@ -3454,6 +3460,7 @@ local function findWrite(n,aobs,m,b,f,p)
 		lastAddr_findWrite={bn,isInModule(bn,string.format('%X',bn),modulesList_findWrite)[2]}
 		debug_setBreakpoint(bn,1,bptExecute)
 		findWriteBp=true
+		midTrace=true
 	end
 end
 
@@ -3469,8 +3476,13 @@ local function findWriteStep(i,aobs,b,f,p,m) --(n,aobs,m,b,f,p)
 	 findWrite(stp,aobs,m,b,f,p)
 end
 
+local function isMidTrace()
+	return midTrace
+end
+
 local function end_fw()
 	findWriteBp=false
+	midTrace=false
 	for j=1, #findWriteAttached do
 		local aj=findWriteAttached[j]
 		if aj~=nil then
@@ -3544,6 +3556,7 @@ local function onFindWriteBp()
 					print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],modCurr[2]))
 					writeFound=true
 					findWriteBp=false
+					midTrace=false
 					break
 				else
 					lastAddr_findWrite={RIP,modCurr[2]}
@@ -3605,6 +3618,7 @@ function debugger_onBreakpoint()
 end
 
 traceCount={}
+traceCount.isMidTrace=isMidTrace
 traceCount.attach=attach
 traceCount.stop=stop
 traceCount.printHits=printHits
