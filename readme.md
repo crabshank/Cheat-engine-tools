@@ -414,6 +414,8 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (logpoint.…): 
 
+* **isMidTrace()** -> Returns true/false re. whether the module is currently in a trace (could be useful for writing scripts).
+
 * **attach( { a, c, bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address.
 
 **a** is an address(in string or number form, use '0x…' for addresses in hexadecimal) of an instruction that when that instruction is executed, the breakpint will hit, *or* a table with: {address, onWrite}; where if **onWrite**==true, the breakpoint will hit if **address** is written to, and otherwise the breakpoint will hit when the **address** is accessed.
