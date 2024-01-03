@@ -163,7 +163,7 @@ local function set_regsLastDisp(k)
 	ak.rgc=ak.rgc+1
 end
 
-local function onBp_attached()
+local function onBp_attached(noRun)
 local abpl=#abp
 if abpl >0 then
 	local ix=get_abp_el(RIP)
@@ -212,7 +212,9 @@ if abpl >0 then
 				hexByteString = decByteString:gsub('%S+',function (c) return string.format('%02X',c) end)
 				abpx.regs[32+i]=hexByteString
 			end
-				debug_continueFromBreakpoint(co_run)
+				if noRun~=true then
+					debug_continueFromBreakpoint(co_run)
+				end
 end
 	end
 
@@ -245,12 +247,15 @@ local function attachBpAddr(a)
 	local ad=getAddress(a)
 	abp=rem_abp(ad)
 	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',ad),['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
-	debug_setBreakpoint(ad,onBp_attached)
 	if debug_isBroken()==true and RIP==ad then
+		debug_removeBreakpoint(ad)
+		debug_setBreakpoint(ad,onBp_attached)
 		return true
 	else
+		debug_setBreakpoint(ad,onBp_attached)
 		return false
 	end
+	
 end
 
 local function attachBp(t)
@@ -274,7 +279,7 @@ local function attachBp(t)
 		abp[k].forcePrint=true
 	end
 	if do_r==true then
-		onBp_attached()
+		onBp_attached(true)
 	end
 end
 

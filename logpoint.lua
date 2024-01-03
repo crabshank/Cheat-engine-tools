@@ -607,7 +607,7 @@ local function get_abp_el(a)
 	return ix
 end
 
-local function onBp(rw)
+local function onBp(rw,noRun)
 	debug_getContext(true)
 	local chk=false
 	local abpx=0
@@ -917,18 +917,21 @@ local function onBp(rw)
 									end
 								end
 								
-								if fnd==false then
-									debug_continueFromBreakpoint(co_run)
+								if noRun~=true then
+									if fnd==false then
+										debug_continueFromBreakpoint(co_run)
+									else
+										return 1
+									end		
 								else
-									return 1
+									debug_continueFromBreakpoint(co_run)
 								end		
-							else
-								debug_continueFromBreakpoint(co_run)
 							end
 
 end
 
 local function attachLpAddr(atb,c,bpst,cnt)
+	local isCurrRIP=false
 	local a=atb[1]
 	abp=rem_abp(a)
 	local tyc=type(c)
@@ -1036,6 +1039,10 @@ local function attachLpAddr(atb,c,bpst,cnt)
 		table.insert(abp,{['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
 	end
 	if ab_type==0 then
+		if debug_isBroken()==true and RIP==a then
+			isCurrRIP=true
+			debug_removeBreakpoint(a)
+		end
 		debug_setBreakpoint(a,onBp)
 	else
 		if ab_type==1 then
@@ -1044,9 +1051,11 @@ local function attachLpAddr(atb,c,bpst,cnt)
 			debug_setBreakpoint(a, 1, bptWrite, bpmDebugRegister, function() onBp(a) end)
 		end
 	end
+	return isCurrRIP
 end
 
 local function attach(...)
+	local isCurrRIP=false
    local args = {...}
    removeAttached()
    for i,v in ipairs(args) do
@@ -1091,11 +1100,18 @@ local function attach(...)
 			end
 		end
 		stopped=false
-		attachLpAddr(a,c,bpst)
+		local r=attachLpAddr(a,c,bpst)
+			if isCurrRIP==false and r==true then
+				isCurrRIP=true
+			end
+	end
+	if isCurrRIP==true then
+		onBp(nil,true)
 	end
 end
 
 local function count(...)
+	local isCurrRIP=false
    local args = {...}
    removeAttached()
    for i,v in ipairs(args) do
@@ -1124,7 +1140,13 @@ local function count(...)
 			return
 		end
 		stopped=false
-		attachLpAddr(a,c,nil,true)
+		local r=attachLpAddr(a,c,nil,true)
+		if isCurrRIP==false and r==true then
+				isCurrRIP=true
+			end
+	end
+	if isCurrRIP==true then
+		onBp(nil,true)
 	end
 end
 
