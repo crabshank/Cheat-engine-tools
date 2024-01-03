@@ -247,21 +247,34 @@ local function attachBpAddr(a)
 	table.insert(abp,{['address']=a,['address_hex']=string.format('%X',ad),['regs']=getLenTable(rl), ['regsLastDisp']=getLenTable(rl),['rgc']=0, ['forcePrint']=true})
 	debug_setBreakpoint(ad,onBp_attached)
 	if debug_isBroken()==true and RIP==ad then
-		onBp_attached()
+		return true
+	else
+		return false
 	end
 end
 
 local function attachBp(t)
 	local a=t
+	local r
+	local do_r=false
 	if type(t)=='table' then
 		for j=1, #t do
-			attachBpAddr(a[j])
+			r=attachBpAddr(a[j])
+			if do_r==false and r==true then
+				do_r=true
+			end
 		end
 	else
-		attachBpAddr(a)
+		r=attachBpAddr(a)
+		if do_r==false and r==true then
+			do_r=true
+		end
 	end
 	for k=1, #abp do
 		abp[k].forcePrint=true
+	end
+	if do_r==true then
+		onBp_attached()
 	end
 end
 
