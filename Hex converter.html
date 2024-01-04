@@ -1104,7 +1104,7 @@ unregistersymbol(${nmb})
 			   let vk=v[k];
 			   let vkFe=vk.firstElementChild;
 			   let vkFe_hod=vkFe.getAttribute('hod');
-			   let vkFe_bse='base'+vkFe_hod;
+			   let vkFe_bse=(nmb_el!==null)?'base'+vkFe_hod:t[0]+'_base';
 			   
 				ct+=`<CheatEntry>
 				  <ID>${k+1}</ID>
