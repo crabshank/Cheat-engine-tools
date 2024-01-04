@@ -414,8 +414,6 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 ### Methods on (logpoint.…): 
 
-* **isMidTrace()** -> Returns true/false re. whether the module is currently in a trace (could be useful for writing scripts).
-
 * **attach( { a, c, bpt --[[Optional]] }, {…}, … )** -> Takes a series of tables, one for each address.
 
 **a** is an address(in string or number form, use '0x…' for addresses in hexadecimal) of an instruction that when that instruction is executed, the breakpoint will hit, *or* a table with: {address, onWrite}; where if **onWrite**==true, the breakpoint will hit if **address** is written to, and otherwise the breakpoint will hit when the **address** is accessed.
@@ -481,6 +479,8 @@ N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situ
 * **attach( a, c, z --[[Optional]], s --[[Optional]], n --[[Optional]] )** -> Attach breakpoints to **a**: address or table of addresses (either in number [Use '0x…' for addresses in hexadecimal] or string, e.g. 'example.exe+7AE', form) (**If a table of addresses, then it will attach a breakpoint to the 1st element, then when it is hit it will attach one to the 2nd and so on until the last breakpoint is hit and then it will start the trace. This is useful for when the trace cannot escape system modules.**), and keep logging for **c** steps afterwards ("step into/over"). If **c** is a table, the trace will continue until the address reprsesented in the first element of the table is executed up to an optional limit, if specified by the 2nd element. If **n** is a specified, non-empty string, then it will save the trace by that string (see the *.saved()* method). If **z** == true, then it will break when the trace is over. If **s** is set to **true**, then the module will "step over" (calls), if **s** is a string or table of strings then the module will step into all modules specified by this string and "step out" of all addresses in modules not specified here, otherwise it will "step into".
 
 * **lite( a, c, s --[[Optional]] )** -> Like "traceCount.attach(…)" but only the instructions are logged, so it's quicker. **a**, **c** and **z** are the same as in "traceCount.attach(…). , **s**, if true, will "step over", otherwise it will step into.
+
+* **isMidTrace()** -> Returns true/false re. whether the module is currently in a trace (could be useful for writing scripts).
  
 * **litePrint(fileName)** -> **fileName** is a (full path to a) file name (use double backslashes instead on single ones), where the last trace captured by "traceCount.lite(…)" will be saved; if unspecified or nil, the trace will be printed to the console.
 
