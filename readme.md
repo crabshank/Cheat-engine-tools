@@ -565,11 +565,11 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **stack(d, b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Break on address **d** and attempt to find return addresses in the stack. **b** how deep (RSP+**b**) to probe the stack, if unspecified the function will probe the full stack. **m** is a string containing a module name; only addresses in module **m** will be logged. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
-* **end_stack( bck --[[Optional]] , lst --[[Optional]] )** -> End logging by "batchRW.stack(…)", and print its output. If **bck**==true/false, then the return addresses will be printed in the (reverse, if true) order that they were recorded in, and if **lst** is a number, it will only print the first (if **bck**==true) or last (if **bck**==false) n values specified by the **lst** argument.
+* **end_stack(p --[[Optional]])** -> **p** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
 
-* **rsp( b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Same as "batchRW.stack(…)", except it only works when the game is currently paused at a breakpoint. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
+* **rsp(b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Same as "batchRW.stack(…)", except it only works when the game is currently paused at a breakpoint. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
-* **jump( i, s --[[Optional]] )** -> Jumps to the **i**th result, as printed by "batchRW.end_stack/rsp(…)", of: if **s**==true, rsp; if **s**==false, stack; otherwise, the last printed result.
+* **jump(i)** -> Jumps to the **i**th result, as shown by "Jump #" in the printout from "batchRW.end_stack/rsp(…)".
 
 ## attachBpLog.lua
 
