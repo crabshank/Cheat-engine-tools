@@ -1289,9 +1289,9 @@ local function printHits(m,p,n,l,f,t)
 		end
 		if pth~=nil then
 			print('Trace saved!')
+			io.close(pth)
 		end
 	end
-
 end
 
 local function doSave(n,c)
@@ -1610,6 +1610,7 @@ local function litePrint(fileName)
 		for i=1, #liteFormattedCount do
 			print(liteFormattedCount[i])
 		end
+		io.close(fileHdl)
 	end
 end
 

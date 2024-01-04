@@ -496,6 +496,9 @@ local function dumpRegisters(bin,f,k)
 		stopped=true
 		restoreGlobals()
 	end
+	if pth~=nil then
+			io.close(pth)
+	end
 end
 
 local function dumpRegistersChrono(k,bin,f)
@@ -555,9 +558,9 @@ local function dumpRegistersChrono(k,bin,f)
 			end
 		end
 	if pth~=nil then
+		io.close(pth)
 		print('Logs saved!')
 	end
-	
 	end
 end
 
