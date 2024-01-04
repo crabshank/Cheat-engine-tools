@@ -3,6 +3,7 @@ local lprog=false;
 local timer_attach={['accessed']={}}
 local addr_stack=nil
 local empty_stack=true
+local firstStack=true
 local rets_lookup={}
 local rets_lookup_order={}
 local modulesList={}
@@ -10,8 +11,17 @@ local bps={}
 local xcld={['Decimal address']=true}
 local jumpRes={['sel']='',['rsp']={},['stack']={}}
 
-local function tprint(tbl, lookup_exclude, indent,suppressNL)
-  local function do_tprint(tbl, lookup_exclude, indent) -- https://gist.github.com/ripter/4270799
+local function print_th(t,p)
+	if p~=nil then
+		p:write(t..'\n')
+	else
+		print(t)
+	end
+end
+
+
+local function tprint(tbl, lookup_exclude, indent,suppressNL,pth)
+  local function do_tprint(tbl, lookup_exclude, indent,pth) -- https://gist.github.com/ripter/4270799
 	if indent==nil then indent = 0 end
 	for k, v in pairs(tbl) do
 		local tyk=type(k)
@@ -29,28 +39,32 @@ local function tprint(tbl, lookup_exclude, indent,suppressNL)
 			  formatting = string.rep("	", indent) .. k .. ": "
 			  local typv=type(v)
 			  if typv == "table" then
-				print(formatting)
-				do_tprint(v, lookup_exclude, indent+1)
+				print_th(formatting,pth)
+				do_tprint(v, lookup_exclude, indent+1,pth)
 			  elseif typv == 'boolean' then
-				print(formatting .. tostring(v))
+				print_th(formatting .. tostring(v),pth)
 			  elseif typv == 'string' then
 				local la, lb=string.find(v, "\n")
 				if la==nil then
-					print(formatting .. '"'.. v ..'"')
+					print_th(formatting .. '"'.. v ..'"',pth)
 				else
-					print(formatting .. '[['.. v ..']]')
+					print_th(formatting .. '[['.. v ..']]',pth)
 				end
 			  elseif typv == 'function' then
-				print(formatting .. 'function () … end')
+				print_th(formatting .. 'function () … end',pth)
 			  else
-				print(formatting .. tostring(v))
+				print_th(formatting .. tostring(v),pth)
 			  end
 		end
 	end
   end
-  do_tprint(tbl, lookup_exclude, indent)
+  do_tprint(tbl, lookup_exclude, indent,pth)
   if suppressNL~=true then
-	print('\n')
+		if pth~=nil then
+			pth:write('\n')
+		else
+			print('\n')
+		end
   end
 end
 
@@ -541,61 +555,46 @@ local function attach_loop(z,t,onWrite,col)
 	timer.OnTimer=ot
 end
 
-local function end_stack(bck,lst)
-
- if empty_stack==true then
-    print('No stack data!')
+local function end_stack(p)
 	if addr_stack~=nil then
 		debug_removeBreakpoint(addr_stack)
 	end
-    return
- end
+	 if empty_stack==true then
+		print('No stack data!')
+		return
+	 end
  
-	if addr_stack~=nil then
-		debug_removeBreakpoint(addr_stack)
-		
-		
-		if bck==true or bck==false then
-			local tyl=type(lst)
-			local tyn=false
-			if tyl=='number' then
-				tyn=true
-			end
-			
-			local a=1
-			local b=#rets_lookup_order
-			if tyn==true then
-				b=a+lst-1
-			end
-			local d=-1
-			if bck==true then
-				a=b
-				b=1
-				if tyn==true then
-					b=a-lst+1
-				end
-				d=1
-			end
-
-			print('Partial stack results:\n')
-			jumpRes.stack=rets_lookup_order
-			jumpRes.sel='stack'
-			for i=b,a,d do
-				local ri=rets_lookup_order[i]
-				tprint(ri,xcld,1)
-			end
-			
-		else
-			local t2={}
-			for key, value in pairs(rets_lookup) do
-				table.insert(t2,{['Symbolic address']=value['Symbolic_address'],['Decimal address']=value['address_dec'],['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
-			end
-			
-			table.sort( t2, function(a, b) return a['Count'] > b['Count'] end )
-				jumpRes.stack=t2
-				jumpRes.sel='stack'
-				tprint(t2,xcld)
+	local pth=nil
+	if p~=nil and p~=''  then
+			pth=io.open(p,'w')
+			print('Saving stack logs…')
+	end
+ 
+	jumpRes.stack={}
+	jumpRes.sel='stack'
+	local cnt=1
+	local t2={}
+	for key0, value0 in pairs(rets_lookup) do
+		print_th('Instruction address '..key0..':',pth)
+		for key, value in pairs(value0) do
+			table.insert(t2,{['Symbolic address']=value['Symbolic_address'],['Decimal address']=value['address_dec'],['Address']=key,['Count']=value['count'],['RSP+… ']=value['RSP+…']})
 		end
+		table.sort( t2, function(a, b) return a['Count'] > b['Count'] end )
+		for n=1, #t2 do
+			t2[n]['Jump #']=cnt
+			table.insert(jumpRes.stack,t2[n])
+			cnt=cnt+1
+		end
+		tprint(t2,xcld,1,true,pth)
+		if pth~=nil then
+			pth:write('\n')
+		else
+			print('')
+		end
+	end
+	if pth~=nil then
+			print('Stack logs saved!')
+			io.close(pth)
 	end
 end
 
@@ -604,13 +603,19 @@ local function stack(d,b,m,f)
 	empty_stack=true
 
 	local tyd=type(d)
-	if tyd=='string' then
+	local trg=bptExecute
+	if tyd=='table' then
+		trg=bptAccess
+		if d[2]==true then
+			trg=bptWrite
+		end
+		addr_stack=getAddress(d[1])
+	elseif tyd=='string' then
 		addr_stack=getAddress(d)
-	elseif tyd=='number' then
-		addr_stack=d
 	else
-		print("Argument 'd' must be a number or string")
+		addr_stack=d
 	end
+
 	rets_lookup={}
 	rets_lookup_order={}
 	modulesList={}
@@ -628,8 +633,12 @@ local function stack(d,b,m,f)
 			table.insert(modulesList,tm)
 		end
 	end
-
-	debug_setBreakpoint(addr_stack, 1, bptExecute, bpmDebugRegister, function()
+	firstStack=true
+	debug_setBreakpoint(addr_stack, 1, trg, bpmDebugRegister, function()
+		if firstStack==true then
+			firstStack=false
+			print('Breakpoint for '..string.format('%X',addr_stack)..' hit!')
+		end
 		debug_getContext()
 		local bp
 		if b==nil or b<0 then
@@ -642,46 +651,54 @@ local function stack(d,b,m,f)
 			end
 		end
 		
-		--local p=1
 		local fc=0
 		local fsx='0'
+		local RIPx=string.format('%X',RIP)
+		local first=false
 		for i=RSP, bp do
 			local rd=readQword(i)
 			if type(rd)=='number' and rd>=0 then
+				if first==false then
+					first=true
+					if rets_lookup_order[RIPx]==nil then
+						rets_lookup_order[RIPx]={}
+					end
+					if rets_lookup[RIPx]==nil then
+						rets_lookup[RIPx]={}
+					end
+				end
 				local dx=string.format('%X',rd)
 				local isRet=isInModule(rd,dx,modulesList)
 				if isRet[1]==true then
 				 empty_stack=false
 				 local orderRet={}
-				 orderRet['# ']=#rets_lookup_order+1
+				 orderRet['# ']=#rets_lookup_order[RIPx]+1
 				 orderRet['Address']=dx
 				 orderRet['Decimal address']=rd
 				 orderRet['Symbolic address']=isRet[2]
 				 orderRet['RSP+… ']=fsx
-				 table.insert(rets_lookup_order,orderRet)
-					if rets_lookup[dx]==nil then
-						rets_lookup[dx]={}
-						rets_lookup[dx]['count']=1
-						rets_lookup[dx]['address_dec']=rd
-						rets_lookup[dx]['Symbolic_address']=isRet[2]
-						rets_lookup[dx]['RSP+…']={}
-						rets_lookup[dx]['RSP+…'][fsx]=1
+				 table.insert(rets_lookup_order[RIPx],orderRet)
+					if rets_lookup[RIPx][dx]==nil then
+						rets_lookup[RIPx][dx]={}
+						rets_lookup[RIPx][dx]['count']=1
+						rets_lookup[RIPx][dx]['address_dec']=rd
+						rets_lookup[RIPx][dx]['Symbolic_address']=isRet[2]
+						rets_lookup[RIPx][dx]['RSP+…']={}
+						rets_lookup[RIPx][dx]['RSP+…'][fsx]=1
 					else
-						rets_lookup[dx]['count']=rets_lookup[dx]['count']+1
-						if rets_lookup[dx]['RSP+…'][fsx]~=nil then
-							rets_lookup[dx]['RSP+…'][fsx]=rets_lookup[dx]['RSP+…'][fsx]+1
+						rets_lookup[RIPx][dx]['count']=rets_lookup[RIPx][dx]['count']+1
+						if rets_lookup[RIPx][dx]['RSP+…'][fsx]~=nil then
+							rets_lookup[RIPx][dx]['RSP+…'][fsx]=rets_lookup[RIPx][dx]['RSP+…'][fsx]+1
 						else
-							rets_lookup[dx]['RSP+…'][fsx]=1
+							rets_lookup[RIPx][dx]['RSP+…'][fsx]=1
 						end
 					end
-					--p=p+1
 				end
 			end
 			fc=fc+1
 			fsx=string.format('%X',fc)
 		end
 	end)
-
 end
 
 local function rsp(b,m,f)
@@ -714,7 +731,6 @@ local function rsp(b,m,f)
 				bp=math.max(math.min(RSP+b,RBP-7),RSP)
 			end
 		end
-		--local p=1
 		local fc=0
 		local fsx='0'
 		for i=RSP, bp do
@@ -741,47 +757,29 @@ local function rsp(b,m,f)
 							rets_lookup2[dx]['RSP+… '][fsx]=1
 						end
 					end
-					--p=p+1
 				end
 			end
 			fc=fc+1
 			fsx=string.format('%X',fc)
 		end
-	jumpRes.rsp=rets_lookup2
+	jumpRes.rsp={}
 	jumpRes.sel='rsp'
 	for i=1, #rets_lookup2.ord do
 		local k=rets_lookup2.ord[i]
 		local v=rets_lookup2[k]
+		v['Jump #']=i
+		table.insert(jumpRes.rsp,v)
 		tprint_kv(k,v,xcld,nil,true)
 	end
 end
 
-local function jump(i,s)
-	
-	local stk=jumpRes['sel']
-	local js
-	local j
-	local lim
-	if s==true or (s~=true and stk=='rsp') then
-		js=jumpRes['rsp']
-		j=js[js.ord[i]]
-		lim=#js.ord
-	elseif s==false or (s~=false and stk=='stack') then
-		js=jumpRes['stack']
-		j=js[i]
-		lim=#js
-	end
-	
-	if js==nil then
-		print(stk..' does not exist!')
+local function jump(i)
+	local js=jumpRes[jumpRes.sel]
+	local j=js[i]
+	if j==nil then
+		print(string.format('Argument "i" must be between 1 and %d',#js))
 	else
-		
-		
-		if j==nil then
-			print(string.format('For %s: i must be between %d and %d',stk,1,lim))
-		else
-			getMemoryViewForm().DisassemblerView.TopAddress=j['Decimal address']
-		end
+		getMemoryViewForm().DisassemblerView.TopAddress=j['Decimal address']
 	end
 end
 
