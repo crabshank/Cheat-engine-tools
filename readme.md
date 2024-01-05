@@ -480,6 +480,8 @@ N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situ
 
 * **lite( a, c, s --[[Optional]] )** -> Like "traceCount.attach(…)" but only the instructions are logged, so it's quicker. **a**, **c** and **z** are the same as in "traceCount.attach(…). , **s**, if true, will "step over", otherwise it will step into.
 
+N.B. With methods "traceCount.attach/lite(…)", a window will popup telling you have many steps are remaining in your trace (if this is applicable).
+
 * **isMidTrace()** -> Returns true/false re. whether the module is currently in a trace (could be useful for writing scripts).
  
 * **litePrint(fileName)** -> **fileName** is a (full path to a) file name (use double backslashes instead on single ones), where the last trace captured by "traceCount.lite(…)" will be saved; if unspecified or nil, the trace will be printed to the console.
