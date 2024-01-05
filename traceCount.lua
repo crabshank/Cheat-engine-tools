@@ -2148,7 +2148,9 @@ local function onLiteBp()
 						debug_removeBreakpoint(ai1)
 						liteFirst=false
 						print('Breakpoint at ' .. ai1_hx .. ' hit!')
-						setupWindow(liteCount)
+						if liteCount~=nil
+							setupWindow(liteCount)
+						end
 					else
 						if debug_isBroken()==true then
 							jumpMem(RIP)
@@ -2158,7 +2160,9 @@ local function onLiteBp()
 				end
 				
 				liteTrace[liteIx]=RIP
-				trace_w[2].Caption=spaceSep_int(liteCount-liteIx)..' steps remaining'
+				if liteCount~=nil
+					trace_w[2].Caption=spaceSep_int(liteCount-liteIx)..' steps remaining'
+				end
 				liteIx=liteIx+1
 				
 				local rpt=false
@@ -2377,7 +2381,9 @@ local function onBp()
 						debug_removeBreakpoint(ai1)
 						first=false
 						print('Breakpoint at ' .. ai1_hx .. ' hit!')
-						setupWindow(count-1)
+						if count~=nil then
+							setupWindow(count-1)
+						end
 					else
 						if debug_isBroken()==true then
 							jumpMem(RIP)
