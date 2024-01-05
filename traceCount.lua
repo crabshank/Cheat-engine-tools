@@ -2,6 +2,8 @@ local frm = getMemoryViewForm()
 local hv = frm.DisassemblerView
 local hx=frm.HexadecimalView
 
+local trace_w={nil,nil} --form,label
+
 local print=print
 local upperc=string.upper
 local string_gmatch=string.gmatch
@@ -53,6 +55,28 @@ local function isInModule(address,address_hex,list) -- https://github.com/cheat-
 		end
 	end
 	return {false,address_hex}
+end
+
+local function spaceSep_int(b)
+	local g=''
+	if b<0 then
+	   g='-'
+	   b=math.abs(b)
+	end
+	local n=tostring(b)
+	local l=#n
+	local c=l
+	local out={}
+	if l>3 then
+	   while c>0 do
+			 local a=math.max(1,c-2)
+			 table.insert(out,1,n:sub(a,c))
+			 c=c-3
+	   end
+	   return g..table.concat(out,' ')
+	else
+		return g..n
+	end
 end
 
 local function sameTable(t1,t2)
@@ -1360,6 +1384,7 @@ local function saveTrace()
 end
 
 local function runStop(b,adx)
+	trace_w[1].close()
 	midTrace=false
 	if condBpProg==true then
 		condBpProg=false
@@ -2072,6 +2097,35 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 		return
 end
 
+local function setupWindow(c) -- c is remaining steps
+	if trace_w[1] then
+	 trace_w[1].close()
+	end
+
+	trace_w[1] = createForm()
+	trace_w[1].Width = 332
+	trace_w[1].Height =40
+	trace_w[1].Position = 'poScreenCenter'
+	trace_w[1].Color = '0x000000'
+	trace_w[1].Caption = 'TraceCount progess'
+	trace_w[1].FormStyle = 'fsMDIForm'
+	trace_w[1].DefaultMonitor = 'dmMainForm'
+	trace_w[1].BorderStyle = 'bsSingle'
+
+	trace_w[1].onClose=function()
+		trace_w[2].destroy()
+		trace_w[1].destroy()
+	end
+
+	trace_w[2]=createLabel(trace_w[1])
+	trace_w[2].Left = 0
+	trace_w[2].Top = 0
+	trace_w[2].Font.size=17
+	trace_w[2].Font.Color='0xffffff'
+	trace_w[2].Color='0x000000'
+	trace_w[2].Caption=spaceSep_int(c)..' steps remaining'
+end
+
 local function onLiteBp()
 
 	debug_getContext()
@@ -2094,6 +2148,7 @@ local function onLiteBp()
 						debug_removeBreakpoint(ai1)
 						liteFirst=false
 						print('Breakpoint at ' .. ai1_hx .. ' hit!')
+						setupWindow(liteCount)
 					else
 						if debug_isBroken()==true then
 							jumpMem(RIP)
@@ -2103,6 +2158,7 @@ local function onLiteBp()
 				end
 				
 				liteTrace[liteIx]=RIP
+				trace_w[2].Caption=spaceSep_int(liteCount-liteIx)..' steps remaining'
 				liteIx=liteIx+1
 				
 				local rpt=false
@@ -2123,6 +2179,7 @@ local function onLiteBp()
 					else
 						print('Trace count limit reached!\n')
 					end
+					trace_w[1].close()
 					liteFormattedCount=getLiteCounts()
 					if lite_stopTraceEnd==true then
 						return 1
@@ -2320,6 +2377,7 @@ local function onBp()
 						debug_removeBreakpoint(ai1)
 						first=false
 						print('Breakpoint at ' .. ai1_hx .. ' hit!')
+						setupWindow(count-1)
 					else
 						if debug_isBroken()==true then
 							jumpMem(RIP)
@@ -2335,6 +2393,7 @@ local function onBp()
 			
 			if count~=nil then
 				count=count-1
+				trace_w[2].Caption=spaceSep_int(count)..' steps remaining'						
 				local cnt_done=false
 					if count<1 then
 						cnt_done=true
