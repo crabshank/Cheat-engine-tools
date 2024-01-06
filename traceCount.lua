@@ -22,7 +22,7 @@ local jmpFirst=false
 
 local midTrace=false
 
-local findWriteStep=nil
+local findWriteStepOver=nil
 local findWriteBp=false
 local findWriteLastWasCall=false
 local findWriteStart=nil
@@ -31,6 +31,7 @@ local findWriteFirst=nil
 local findWriteAttached={}
 local findWriteToAttach={}
 local findWriteLookup={}
+local findWriteLookup_step={}
 local findWriteAobs={}
 local findWriteStackBps={}
 local findWritePatts={}
@@ -3506,7 +3507,7 @@ local function findWrite(n,aobs,m,b,f,p)
 		findWriteAttached={}
 		findWriteToAttach={}
 		findWriteLookup={}
-		
+		findWriteLookup_step={}
 		if b==nil or b<0 then
 			bp=math.max(RBP-7,RSP)
 		else
@@ -3552,7 +3553,7 @@ local function findWrite(n,aobs,m,b,f,p)
 		end
 		findWriteStart=bn
 		findWriteEnd=fn
-		findWriteStep=n
+		findWriteStepOver=n
 		lastAddr_findWrite={bn,isInModule(bn,string.format('%X',bn),modulesList_findWrite)[2]}
 		debug_setBreakpoint(bn,1,bptExecute)
 		findWriteBp=true
@@ -3564,10 +3565,14 @@ local function findWriteStack(aobs,m,b,f) --(n,aobs,m,b,f,p)
 	 findWrite(0,aobs,m,b,f,nil)
 end
 
-local function findWriteStep(i,aobs,b,f,p,m) --(n,aobs,m,b,f,p)
-	local stp=2
-	if i==true then
-		stp=1
+local function findWriteStep(i,aobs,b,f,p,m) --(n,aobs,m,b,f,p)`
+	local stp=2 --into
+	-- internal: 3->into but over if already executed/2->into/1->over
+						-- external-> internal: 0->2,1->1, 2->3
+	if i==1 then
+		stp=1 --over
+	elseif i==2 then
+		stp=3 --into but over if already executed
 	end
 	 findWrite(stp,aobs,m,b,f,p)
 end
@@ -3600,38 +3605,66 @@ local function onFindWriteBp()
 	end
 	
 	local RIPx=string.format('%X',RIP)
-	local modCurr=isInModule(RIP,RIPx,modulesList_findWrite)
-	--print(modCurr[2])
-	local ds = disassemble(RIP)
-	local extraField, instruction, bytes, address = splitDisassembledString(ds)
-	local isRet=false
-	local isPatt=false
-	local isCall=false
 	
-	if string.find(instruction,"%s+ret%s*$")~=nil or string.find(instruction,"^%s*ret%s*$")~=nil then
-		isRet=true
+	local isRet
+	local isPatt
+	local isCall
+	local modCurr
+	local isRep
+	local ft=false
+	if findWriteLookup_step[RIPx]==nil then --1st time
+						ft=true
+						modCurr=isInModule(RIP,RIPx,modulesList_findWrite)
+						--print(modCurr[2])
+						local ds = disassemble(RIP)
+						local extraField, instruction, bytes, address = splitDisassembledString(ds)
+						isRet=false
+						isPatt=false
+						isCall=false
+						isRep=false
+						
+						if string.find(instruction,"%s+ret%s*$")~=nil or string.find(instruction,"^%s*ret%s*$")~=nil then
+							isRet=true
+						end
+						
+						if string.find(instruction,"^%s*call%s+")~=nil then
+							isCall=true
+						end
+						
+						local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
+						if la~=nil then
+							isRep=true
+						end
+						
+						if findWritePatts~=nil then
+							local pl=#findWritePatts
+							if pl>0 then
+								for i=1,pl do
+									if string.find(instruction,findWritePatts[i])~=nil then
+										isPatt=true
+										break
+									end
+								end
+							end
+						end
+						findWriteLookup_step[RIPx]={modCurr,instruction,isRet,isPatt,isCall,isRep}
 	end
-	
-	if string.find(instruction,"^%s*call%s+")~=nil then
-		isCall=true
-	end
-	
-	if findWritePatts~=nil then
-		local pl=#findWritePatts
-		if pl>0 then
-			for i=1,pl do
-				if string.find(instruction,findWritePatts[i])~=nil then
-					isPatt=true
-					break
-				end
-			end
+
+	if ft==false then
+		local rx=findWriteLookup_step[RIPx]
+		modCurr=rx[1]
+		isRet=rx[3]
+		isPatt=rx[4]
+		isCall=rx[5]
+		if rx[6]==true then
+			ft=true
 		end
 	end
 	
 	local writeFound=false
 	local scanHere=false
 	if modCurr[1]==true then
-		if findWriteStep~=2 then --into
+		if findWriteStepOver==2 or ( findWriteStepOver==3  and ft==true) then --into
 			if findWriteLastWasCall==true or isRet==true or isPatt==true or findWriteWasPatt==true then
 				scanHere=true
 			end
@@ -3673,10 +3706,10 @@ local function onFindWriteBp()
 	else
 		findWriteWasPatt=false
 	end
-	
+
 	if writeFound==true then
 		debug_continueFromBreakpoint(co_run)
-	elseif findWriteStep~=2 then --into
+	elseif findWriteStepOver==2 or (findWriteStepOver==3 and ft==true) then --into
 		debug_continueFromBreakpoint(co_stepinto)
 	else -- step over
 		debug_continueFromBreakpoint(co_stepover)
