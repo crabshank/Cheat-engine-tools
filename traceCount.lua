@@ -2103,7 +2103,7 @@ local function setupWindow(c) -- c is remaining steps
 	end
 
 	trace_w[1] = createForm()
-	trace_w[1].Width = 332
+	trace_w[1].Width = 334
 	trace_w[1].Height =40
 	trace_w[1].Position = 'poScreenCenter'
 	trace_w[1].Color = '0x000000'
@@ -2118,7 +2118,7 @@ local function setupWindow(c) -- c is remaining steps
 	end
 
 	trace_w[2]=createLabel(trace_w[1])
-	trace_w[2].Left = 0
+	trace_w[2].Left = 2
 	trace_w[2].Top = 0
 	trace_w[2].Font.size=17
 	trace_w[2].Font.Color='0xffffff'
