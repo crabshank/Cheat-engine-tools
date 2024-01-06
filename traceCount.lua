@@ -889,8 +889,10 @@ local liteCount=0
 local liteBp=false
 
 local liteFirst=true
-local liteStepOver=false
+local liteStepOver=0 --0/1/2 - into/over/into but over when executed before
+local liteForceStepOver=false
 local liteTrace={}
+local liteTrace_lookup={}
 local liteFormattedCount={}
 local liteRep=nil
 
@@ -2131,7 +2133,6 @@ end
 local function onLiteBp()
 
 	debug_getContext()
-
 	local ai1=0
 	local ai1_hx=''
 		if liteAbp[1]~=nil then
@@ -2162,11 +2163,27 @@ local function onLiteBp()
 				end
 				
 				liteTrace[liteIx]=RIP
+
+					if liteStepOver==2 then
+						local RIPx=string.format("%X", RIP)
+						if liteTrace_lookup[RIPx]==nil then
+									local dss = disassemble(RIP)
+									local extraField, instruction, bytes, address = splitDisassembledString(dss)
+									local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
+									liteTrace_lookup[RIPx]={true,instruction,la}
+						else --seen before
+							if liteTrace_lookup[RIPx][3]==nil then
+										liteForceStepOver=true
+							end
+						end
+					end
+
 				if liteCount~=nil then
 					trace_w[2].Caption=spaceSep_int(liteCount-liteIx)..' steps remaining'
 				end
+
 				liteIx=liteIx+1
-				
+
 				local rpt=false
 				if (liteRep~=nil and RIP==liteRep and liteIx>2) then
 					rpt=true
@@ -2178,50 +2195,55 @@ local function onLiteBp()
 					end
 				
 				if ( cnt_done==true or rpt==true ) then -- End of trace!
-					liteBp=false
-					midTrace=false
-					if rpt==true then
-						print('Specified address ( '..string.format('%X',RIP)..' ) executed!\n')
-					else
-						print('Trace count limit reached!\n')
-					end
-					if trace_w[1] then
-						trace_w[1].close()
-					end
-					liteFormattedCount=getLiteCounts()
-					if lite_stopTraceEnd==true then
-						return 1
-					else
-						debug_continueFromBreakpoint(co_run) --END OF TRACE!
-					end
-				elseif liteStepOver==true then --Step over or Out of specified modules
-					if cnt_done==true then
-						liteFormattedCount=getLiteCounts()
-						if lite_stopTraceEnd==true then
-							return 1
-						else
-							debug_continueFromBreakpoint(co_run) --END OF TRACE!
-						end
-					else
-						debug_continueFromBreakpoint(co_stepover)
-					end
-				else
-					if cnt_done==true then
-						liteFormattedCount=getLiteCounts()
-						if lite_stopTraceEnd==true then
-							return 1
-						else
-							debug_continueFromBreakpoint(co_run) --END OF TRACE!
-						end
-					else
-						debug_continueFromBreakpoint(co_stepinto)
-					end
+										liteBp=false
+										midTrace=false
+										if rpt==true then
+											print('Specified address ( '..string.format('%X',RIP)..' ) executed!\n')
+										else
+											print('Trace count limit reached!\n')
+										end
+										if trace_w[1] then
+											trace_w[1].close()
+										end
+										liteFormattedCount=getLiteCounts()
+										if lite_stopTraceEnd==true then
+											return 1
+										else
+											debug_continueFromBreakpoint(co_run) --END OF TRACE!
+										end
+				elseif liteStepOver==1 then --Step over
+							if cnt_done==true then
+								liteFormattedCount=getLiteCounts()
+								if lite_stopTraceEnd==true then
+									return 1
+								else
+									debug_continueFromBreakpoint(co_run) --END OF TRACE!
+								end
+							else
+								debug_continueFromBreakpoint(co_stepover)
+							end
+				else --step into
+							if cnt_done==true then
+								liteFormattedCount=getLiteCounts()
+								if lite_stopTraceEnd==true then
+									return 1
+								else
+									debug_continueFromBreakpoint(co_run) --END OF TRACE!
+								end
+							else
+									if liteForceStepOver==true then
+										liteForceStepOver=false
+										debug_continueFromBreakpoint(co_stepover)
+									else
+										debug_continueFromBreakpoint(co_stepinto)
+									end
+							end
 				end
 				
 		end
 end
 
-local function lite(a,c,z,s)
+local function lite(a,c,s,z)
 	debug_removeBreakpoint(liteAddr)
 	liteBp=false
 	midTrace=false
@@ -2281,9 +2303,13 @@ local function lite(a,c,z,s)
 	mri_skip=false
 	mri_isCall=true
 	mrc_retAdr=nil
-	liteStepOver=s
-	
+	liteStepOver=0
+	if s==1 or s==2 then
+		liteStepOver=s
+	end
+	liteForceStepOver=false
 	liteTrace={}
+	liteTrace_lookup={}
 	liteFormattedCount={}
 	
 	debug_setBreakpoint(liteAbp[1][1], 1, bptExecute)
