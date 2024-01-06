@@ -691,7 +691,7 @@ local function check_inj()
         local farl1=false
 	for i=1, #clp do
 		local opc=clp[i]
-		if i==1 and string.match(opc,'^jmp%s*.+$')~=nil then
+		if i==1 and string.match(opc,'^%s*jmp%s+.+$')~=nil then
 			c=c+1
 		elseif i==1 then
 			rst=true
