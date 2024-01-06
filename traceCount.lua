@@ -1384,7 +1384,9 @@ local function saveTrace()
 end
 
 local function runStop(b,adx)
-	trace_w[1].close()
+	if trace_w[1] then
+		trace_w[1].close()
+	end
 	midTrace=false
 	if condBpProg==true then
 		condBpProg=false
@@ -2183,7 +2185,9 @@ local function onLiteBp()
 					else
 						print('Trace count limit reached!\n')
 					end
-					trace_w[1].close()
+					if trace_w[1] then
+						trace_w[1].close()
+					end
 					liteFormattedCount=getLiteCounts()
 					if lite_stopTraceEnd==true then
 						return 1
