@@ -482,11 +482,11 @@ N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situ
 
 If **s**==:
 
-* 1 -> Step over
+* 1 -> Step over.
 
-* 2 -> Step into, but step over code that that been executed before in the trace
+* 2 -> Step into, but step over code that that been executed before in the trace (useful for escaping many long loops).
 
-* Otherwise (default) -> Step into
+* Otherwise (default) -> Step into.
 
 N.B. With methods "traceCount.attach/lite(…)", a window will popup telling you have many steps are remaining in your trace (if this is applicable).
 
