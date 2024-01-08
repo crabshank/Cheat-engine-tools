@@ -488,7 +488,7 @@ If **s**==:
 
 * Otherwise (default) -> Step into.
 
-N.B. With methods "traceCount.attach/lite(…)", a window will popup telling you have many steps are remaining in your trace (if this is applicable).
+N.B. With methods "traceCount.attach/lite(…)", a window will popup telling you have many steps are remaining in your trace (if this is applicable). Also, the printed trace using this method will attempt to show any loops in compressed form.
 
 * **isMidTrace()** -> Returns true/false re. whether the module is currently in a trace (could be useful for writing scripts).
  
