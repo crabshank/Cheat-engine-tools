@@ -40,6 +40,14 @@ local findWriteWasPatt=false
 local modulesList_findWrite={}
 local lastAddr_findWrite={}
 
+local function s_pluralise(c,t)
+	if c~=1 then
+		return t..'s'
+	else
+		return t
+	end
+end
+
 local function isInModule(address,address_hex,list) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
 	for i=1, #list do
 	local v=list[i]
@@ -1628,70 +1636,141 @@ local function getSubRegDecBytes(x,g,a,b,n)
 end
 
 local function litePrint(fileName)
+	local lgf=#liteFormattedCount 
 	if fileName~=nil then
 		local fileHdl=io.open(fileName,'w')
 		print('Saving trace…')
-		for i=1, #liteFormattedCount do
+		for i=1, lgf do
+			local lfi=liteFormattedCount[i]
 			fileHdl:write(liteFormattedCount[i]..'\n')
 		end
 		fileHdl:close()
 		print('Trace saved!')
 	else
-		for i=1, #liteFormattedCount do
-			print(liteFormattedCount[i])
+		for i=1, lgf do
+			local lfi=liteFormattedCount[i]
+			print(lfi)
 		end
-		io.close(fileHdl)
 	end
 end
 
 local function getLiteCounts()
+	local ltl=#liteTrace
+	local block_nums={}
+	local byNumBlocks={}
 	local countInts={}
-	local out={}
-	
-	for i=1, #liteTrace do
+	local cb=1
+	local liteTrace_tix={}
+	for i=1, ltl do
 		local ti=liteTrace[i]
 		local tix=string.format('%X',ti)
+		table.insert(liteTrace_tix,tix)
 		local isJump=false
+		table.insert(block_nums,cb)
+		if countInts[tix]==nil then
+			countInts[tix]=1
+		else
+			countInts[tix]=countInts[tix]+1
+		end
 		if i>1 then
 			local last_addr=liteTrace[i-1]
 			local nextInst_addr=getInstructionSize(last_addr)+last_addr
 			if ti~=nextInst_addr then
-				isJump=true
+				isJump=true				
+				if countInts[ liteTrace_tix[i-1] ] ~= countInts[tix] then
+					cb=cb+1
+					block_nums[#block_nums]=cb
+				end
 			end
 		end
-		local out_str=''
-		if isJump==true then
-			out_str='\n'
+
+		
+		if byNumBlocks[cb]==nil then
+			local cnt={countInts[tix]}
+			byNumBlocks[cb]={{tix},cnt,cnt,{i},{i},{ti},{isJump}}
+		else
+			table.insert(byNumBlocks[cb][1],tix)
+			table.insert(byNumBlocks[cb][2],countInts[tix])
+			table.insert(byNumBlocks[cb][3],countInts[tix])
+			table.insert(byNumBlocks[cb][4],i)
+			table.insert(byNumBlocks[cb][5],i)
+			table.insert(byNumBlocks[cb][6],ti)
+			table.insert(byNumBlocks[cb][7],isJump)
 		end
-		if countInts[tix]==nil then
-			local dsti=disassemble(ti)
+	end --eol
+
+	local loop_run={byNumBlocks[1]} -- {{ loop_table_x, first_block_numbers, last_block_numbers, first_occ_numbers, last_occ_numbers, loop_table },...}
+
+	for i=2, #byNumBlocks do
+		local lst=loop_run[#loop_run]
+		local nbi=byNumBlocks[i]
+		if sameTable(lst[1],nbi[1])==true then
+			loop_run[#loop_run][3]=nbi[2]
+			loop_run[#loop_run][5]=nbi[4]
+		else
+			table.insert(loop_run,nbi)
+		end
+	end --eol
+	
+	local traceText_tbl={}
+	local lrl=#loop_run
+	for i=1, lrl do
+		local li=loop_run[i]
+		local lir=li[6]
+		local lirx=li[1]
+		local lic1=li[2]
+		local lic2=li[3]
+		local lio1=li[4]
+		local lio2=li[5]
+		local li7=li[7]
+		for k=1, #lir do --loop over RIPs
+			local cr=lir[k] --current RIP
+			local tix=lirx[k]
+			local dsti=disassemble(cr)
 			local extraField, instruction, bytes, address=splitDisassembledString(dsti)
-			local a = getNameFromAddress(address) or ''
+			local a = getNameFromAddress(cr) or ''
 			local pa=''
 			if a=='' then
 				pa=tix
 			else
 				pa=tix .. ' ( ' .. a .. ' )'
 			end
-
 			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
-			
+
 			if extraField~='' then
 				prinfo=prinfo .. ' ( ' .. extraField .. ' )'
 			end
 
-			countInts[tix]={dsti,1,prinfo}
-			out_str=out_str..'#%d (1):\t%s'
-			out[i]=string.format(out_str,i,prinfo)
-		else
-			local cit=countInts[tix]
-			countInts[tix][2]=cit[2]+1
-			out_str=out_str..'#%d (%d):\t%s'
-			out[i]=string.format(out_str,i,cit[2],cit[3])
+			local ncs=''
+			local lic1k=lic1[k]
+			local lic2k=lic2[k]
+			if lic1k==lic2k then
+				ncs='('..lic1k..')'
+			else
+				ncs='('..lic1k..'-'..lic2k..')'
+			end
+
+			local ncln=''
+			local lio1k=lio1[k]
+			local lio2k=lio2[k]
+			if lio1k==lio2k then
+				ncln='#'..lio1k
+			else
+				ncln='#'..lio1k..' - #'..lio2k
+			end
+
+			local out_str=''
+			if li7[k]==true then
+					out_str='\n'
+				end
+			out_str=out_str..'%s %s:\t%s'
+			local ostf=string.format(out_str,ncln,ncs,prinfo)
+			table.insert(traceText_tbl,ostf)
 		end
+
 	end
-	return out
-end
+	return traceText_tbl --return trace text
+end --eof
 
 local function jumpMem(addr)
 	debug_getContext(true)
@@ -2128,7 +2207,7 @@ local function setupWindow(c) -- c is remaining steps
 	trace_w[2].Font.size=17
 	trace_w[2].Font.Color='0xffffff'
 	trace_w[2].Color='0x000000'
-	trace_w[2].Caption=spaceSep_int(c)..' steps remaining'
+	trace_w[2].Caption=spaceSep_int(c)..' '..s_pluralise(c,'step')..' remaining'
 end
 
 local function onLiteBp()
@@ -2180,7 +2259,8 @@ local function onLiteBp()
 					end
 
 				if liteCount~=nil then
-					trace_w[2].Caption=spaceSep_int(liteCount-liteIx)..' steps remaining'
+					local ct1=liteCount-liteIx
+					trace_w[2].Caption=spaceSep_int(ct1)..' '..s_pluralise(ct1,'step')..' remaining'
 				end
 
 				liteIx=liteIx+1
@@ -2430,7 +2510,7 @@ local function onBp()
 			
 			if count~=nil then
 				count=count-1
-				trace_w[2].Caption=spaceSep_int(count)..' steps remaining'						
+				trace_w[2].Caption=spaceSep_int(count)..' '..s_pluralise(count,'step')..' remaining'		
 				local cnt_done=false
 					if count<1 then
 						cnt_done=true
@@ -3565,7 +3645,7 @@ local function findWriteStack(aobs,m,b,f) --(n,aobs,m,b,f,p)
 	 findWrite(0,aobs,m,b,f,nil)
 end
 
-local function findWriteStep(i,aobs,b,f,p,m) --(n,aobs,m,b,f,p)`
+local function findWriteStep(i,aobs,b,f,p,m) --(n,aobs,m,b,f,p)
 	local stp=2 --into
 	-- internal: 3->into but over if already executed/2->into/1->over
 						-- external-> internal: 0->2,1->1, 2->3
