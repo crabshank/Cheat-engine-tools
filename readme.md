@@ -10,7 +10,7 @@ Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; 
 
 ## tprint.lua
 
-Allows you to print whole lua tables. Credit to ripter.
+Allows you to print whole lua tables, values (even of "userdata" type). Credit to ripter.
 
 ## maxScan.lua
 
