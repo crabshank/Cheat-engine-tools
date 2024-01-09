@@ -32,7 +32,6 @@ function tprint(tbl, indent)
 						noEls=false
 					elseif type(pli.Name)=='string' then
 						   nm=pli.Name
-						   print('NM!')
 						   plt[nm]=pli
 						   noEls=false
 					end
