@@ -1,3 +1,7 @@
+local function trim_str(s)
+	return string.match(s,'^()%s*$') and '' or string.match(s,'^%s*(.*%S)')
+end
+
 function tprint(tbl, indent)
   local function do_tprint(tbl, indent,notTable) -- https://gist.github.com/ripter/4270799
 	if notTable==true then
@@ -39,11 +43,20 @@ function tprint(tbl, indent)
 				propertyList.destroy()
 				if noEls==false then
 					local vn=v.Name
-					if type(vn)=='string' then
+					if type(vn)=='string' and trim_str(vn)~='' then
 						formatting = string.rep("	", indent) ..vn.. ": "
 						print(formatting)
+						do_tprint(plt, indent+1)
+					else
+						local lk=k..': '
+						if notTable==true then
+							lk=''
+						end
+						formatting = string.rep("	", indent) ..lk.."{"
+						print(formatting)
+						do_tprint(plt, indent+1)
+						print('}')
 					end
-					do_tprint(plt, indent+1)
 				end
 			else
 				propertyList.destroy()
