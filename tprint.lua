@@ -1,12 +1,55 @@
 function tprint(tbl, indent)
-  local function do_tprint(tbl, indent) -- https://gist.github.com/ripter/4270799
-	if not indent then indent = 0 end
+  local function do_tprint(tbl, indent,notTable) -- https://gist.github.com/ripter/4270799
+	if notTable==true then
+		tbl={tbl}
+		indent = 0
+	else
+		if not indent then indent = 0 end
+	end
 	for k, v in pairs(tbl) do
-	  formatting = string.rep("	", indent) .. k .. ": "
+	local formatting=''
+	if notTable~=true then
+		formatting = string.rep("	", indent) .. k .. ": "
+	 end
 	  local typv=type(v)
 	  if typv == "table" then
 		print(formatting)
 		do_tprint(v, indent+1)
+	  elseif typv == 'userdata' then
+			local noEls=true
+			local propertyList=getPropertyList(v)
+			local plc=propertyList.Count
+			if plc>0 then
+				local plt={}
+				for i=0, plc-1 do
+					
+					local pli=propertyList[i]
+					local typ=type(pli)
+
+					local nm=''
+					if typ=='string' then
+						table.insert(plt,pli)
+						noEls=false
+					elseif type(pli.Name)=='string' then
+						   nm=pli.Name
+						   print('NM!')
+						   plt[nm]=pli
+						   noEls=false
+					end
+				end
+				propertyList.destroy()
+				if noEls==false then
+					local vn=v.Name
+					if type(vn)=='string' then
+						formatting = string.rep("	", indent) ..vn.. ": "
+						print(formatting)
+					end
+					do_tprint(plt, indent+1)
+				end
+			else
+				propertyList.destroy()
+			end
+
 	  elseif typv == 'boolean' then
 		print(formatting .. tostring(v))
 	  elseif typv == 'string' then
@@ -23,6 +66,13 @@ function tprint(tbl, indent)
 	  end
 	end
   end
-  do_tprint(tbl,indent)
+  
+  local notTable=false
+  local tyb=type(tbl)
+  if tyb~='table' then
+	notTable=true
+  end
+  
+  do_tprint(tbl,indent,notTable)
   print('\n')
 end
