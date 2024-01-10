@@ -3,16 +3,10 @@ local function trim_str(s)
 end
 
 function tprint(tbl, indent)
-  local function do_tprint(tbl, indent,notTable) -- https://gist.github.com/ripter/4270799
-	if notTable==true then
-		tbl={tbl}
-		indent = 0
-	else
-		if not indent then indent = 0 end
-	end
-	for k, v in pairs(tbl) do
-	local formatting=''
-	if notTable~=true then
+
+	local function actualPrint(k,v,indent,notTable,do_tprint,zero)
+			local formatting=''
+	if notTable~=true or zero==true then
 		formatting = string.rep("	", indent) .. k .. ": "
 	 end
 	  local typv=type(v)
@@ -26,13 +20,13 @@ function tprint(tbl, indent)
 			if plc>0 then
 				local plt={}
 				for i=0, plc-1 do
-					
+
 					local pli=propertyList[i]
 					local typ=type(pli)
 
 					local nm=''
 					if typ=='string' then
-						table.insert(plt,pli)
+						plt[i]=pli
 						noEls=false
 					elseif type(pli.Name)=='string' then
 						   nm=pli.Name
@@ -52,10 +46,11 @@ function tprint(tbl, indent)
 						if notTable==true then
 							lk=''
 						end
-						formatting = string.rep("	", indent) ..lk.."{"
+						local fmi= string.rep("	", indent)
+						formatting =fmi..lk.."{"
 						print(formatting)
 						do_tprint(plt, indent+1)
-						print('}')
+						print(fmi..'}')
 					end
 				end
 			else
@@ -77,14 +72,34 @@ function tprint(tbl, indent)
 		print(formatting .. tostring(v))
 	  end
 	end
+
+  local function do_tprint(tbl, indent,notTable) -- https://gist.github.com/ripter/4270799
+	if notTable==true then
+		tbl={tbl}
+		indent = 0
+	else
+		if not indent then indent = 0 end
+	end
+	if tbl[0]~=nil then
+		local nt=false
+		if type(tbl[0])~=table then
+			nt=true
+		end
+		actualPrint(0,tbl[0],indent,nt,do_tprint,true)
+	end
+	for k, v in pairs(tbl) do
+		if k~=0 then
+			actualPrint(k,v,indent,notTable,do_tprint)
+		end
+	end
   end
-  
+
   local notTable=false
   local tyb=type(tbl)
   if tyb~='table' then
 	notTable=true
   end
-  
+
   do_tprint(tbl,indent,notTable)
   print('\n')
 end
