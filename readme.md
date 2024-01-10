@@ -1,6 +1,6 @@
 ## All_properties_components.lua
 
-Lists of all parts of windows (classes) that can be changed via Lua. The code to generate the list is at the bottom of the file. You can cross-reference some of this with "Cheat Engine - Script Engine help.pdf".
+Lists of all parts of windows (classes) that can be changed via Lua. The code to generate the list is at the bottom of the file. You can cross-reference some of this with `Cheat Engine - Script Engine help.pdf`.
 
 ## Hex annotate.html
 
