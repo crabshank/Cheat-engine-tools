@@ -1,3 +1,7 @@
+## All_properties_components.lua
+
+List of all parts of windows (classes) that can be changed via Lua. The code to generate the list is at the bottom of the file. You can cross-reference some of this with "Cheat Engine - Script Engine help.pdf".
+
 ## Hex annotate.html
 
 Webpage that lets you highlight hex to help you to present the structures in data. You can save your annotations to a .json file.
