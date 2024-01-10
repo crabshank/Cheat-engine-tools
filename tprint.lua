@@ -32,6 +32,10 @@ function tprint(tbl, indent)
 						   nm=pli.Name
 						   plt[nm]=pli
 						   noEls=false
+					else
+						nm=string.format('getPropertyList(…)[%d]',i)
+						 plt[nm]=pli
+						 noEls=false
 					end
 				end
 				propertyList.destroy()
