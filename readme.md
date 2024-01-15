@@ -1,6 +1,6 @@
-## All_properties_components.lua
+## Assembly_scan_module.lua
 
-Lists of all parts of windows (classes) that can be changed via Lua. The code to generate the list is at the bottom of the file. You can cross-reference some of this with `Cheat Engine - Script Engine help.pdf`.
+Automatically populates the "From" and "To" addresses in the "Memory viewer > Search > Find assembly code" window with the first and last address of the process that Cheat Engine is attached to.
 
 ## Hex annotate.html
 
