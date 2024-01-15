@@ -268,10 +268,10 @@ function f(sender, address, LastDisassembleData, result, description)
 								n_s=max_s+(imm-min_s)+1
 							end
 							local bn=getBits(n_s,true)
-							local txt=ops[opcd](true,bn,nil,nil)
-					end
-					if txt~='' then
-						txt=LastDisassembleData.description..' || '..txt
+							local txt1=ops[opcd](true,bn,nil,nil)
+							if txt1~='' then
+								txt=txt..' || '..txt1
+							end
 					end
 			end
 			allDisassemblerNotes[ads]={dss=result, opcode=opcd,description=description, text=txt}
