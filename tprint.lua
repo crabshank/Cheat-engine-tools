@@ -105,6 +105,7 @@ local function userdata_table(v)
 					local pi=plt[cnt]
 					local v=pi['data']
 					local p=deepcopy(pi['path'])
+					local p2=deepcopy(pi['path2'])
 
 
 		local propertyList=getPropertyList(v)
@@ -125,7 +126,9 @@ local function userdata_table(v)
 						end
 						local np=deepcopy(p)
 						table.insert(np,nm)
-						table.insert(plt,{path=np, data=pli, type='Property'})
+						local np2=deepcopy(p2)
+						table.insert(np2,nm)
+						table.insert(plt,{path2=np2,path=np, data=pli, type='Property'})
 					end
 			end
 			propertyList.destroy()
@@ -148,7 +151,9 @@ local function userdata_table(v)
 							end
 						local np=deepcopy(p)
 						table.insert(np,nm)
-						table.insert(plt,{path=np, data=pli, type='Component'})
+						local np2=deepcopy(p2)
+						table.insert(np2,nm)
+						table.insert(plt,{path2=np2,path=np, data=pli, type='Component'})
 					end
 				end
 				end
@@ -159,10 +164,7 @@ local function userdata_table(v)
 					local pi=plt[i]
 					local v=pi['data']
 					local p=pi['path']
-					local p2=p
-					if pi['path2']~=nil then
-						p2=pi['path2']
-					end
+					local p2=pi['path2']
 
 					local runEl=pltFinal
 					local lp=#p
