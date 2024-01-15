@@ -57,6 +57,26 @@ local function getOnes(bin)
 	return {r,st}
 end
 
+local shfs={}
+
+	shfs['rol']=function(op)
+		return string.format('Rotate bits (position: n -> n+%d)',op)
+	end
+	shfs['ror']=function(op)
+		return string.format('Rotate bits (position: n -> n-%d)',op)
+	end
+	shfs['shl']=function(op)
+		return string.format('Shift bits (position: n -> n+%d)',op)
+	end
+	shfs['sal']=shfs['shl']
+	
+	shfs['shr']=function(op)
+		return string.format('Shift bits (position: n -> n-%d)',op)
+	end
+	shfs['sar']=function(op)
+		return string.format('Shift bits but disregard sign bit (position: n -> n-%d)',op)
+	end
+
 local ops={}
 
 	ops['and']=function(imm,bin,op1,op2)
@@ -162,7 +182,7 @@ local ops={}
 			return ''
 		end
 	end
-
+	
 local round = function(a, prec)
     return math.floor(a + 0.5*prec)
 end
@@ -202,63 +222,63 @@ function f(sender, address, LastDisassembleData, result, description)
 		allDisassemblerNotes={}
 	end
 	local ads=tostring(address)
-	local txt=''
+	local txt=LastDisassembleData.description
 	if allDisassemblerNotes[ads]==nil or allDisassemblerNotes[ads].dss~=result then
 		local opcd=trim_str(LastDisassembleData['opcode'])
-		local g=ops[opcd]
-		if g~=nil then
-			local dst = disassemble(address)
-			local extraField, instruction, bytes, address = splitDisassembledString(dst)
-			
-			local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
-			local ops2=string_match(instruction,'%s+[^,]+%s*,%s*([^%s]+)')
-			local imm=tonumber(ops2,16)
-			
-
-			if imm==nil then --not immediate
+			if opcd=='lea' then
+				txt=txt..' || Load value in brackets into first operand'
+			elseif shfs[opcd]~=nil then -- shift
+					local dst = disassemble(address)
+					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					
 					local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
-					local ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
-					if ops1~=nil and ops2~=nil then
-						txt=g(false,nil,ops1,ops2)
-					else
-						txt=LastDisassembleData.description
+					local ops2=string_match(instruction,'%s+[^,]+%s*,%s*([^%s]+)')
+					local imm=tonumber(ops2,16)
+					
+					if imm~=nil then -- immediate
+						txt= txt..' || '..shfs[opcd](imm)
 					end
-			else --immediate
-				local abs_imm= math.abs(imm)
-				local b=1
-				if abs_imm>1 then
-					b=math.ceil((math.log( abs_imm ) / math.log( 2 )/8)) --bytes required to represent this number
-				end
-					local max_u=string.rep('FF',b)
-					max_u=tonumber(max_u,16)
-					local max_s=math.floor(max_u/2)
-					local min_s=-(max_s+1)
-					local n_s=imm
-					if imm<0 then
-						n_s=max_s+(imm-min_s)+1
+			elseif ops[opcd]~=nil then -- bitwise op
+					local dst = disassemble(address)
+					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					
+					local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
+					local ops2=string_match(instruction,'%s+[^,]+%s*,%s*([^%s]+)')
+					local imm=tonumber(ops2,16)
+					
+
+					if imm==nil then --not immediate
+							local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
+							local ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
+							if ops1~=nil and ops2~=nil then
+								txt=txt..' || '..ops[opcd](false,nil,ops1,ops2)
+							end
+					else --immediate
+						local abs_imm= math.abs(imm)
+						local b=1
+						if abs_imm>1 then
+							b=math.ceil((math.log( abs_imm ) / math.log( 2 )/8)) --bytes required to represent this number
+						end
+							local max_u=string.rep('FF',b)
+							max_u=tonumber(max_u,16)
+							local max_s=math.floor(max_u/2)
+							local min_s=-(max_s+1)
+							local n_s=imm
+							if imm<0 then
+								n_s=max_s+(imm-min_s)+1
+							end
+							local bn=getBits(n_s,true)
+							local txt=ops[opcd](true,bn,nil,nil)
 					end
-					local bn=getBits(n_s,true)
-					txt=g(true,bn,nil,nil)
-			end
-			if txt=='' then
-				txt=LastDisassembleData.description
-			else
-				txt=LastDisassembleData.description..' || '..txt
+					if txt~='' then
+						txt=LastDisassembleData.description..' || '..txt
+					end
 			end
 			allDisassemblerNotes[ads]={dss=result, opcode=opcd,description=description, text=txt}
-		else
-			txt=LastDisassembleData.description
-		end
-	elseif allDisassemblerNotes[ads]==nil then
-		txt=LastDisassembleData.description
 	else
 		txt=allDisassemblerNotes[ads].text
 	end
-	
-	--[[if txt=='' then
-		txt=LastDisassembleData.description
-	end]]
-	
+
 	local s=string.match(getComment(LastDisassembleData.address),"[^〈]*%s*〈" )
 	if s ==nil then
 		s="〈"
