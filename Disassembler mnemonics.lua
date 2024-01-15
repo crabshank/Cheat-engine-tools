@@ -236,7 +236,20 @@ function f(sender, address, LastDisassembleData, result, description)
 					local imm=tonumber(ops2,16)
 					
 					if imm~=nil then -- immediate
-						txt= txt..' || '..shfs[opcd](imm)
+						local abs_imm= math.abs(imm)
+						local b=1
+						if abs_imm>1 then
+							b=math.ceil((math.log( abs_imm ) / math.log( 2 )/8)) --bytes required to represent this number
+						end
+							local max_u=string.rep('FF',b)
+							max_u=tonumber(max_u,16)
+							local max_s=math.floor(max_u/2)
+							local min_s=-(max_s+1)
+							local n_s=imm
+							if imm<0 then
+								n_s=max_s+(imm-min_s)+1
+							end
+						txt= txt..' || '..shfs[opcd](n_s)
 					end
 			elseif ops[opcd]~=nil then -- bitwise op
 					local dst = disassemble(address)
