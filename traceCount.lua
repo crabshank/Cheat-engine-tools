@@ -2190,7 +2190,7 @@ local function setupWindow(c) -- c is remaining steps
 	trace_w[1].Height =40
 	trace_w[1].Position = 'poScreenCenter'
 	trace_w[1].Color = '0x000000'
-	trace_w[1].Caption = 'TraceCount progess'
+	trace_w[1].Caption = 'traceCount progress'
 	trace_w[1].FormStyle = 'fsMDIForm'
 	trace_w[1].DefaultMonitor = 'dmMainForm'
 	trace_w[1].BorderStyle = 'bsSingle'
