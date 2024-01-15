@@ -209,6 +209,7 @@ function tprint(tbl, indent)
 				do_tprint(v, indent+1)
 			end
 		  elseif typv == 'userdata' then
+			print(formatting)
 			do_tprint(userdata_table(v),indent+1)
 		  elseif typv == 'boolean' then
 			print(formatting .. tostring(v))
