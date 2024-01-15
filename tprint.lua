@@ -53,6 +53,10 @@ local function userdata_table(v)
 			if plc>0 then
 					for i=0, plc-1 do
 						local pli=propertyList[i]
+						local val=getProperty(v,pli)
+						if type(val)=='userdata' then
+							val=nil
+						end
 						local typ=type(pli)
 						local pli_nm=pli.Name
 						local nm=''
@@ -67,7 +71,7 @@ local function userdata_table(v)
 						       nm=string.format('getPropertyList(%s)[%d]',vna,i)
 						       nm2=nm
 						end
-						table.insert(plt,{path2={nm2}, path={nm}, data=pli,type='Property'})
+						table.insert(plt,{path2={nm2}, path={nm}, data=pli,val=val,type='Property'})
 					end
 			end
 			propertyList.destroy()
@@ -93,7 +97,7 @@ local function userdata_table(v)
 								nm2=nm
 							end
 
-							table.insert(plt,{path2={nm2}, path={nm}, data=pli,type='Component'})
+							table.insert(plt,{path2={nm2}, path={nm}, data=pli, val=nil,type='Component'})
 					end
 				end
 				end
@@ -114,6 +118,10 @@ local function userdata_table(v)
 			if plc>0 then
 					for i=0, plc-1 do
 						local pli=propertyList[i]
+						local val=getProperty(v,pli)
+						if type(val)=='userdata' then
+							val=nil
+						end
 						local typ=type(pli)
 						  local pli_nm=pli.Name
 						local nm=''
@@ -128,7 +136,7 @@ local function userdata_table(v)
 						table.insert(np,nm)
 						local np2=deepcopy(p2)
 						table.insert(np2,nm)
-						table.insert(plt,{path2=np2,path=np, data=pli, type='Property'})
+						table.insert(plt,{path2=np2,path=np, data=pli,val=val, type='Property'})
 					end
 			end
 			propertyList.destroy()
@@ -153,7 +161,7 @@ local function userdata_table(v)
 						table.insert(np,nm)
 						local np2=deepcopy(p2)
 						table.insert(np2,nm)
-						table.insert(plt,{path2=np2,path=np, data=pli, type='Component'})
+						table.insert(plt,{path2=np2,path=np, data=pli,  val=nil, type='Component'})
 					end
 				end
 				end
@@ -162,7 +170,8 @@ local function userdata_table(v)
 				
 				for i=1, #plt do
 					local pi=plt[i]
-					local v=pi['data']
+					--local d=pi['data']
+					local v=pi['val']
 					local p=pi['path']
 					local p2=pi['path2']
 
@@ -173,6 +182,9 @@ local function userdata_table(v)
 						if runEl[pj]==nil then
 							if j==lp then
 								runEl[pj]={type=pi['type'], path=table.concat(p2,'.')}
+								if v~=nil then
+									runEl[pj].value=v
+								end
 							else
 								runEl[pj]={}
 							end
