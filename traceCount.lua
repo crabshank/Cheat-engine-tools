@@ -2527,7 +2527,6 @@ local function onBp()
 					local hlk=hits_lookup[RIPx]
 					local dst = disassemble(RIP)
 					local extraField, instruction, bytes, address = splitDisassembledString(dst)
-					local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
 					if  hlk~= nil then
 						if hlk[3]==nil then
 							alreadyRun=true
@@ -2536,6 +2535,7 @@ local function onBp()
 						hlk[1]=hit_no
 						table.insert(hits_lookup[RIPx][2],ix)
 					else --nil
+						local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
 						hits_lookup[RIPx]={hit_no,{ix},la}
 					end
 
