@@ -1126,7 +1126,7 @@ local function attach(a,c,z,s,n)
 	sio='step into'
 	if s==true then
 		stp=1
-		sio='step over'
+		sio='step over previously run instructions'
 	elseif (tys=='string' and s~='') or (tys=='table' and #s>0) then
 		stp=2
 		sio='step into specified modules'
@@ -2466,7 +2466,8 @@ local function onBp()
 	registers['regs']['XMM13']=XMM13
 	registers['regs']['XMM14']=XMM14
 	registers['regs']['XMM15']=XMM15
-
+	
+	local alreadyRun=false
 	local ai1=0
 	local ai1_hx=''
 		if abp[1]~=nil then
@@ -2480,7 +2481,6 @@ local function onBp()
 			debug_setBreakpoint(abp[1][1], 1, bptExecute)
 			debug_continueFromBreakpoint(co_run)
 		else
-				
 				
 				local runToRet=false
 				local rpt=false
@@ -2526,6 +2526,7 @@ local function onBp()
 					local hit_no=1
 					local hlk=hits_lookup[RIPx]
 					if  hlk~= nil then
+						alreadyRun=true
 						hit_no=hlk[1]+1
 						hlk[1]=hit_no
 						table.insert(hits_lookup[RIPx][2],ix)
@@ -2933,7 +2934,11 @@ local function onBp()
 								end
 						elseif stp==1 then
 							if cnt_done==false then
-								debug_continueFromBreakpoint(co_stepover)
+								if alreadyRun==true then
+									debug_continueFromBreakpoint(co_stepover)
+								else
+									debug_continueFromBreakpoint(co_stepinto)
+								end
 							end
 						else
 							if cnt_done==false then
