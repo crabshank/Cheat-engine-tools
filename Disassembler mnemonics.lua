@@ -90,10 +90,9 @@ local ops={}
 				local by='bits'
 				local s=''
 				if stl>2 then
-					s=table.concat(st,', ')
-				else
-					s=table.concat(st,' ')
+					st[stl]='and '..st[stl]
 				end
+				s=table.concat(st,', ')
 				return 'Clear all '..by..' except: '..s
 			end
 		else
@@ -111,15 +110,13 @@ local ops={}
 			else
 				local by='bit'
 				if stl>1 then
-					st[stl]='and '..st[stl]
 					by='bits'
 				end
 				local s=''
 				if stl>2 then
-					s=table.concat(st,', ')
-				else
-					s=table.concat(st,' ')
+					st[stl]='and '..st[stl]
 				end
+				s=table.concat(st,', ')
 				return s..' '..by..'==0?'
 			end
 		else
@@ -142,10 +139,9 @@ local ops={}
 				end
 				local s=''
 				if stl>2 then
-					s=table.concat(st,', ')
-				else
-					s=table.concat(st,' ')
+					st[stl]='and '..st[stl]
 				end
+				s=table.concat(st,', ')
 				return 'Invert: '..s..' '..by
 			end
 		else
@@ -172,10 +168,9 @@ local ops={}
 				end
 				local s=''
 				if stl>2 then
-					s=table.concat(st,', ')
-				else
-					s=table.concat(st,' ')
+					st[stl]='and '..st[stl]
 				end
+				s=table.concat(st,', ')
 				return 'Set: '..s..' '..by..' to 1'
 			end
 		else
