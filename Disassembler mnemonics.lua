@@ -256,7 +256,6 @@ function f(sender, address, LastDisassembleData, result, description)
 					
 
 					if imm==nil then --not immediate
-							local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
 							local ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
 							local txt1=ops[opcd](false,nil,ops1,ops2)
 							if ops1~=nil and ops2~=nil and txt1~='' then
