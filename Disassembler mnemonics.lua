@@ -254,7 +254,6 @@ function f(sender, address, LastDisassembleData, result, description)
 					local ops2=string_match(instruction,'%s+[^,]+%s*,%s*([^%s]+)')
 					local imm=tonumber(ops2,16)
 					
-
 					if imm==nil then --not immediate
 							local ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
 							local txt1=ops[opcd](false,nil,ops1,ops2)
