@@ -193,8 +193,8 @@ function f(sender, address, LastDisassembleData, result, description)
 	local txt=''
 	if allDisassemblerNotes[ads]==nil or allDisassemblerNotes[ads].dss~=result then
 		local opcd=trim_str(LastDisassembleData['opcode'])
-		local f=ops[opcd]
-		if f~=nil then
+		local g=ops[opcd]
+		if g~=nil then
 			local dst = disassemble(address)
 			local extraField, instruction, bytes, address = splitDisassembledString(dst)
 			
@@ -207,7 +207,7 @@ function f(sender, address, LastDisassembleData, result, description)
 					local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
 					local ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
 					if ops1~=nil and ops2~=nil then
-						txt=f(false,nil,ops1,ops2)
+						txt=g(false,nil,ops1,ops2)
 					else
 						txt=LastDisassembleData.description
 					end
@@ -226,7 +226,7 @@ function f(sender, address, LastDisassembleData, result, description)
 						n_s=max_s+(imm-min_s)+1
 					end
 					local bn=getBits(n_s,true)
-					txt=f(true,bn,nil,nil)
+					txt=g(true,bn,nil,nil)
 			end
 			if txt=='' then
 				txt=LastDisassembleData.description
