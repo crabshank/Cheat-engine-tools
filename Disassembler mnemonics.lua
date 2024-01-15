@@ -64,18 +64,18 @@ local ops={}
 			local r=getOnes(bin)
 			local st=r[2]
 			local stl=#st
-			local by='bit'
-			if stl>1 then
-				st[stl]='and '..st[stl]
-				by='bits'
-			end
-			local s=''
-			if stl>2 then
-				s=table.concat(st,', ')
+			if stl==0 then
+				return 'Clear all bits'
 			else
-				s=table.concat(st,' ')
+				local by='bits'
+				local s=''
+				if stl>2 then
+					s=table.concat(st,', ')
+				else
+					s=table.concat(st,' ')
+				end
+				return 'Clear all '..by..' except: '..s
 			end
-			return 'Clear all '..by..' except: '..s
 		else
 			return ''
 		end
@@ -86,18 +86,22 @@ local ops={}
 			local r=getOnes(bin)
 			local st=r[2]
 			local stl=#st
-			local by='bit'
-			if stl>1 then
-				st[stl]='and '..st[stl]
-				by='bits'
-			end
-			local s=''
-			if stl>2 then
-				s=table.concat(st,', ')
+			if stl==0 then
+				return ''
 			else
-				s=table.concat(st,' ')
+				local by='bit'
+				if stl>1 then
+					st[stl]='and '..st[stl]
+					by='bits'
+				end
+				local s=''
+				if stl>2 then
+					s=table.concat(st,', ')
+				else
+					s=table.concat(st,' ')
+				end
+				return s..' '..by..'==0?'
 			end
-			return s..' '..by..'==0?'
 		else
 			return op1..'==0? '..op1..'<0? Parity?'
 		end
@@ -108,18 +112,22 @@ local ops={}
 			local r=getOnes(bin)
 			local st=r[2]
 			local stl=#st
-			local by='bit'
-			if stl>1 then
-				st[stl]='and '..st[stl]
-				by='bits'
-			end
-			local s=''
-			if stl>2 then
-				s=table.concat(st,', ')
+			if stl==0 then
+				return ''
 			else
-				s=table.concat(st,' ')
+				local by='bit'
+				if stl>1 then
+					st[stl]='and '..st[stl]
+					by='bits'
+				end
+				local s=''
+				if stl>2 then
+					s=table.concat(st,', ')
+				else
+					s=table.concat(st,' ')
+				end
+				return 'Invert: '..s..' '..by
 			end
-			return 'Invert: '..s..' '..by
 		else
 			if op1==op2 then
 				return 'Clear '..op1
@@ -134,18 +142,22 @@ local ops={}
 			local r=getOnes(bin)
 			local st=r[2]
 			local stl=#st
-			local by='bit'
-			if stl>1 then
-				st[stl]='and '..st[stl]
-				by='bits'
-			end
-			local s=''
-			if stl>2 then
-				s=table.concat(st,', ')
+			if stl==0 then
+				return ''
 			else
-				s=table.concat(st,' ')
+				local by='bit'
+				if stl>1 then
+					st[stl]='and '..st[stl]
+					by='bits'
+				end
+				local s=''
+				if stl>2 then
+					s=table.concat(st,', ')
+				else
+					s=table.concat(st,' ')
+				end
+				return 'Set: '..s..' '..by..' to 1'
 			end
-			return 'Set: '..s..' '..by..' to 1'
 		else
 			return ''
 		end
