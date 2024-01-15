@@ -2525,18 +2525,21 @@ local function onBp()
 					local RIPx=string.format('%X',RIP)
 					local hit_no=1
 					local hlk=hits_lookup[RIPx]
+					local dst = disassemble(RIP)
+					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
 					if  hlk~= nil then
-						alreadyRun=true
+						if hlk[3]==nil then
+							alreadyRun=true
+						end
 						hit_no=hlk[1]+1
 						hlk[1]=hit_no
 						table.insert(hits_lookup[RIPx][2],ix)
 					else --nil
-						hits_lookup[RIPx]={hit_no,{ix}}
+						hits_lookup[RIPx]={hit_no,{ix},la}
 					end
 
 					local deref={['hit_address']=RIPx}
-					local dst = disassemble(RIP)
-					local extraField, instruction, bytes, address = splitDisassembledString(dst)
 					
 					if stp==2 then
 						if mri_skip==true then
