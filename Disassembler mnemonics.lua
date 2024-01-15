@@ -74,7 +74,7 @@ local shfs={}
 		return string.format('Shift bits (position: n -> n-%d)',op)
 	end
 	shfs['sar']=function(op)
-		return string.format('Shift bits but disregard sign bit (position: n -> n-%d)',op)
+		return string.format('Shift bits, but disregard sign bit (position: n -> n-%d)',op)
 	end
 
 local ops={}
