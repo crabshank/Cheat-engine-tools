@@ -1690,7 +1690,7 @@ local function getLiteCounts()
 			byNumBlocks[cb]={{tix},cnt,cnt,{i},{i},{ti},{isJump}}
 		else
 			table.insert(byNumBlocks[cb][1],tix)
-			table.insert(byNumBlocks[cb][2],countInts[tix])
+			--table.insert(byNumBlocks[cb][2],countInts[tix])
 			table.insert(byNumBlocks[cb][3],countInts[tix])
 			table.insert(byNumBlocks[cb][4],i)
 			table.insert(byNumBlocks[cb][5],i)
