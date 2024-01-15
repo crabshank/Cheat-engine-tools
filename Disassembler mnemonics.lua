@@ -45,6 +45,7 @@ local function getOnes(bin)
 	end
 	
 	local st={}
+	local st2={}
 	for i=1,#r do
 		local ri=r[i]
 		
@@ -54,7 +55,7 @@ local function getOnes(bin)
 			table.insert(st,get_nth(ri[1])..'-'..get_nth(ri[2]))
 		end
 	end
-	return {r,st}
+	return {r,st,r}
 end
 
 local shfs={}
@@ -109,7 +110,7 @@ local ops={}
 				return ''
 			else
 				local by='bit'
-				if stl>1 then
+				if stl>1 or (stl==1 and r[3][1][1]~=r[3][1][2]) then
 					by='bits'
 				end
 				local s=''
@@ -133,8 +134,7 @@ local ops={}
 				return ''
 			else
 				local by='bit'
-				if stl>1 then
-					st[stl]='and '..st[stl]
+				if stl>1 or (stl==1 and r[3][1][1]~=r[3][1][2]) then
 					by='bits'
 				end
 				local s=''
@@ -162,8 +162,7 @@ local ops={}
 				return ''
 			else
 				local by='bit'
-				if stl>1 then
-					st[stl]='and '..st[stl]
+				if stl>1 or (stl==1 and r[3][1][1]~=r[3][1][2]) then
 					by='bits'
 				end
 				local s=''
