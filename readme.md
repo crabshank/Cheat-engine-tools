@@ -10,7 +10,7 @@ You can hover over hex with the mouse and hold the Ctrl/Alt keys to change the `
 
 ## traceCount monitor.html
 
-Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; output showing executed instructions in the order they were executed); adds checkboxes for easier tracking of relevant registers (will toggle all checkboxes after the one inputted to). Each line has a text box for making notes. The 'Memory accesses index' section has links to all relevant line for each memory address.
+Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; output showing executed instructions in the order they were executed); adds checkboxes for easier tracking of relevant registers and memory addresses (will toggle all checkboxes after the one inputted to). Each line has a text box for making notes. The 'Memory accesses index' section has links to all relevant line for each memory address.
 
 ## tprint.lua
 
