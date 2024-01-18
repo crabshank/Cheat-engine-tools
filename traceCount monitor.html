@@ -32,6 +32,10 @@ span.memLink {
   var firstDone=false;
   var isRN=true;
   var chkRev=false;
+  var meta_mems=[];
+  var mems_chk={};
+  const regexp=[/\([^\)]*\[[0-9A-F]+\] \= \{[^\}]+\}[^\)]*\)/g,/\[[0-9A-F]+\] \= \{[^\}]+\}/g,/(\[[0-9A-F]+\]|[0-9A-F]{2})/g];
+  const regexp_length=regexp.length;
   var rvc=document.getElementById("revChk");
   const registers={};
   registers['list_regs']=[
@@ -152,19 +156,57 @@ let chkCnt=0;
 let allChk=[];
 let ntes=[];
 
-function sortByArrCols(arr, colsArr, dir){
-    arr.sort(sortFunction);
-		function sortFunction(a, b) {
-			for(let i = 0; i < arr.length; i++){
-					if(a[colsArr[i]]>b[colsArr[i]]){
-						return dir[i]*-1;
-					}else if(a[colsArr[i]]<b[colsArr[i]]){
-						return dir[i]*1;
-					}else if(i==arr.length-1){
-					return 0;
-				}
-			} 
-	}
+function insertText(tx,sta,mtc,bfr){
+
+    if(bfr===true){ //insert before
+        sta[mtc[1]]=tx+sta[mtc[1]];
+    }else{
+        let p=mtc[1]+mtc[0].length-1;
+        sta[p]+=tx;
+    }
+    
+    return sta;
+}
+
+
+function chkClick_mem(event,isMeta){
+    let t=event.target;
+    let c=t.checked;
+    let m=parseInt(t.getAttribute('meta_mem'));
+    let mm=meta_mems[m];
+    if(isMeta===true){
+        for(let k=1, len_k=mm.length;k<len_k;k++){
+                mm[k].checked=c;
+                chkClick_mem({target: mm[k]});
+        }
+    }else{
+        if(c===false){
+            mm[0].checked=false;
+        }else{
+            let allTrue=true;
+            for(let k=1, len_k=mm.length;k<len_k;k++){
+                if(mm[k].checked===false){
+                    allTrue=false;
+                    break;
+                }
+            }
+            mm[0].checked=allTrue;
+        }
+        let x=parseInt(t.getAttribute('addr_ix'));
+        let a=t.getAttribute('address');
+        let ar=mems_chk[a];
+        if(!chkRev){
+            for(let i=x+1, len=ar.length; i<len; i++){
+                ar[i].checked=c;
+                chkClick_mem({target: ar[i]});
+            }
+        }else{
+            for(let i=x-1; i>=0; i--){
+                ar[i].checked=c;
+                chkClick_mem({target: ar[i]});
+            }
+        }
+    }
 }
 
 function chkClick(event){
@@ -173,10 +215,7 @@ function chkClick(event){
 	let ocs=rg.at(-1).occs;
 	let st=parseInt(t.getAttribute('occ'));
 	let oc=allChk[ocs[st]];
-	let flg=true;
-	if(oc.checked===false){
-			flg=false;
-	}
+	let flg=oc.checked;
 	if(!chkRev){
 		for(let i=st+1, len=ocs.length; i<len; i++){
 			allChk[ocs[i]].checked=flg;
@@ -185,7 +224,6 @@ function chkClick(event){
 		for(let i=st-1; i>=0; i--){
 			allChk[ocs[i]].checked=flg;
 		}
-
 	}
 }
 
@@ -221,9 +259,13 @@ const pre_el=document.getElementById('preTag');
 		ntes=[];
 		let memAcc=false;
 		let c=0;
+        
+        let mem_ix=0;
+        let cm=0;
+        
 		for (let i=0; i<lnl; i++){
+            let inst=lns[i];
 			if(memAcc===true){
-				let inst=lns[i];
 				let hits=inst.match(/\#\d+/g);
 				if(hits!==null){
 						let hl=hits.length;
@@ -279,7 +321,7 @@ const pre_el=document.getElementById('preTag');
 										let rk_obj=rk.at(-1);
 										let ol=rk_obj.occs.length;
 										rk_obj.occs.push(chkCnt);
-										inst_spl2[s]=`<input type="checkbox" reg_ix="${ka}" ln="${c}" title="${r}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
+										inst_spl2[s]=`<input type="checkbox" class="reg_check" reg_ix="${ka}" ln="${c}" title="${r}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
 										inst_spl2[d]+='</input>';
 										chkCnt++;
 									}
@@ -293,30 +335,113 @@ const pre_el=document.getElementById('preTag');
 						out_spl[st]=inst_spl2.join('');
 						inst=out_spl.join('');
 						}
+               
 				}else{
 					inst=rn+rn;
 				}
 				if(!empt){
 					inst=`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
-					c++;
-				}
+                let strs_last=[[inst,0]];
+                for(let h=0; h<regexp_length; h++){
+                    let mtc=[];
+                    let rxh=regexp[h];
+                    for(let j=0, len_j=strs_last.length; j<len_j; j++){
+                        let sj=strs_last[j];
+                        let sj1=sj[1];
+                        let mts=[...sj[0].matchAll(rxh)];
+                        for(let k=0, len_k=mts.length; k<len_k; k++){
+                            let mk=mts[k];
+                            mtc.push([mk[0],mk.index+sj1]);
+                        }
+                        mts=null;
+                       sj=null;
+                       sj1=null;
+                    }
+                    strs_last=mtc;
+                    mtc=null;
+                }
+                
+                let sta=[...inst];
+                let ca=0;
+                let adr='';
+                let adr_int=adr;
+                
+                for(let j=0, len_j=strs_last.length; j<len_j; j++){
+                    let sj=strs_last[j];
+                    let sj0=sj[0];
+                    if(sj0.startsWith('[')===true){
+                        adr=sj0.slice(1,-1);
+                        adr_int=parseInt(adr,16);
+                        ca=0;
+                        sta=insertText(`<input class="mem_check_meta" ln="${i}" title="${adr}" meta_mem="${cm}" onclick="chkClick_mem(event,true);" type="checkbox"></input>`,sta,sj);
+                        cm++;
+                    }else{
+                        let ai=adr_int+ca;
+                        let aix=ai.toString(16).toUpperCase();
+                        sta=insertText(`<input class="mem_check_byte" ln="${i}" title="${aix}" address="${aix}" mem_ix="${mem_ix}" meta_mem="${cm-1}" onclick="chkClick_mem(event);" type="checkbox"></input>`,sta,sj);
+                        ca++;
+                        mem_ix++;
+                    }
+                }
+                strs_last=null;
+                ca=null;
+                adr=null;
+                adr_int=null;
+                inst=sta.join('');
+                sta=null;
+                c++;
+            }
+                
 				insts.push(inst);
 		}
 		}
 		pre_el.innerHTML=insts.join('');
 		ntes=[...pre_el.querySelectorAll('div.notes')];
-			let ck=pre_el.getElementsByTagName('input');
-			let cki=[];
+        
+        
+        //click on meta mem - all byte ixs for each
+        	let ckbt=pre_el.getElementsByClassName('mem_check_byte');
+            let ckbs=[];
+            for(let k=0, len_k=ckbt.length;k<len_k;k++){
+                let ckb=ckbt[k];
+                let m=parseInt(ckb.getAttribute('meta_mem'));
+                let x=parseInt(ckb.getAttribute('mem_ix'));
+               if (typeof(meta_mems[m])==='undefined'){
+                meta_mems[m]=[ckb];
+               }else{
+                meta_mems[m].push(ckb);
+               }
+               ckbs[x]=ckb;
+            }
+            
+            	let ckm=pre_el.getElementsByClassName('mem_check_meta');
+        
+            for(let k=0, len_k=ckm.length;k<len_k;k++){
+                let ckmk=ckm[k];
+                let m=parseInt(ckmk.getAttribute('meta_mem'));
+                meta_mems[m].unshift(ckmk); //1st el is meta checkbox
+            }
+            
+  //sorted array for each address
+for(let k=0, len_k=ckbs.length;k<len_k;k++){
+    let cs=ckbs[k];
+    let a=cs.getAttribute('address');
+    if(typeof(mems_chk[a])==='undefined'){
+        mems_chk[a]=[cs];
+        ckbs[k].setAttribute('addr_ix',0);
+    }else{
+        mems_chk[a].push(cs);
+        ckbs[k].setAttribute('addr_ix',mems_chk[a].length-1);
+    }
+}
+        
+        let ck=pre_el.getElementsByClassName('reg_check');
 		for(let k=0, len_k=ck.length;k<len_k;k++){
 			let ckk=ck[k];
-			cki[k]=[parseInt(ckk.getAttribute('ovr_occ')),ckk];
+			let x=parseInt(ckk.getAttribute('ovr_occ'));
+            allChk[x]=ckk;
 		}
-		 sortByArrCols(cki,[0],[-1]);
-		 for(let k=0, len_k=cki.length;k<len_k;k++){
-			allChk[k]=cki[k][1];
-		 }
-			
-		
+	
 	}
 		
  rvc.addEventListener('input',  function () {
@@ -339,6 +464,8 @@ const pre_el=document.getElementById('preTag');
 		}
 		chkCnt=0;
 		allChk=[];
+        meta_mems=[];
+        mems_chk={};
 		proc(str);
 		}else{
 			proc(str);
