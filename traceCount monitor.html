@@ -22,6 +22,7 @@ span.memLink {
  <h1 style="text-align: center;">traceCount monitor</h1>
  <label for="revChk" style="margin-bottom: 0.47ch;display: -webkit-inline-box;">Reverse auto-check direction: <input  type="checkbox"  id="revChk" style="vertical-align: bottom;margin-bottom: 0.2ch;margin-left: 0.2ch;"></input></label><br>
  <label for="openFile1">Load file: </label><input  type="file"  id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
+ <section id="check_info"  style="display: none;width: min-content; height: min-content; border: 2px outset rgb(113, 0, 255); text-align: center; white-space: pre-wrap; position: fixed; right: 5px;"></section>
  <pre id="preTag"></pre>
   <style>
 	input[type="checkbox"]{
@@ -36,8 +37,16 @@ span.memLink {
   var mems_chk={};
   const regexp=[/\([^\)]*\[[0-9A-F]+\] \= \{[^\}]+\}[^\)]*\)/g,/\[[0-9A-F]+\] \= \{[^\}]+\}/g,/(\[[0-9A-F]+\]|[0-9A-F]{2})/g];
   const regexp_length=regexp.length;
-  var rvc=document.getElementById("revChk");
-  const registers={};
+  const check_info=document.getElementById("check_info");
+  const pre_el=document.getElementById('preTag');
+  
+window.onscroll=(e)=>{
+    let tp=(pre_el.getBoundingClientRect().top>0)?'':'5px';
+    check_info.style.top=tp;
+}
+  
+  const rvc=document.getElementById("revChk");
+  var registers={};
   registers['list_regs']=[
 ["ST(0)",71],
 ["ST(1)",72],
@@ -168,8 +177,24 @@ function insertText(tx,sta,mtc,bfr){
     return sta;
 }
 
+function getLastCheck(){
+    let chk=document.querySelectorAll('input[type="checkbox"]:checked');
+    let ckl=chk.length;
+    let d='none';
+    let mx=0;
+    if(ckl>0){
+        for(let i=0; i<ckl; ++i){
+            let ci=chk[i];
+            let n=parseInt(ci.getAttribute('ln'));
+            mx=(n>mx)?n:mx;
+        }
+        d='initial';
+        check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx}</span>`;
+    }
+    check_info.style.display=d;
+}
 
-function chkClick_mem(event,isMeta){
+function do_chkClick_mem(event,isMeta){
     let t=event.target;
     let c=t.checked;
     let m=parseInt(t.getAttribute('meta_mem'));
@@ -177,7 +202,7 @@ function chkClick_mem(event,isMeta){
     if(isMeta===true){
         for(let k=1, len_k=mm.length;k<len_k;k++){
                 mm[k].checked=c;
-                chkClick_mem({target: mm[k]});
+                do_chkClick_mem({target: mm[k]});
         }
     }else{
         if(c===false){
@@ -198,15 +223,20 @@ function chkClick_mem(event,isMeta){
         if(!chkRev){
             for(let i=x+1, len=ar.length; i<len; i++){
                 ar[i].checked=c;
-                chkClick_mem({target: ar[i]});
+                do_chkClick_mem({target: ar[i]});
             }
         }else{
             for(let i=x-1; i>=0; i--){
                 ar[i].checked=c;
-                chkClick_mem({target: ar[i]});
+                do_chkClick_mem({target: ar[i]});
             }
         }
     }
+}
+
+function chkClick_mem(event,isMeta){
+    do_chkClick_mem(event,isMeta);
+    getLastCheck();
 }
 
 function chkClick(event){
@@ -225,10 +255,11 @@ function chkClick(event){
 			allChk[ocs[i]].checked=flg;
 		}
 	}
+    getLastCheck();
 }
 
 registers['list_regs_len']= registers['list_regs'].length;
-const pre_el=document.getElementById('preTag');
+
 	function proc(str){
 		//console.log(str);
 		let lns=[];
@@ -258,7 +289,7 @@ const pre_el=document.getElementById('preTag');
 		let insts=[];
 		ntes=[];
 		let memAcc=false;
-		let c=0;
+		let c=1;
         
         let mem_ix=0;
         let cm=0;
@@ -313,11 +344,11 @@ const pre_el=document.getElementById('preTag');
 							let regexp = new RegExp(r, 'ig');
 							let mtcs = [...inst.matchAll(regexp)];
 							if(mtcs.length>0){ //match
-								for (let c=0, len=mtcs.length; c<len; c++) {
-									let mtc=mtcs[c];
+								for (let m=0, len=mtcs.length; m<len; m++) {
+									let mtc=mtcs[m];
 									let s=mtc.index;
 									let d=s+mtc[0].length-1;
-									if(c===0){
+									if(m===0){
 										let rk_obj=rk.at(-1);
 										let ol=rk_obj.occs.length;
 										rk_obj.occs.push(chkCnt);
@@ -340,7 +371,7 @@ const pre_el=document.getElementById('preTag');
 					inst=rn+rn;
 				}
 				if(!empt){
-					inst=`<div contenteditable="true" title="Notes" class="notes"></div>${inst}`;
+					inst=`<div contenteditable="true" ln="${c}" title="Notes" class="notes"></div>${inst}`;
                 let strs_last=[[inst,0]];
                 for(let h=0; h<regexp_length; h++){
                     let mtc=[];
@@ -373,12 +404,12 @@ const pre_el=document.getElementById('preTag');
                         adr=sj0.slice(1,-1);
                         adr_int=parseInt(adr,16);
                         ca=0;
-                        sta=insertText(`<input class="mem_check_meta" ln="${i}" title="${adr}" meta_mem="${cm}" onclick="chkClick_mem(event,true);" type="checkbox"></input>`,sta,sj);
+                        sta=insertText(`<input class="mem_check_meta" ln="${c}" title="${adr}" meta_mem="${cm}" onclick="chkClick_mem(event,true);" type="checkbox"></input>`,sta,sj);
                         cm++;
                     }else{
                         let ai=adr_int+ca;
                         let aix=ai.toString(16).toUpperCase();
-                        sta=insertText(`<input class="mem_check_byte" ln="${i}" title="${aix}" address="${aix}" mem_ix="${mem_ix}" meta_mem="${cm-1}" onclick="chkClick_mem(event);" type="checkbox"></input>`,sta,sj);
+                        sta=insertText(`<input class="mem_check_byte" ln="${c}" title="${aix}" address="${aix}" mem_ix="${mem_ix}" meta_mem="${cm-1}" onclick="chkClick_mem(event);" type="checkbox"></input>`,sta,sj);
                         ca++;
                         mem_ix++;
                     }
@@ -396,8 +427,13 @@ const pre_el=document.getElementById('preTag');
 		}
 		}
 		pre_el.innerHTML=insts.join('');
-		ntes=[...pre_el.querySelectorAll('div.notes')];
-        
+		let nts=pre_el.querySelectorAll('div.notes');
+        ntes=[];
+        for(let k=0, len_k=nts.length;k<len_k;k++){
+                let nk=nts[k];
+                let ln=parseInt(nk.getAttribute('ln'));
+                ntes[ln]=nk;
+            }
         
         //click on meta mem - all byte ixs for each
         	let ckbt=pre_el.getElementsByClassName('mem_check_byte');
