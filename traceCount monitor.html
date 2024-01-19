@@ -189,7 +189,7 @@ function getLastCheck(){
             mx=(n>mx)?n:mx;
         }
         d='initial';
-        check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx}</span>`;
+        check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx+1}</span>`;
     }
     check_info.style.display=d;
 }
@@ -289,7 +289,7 @@ registers['list_regs_len']= registers['list_regs'].length;
 		let insts=[];
 		ntes=[];
 		let memAcc=false;
-		let c=1;
+		let c=0;
         
         let mem_ix=0;
         let cm=0;
