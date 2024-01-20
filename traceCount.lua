@@ -3786,7 +3786,8 @@ end
 							prinfo=prinfo .. ' ( ' .. extraField .. ' )'
 						end
 						prinfo=prinfo ..'\t〈 '..breakHere[2]..' 〉'
-											
+						print(prinfo)
+						
 						if breakHere[3]~=nil then
 							getMemoryViewForm().HexadecimalView.address=breakHere[3]
 						end
