@@ -40,6 +40,8 @@ local findWriteWasPatt=false
 local modulesList_findWrite={}
 local lastAddr_findWrite={}
 
+local rw_trace=0
+
 local function s_pluralise(c,t)
 	if c~=1 then
 		return t..'s'
@@ -880,6 +882,8 @@ local sio=''
 local traceModules={}
 local condTraceModules={}
 
+local rw_lookup={0,{}}
+
 local mri_skip=false
 local mri_isCall=true
 local mrc_retAdr=nil
@@ -1157,6 +1161,7 @@ local function attach(a,c,z,s,n)
 	end
 	
 	condBpProg=false
+	rw_trace=0
 	prog=true
 	first=true
 	debug_setBreakpoint(abp[1][1], 1, bptExecute)
@@ -1395,7 +1400,7 @@ local function saveTrace()
 end
 
 local function runStop(b,adx)
-	if trace_w[1] then
+	if trace_w[1]~=nil then
 		trace_w[1].close()
 	end
 	midTrace=false
@@ -1407,9 +1412,10 @@ local function runStop(b,adx)
 		end
 		return
 	end
+	rw_trace=0
 	prog=false
 	liteBp=false
-	if abp~= nil and #abp>1 then
+	if abp~= nil and #abp>0 then
 			debug_removeBreakpoint(abp[1][1])
 	end
 	saveTrace()
@@ -1771,6 +1777,23 @@ local function getLiteCounts()
 	return traceText_tbl --return trace text
 end --eof
 
+local function jumpMemOnly(addr)
+	local dst = disassemble(addr)
+	local extraField, instruction, bytes, address = splitDisassembledString(dst)
+	local m=getAccessed(instruction)
+	
+	for i=#m, 1, -1 do
+		local mi=m[i]
+		local mi1=mi[1]
+		local n=tonumber(mi1,16)
+		if n~=nil then
+			hx.address=n
+			break
+		end
+	end
+
+end
+
 local function jumpMem(addr)
 	debug_getContext(true)
 	registers['regs']['R8G']=getSubRegDecBytes(string.format("%X", R8), 8,1,8)
@@ -2100,8 +2123,8 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 					rg=registers['get_regs'][ri](registers['regs'][arg_n])
 				else
 					rg['dec']=rgs
-					local hx=string.format('%X',rgs)
-					rg['hex']=hx
+					local hxr=string.format('%X',rgs)
+					rg['hex']=hxr
 				end
 				s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
 				table.insert(present_r,{ri_fnd,rg,regs_pos,ri})
@@ -2181,7 +2204,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 end
 
 local function setupWindow(c) -- c is remaining steps
-	if trace_w[1] then
+	if trace_w[1]~=nil then
 	 trace_w[1].close()
 	end
 
@@ -2197,7 +2220,9 @@ local function setupWindow(c) -- c is remaining steps
 
 	trace_w[1].onClose=function()
 		trace_w[2].destroy()
+		trace_w[2]=nil
 		trace_w[1].destroy()
+		trace_w[1]=nil
 	end
 
 	trace_w[2]=createLabel(trace_w[1])
@@ -2282,7 +2307,7 @@ local function onLiteBp()
 										else
 											print('Trace count limit reached!\n')
 										end
-										if trace_w[1] then
+										if trace_w[1]~=nil then
 											trace_w[1].close()
 										end
 										liteFormattedCount=getLiteCounts()
@@ -2396,6 +2421,116 @@ local function lite(a,c,s,z)
 	midTrace=true
 end
 
+local function onBp_rw_proc(addr)
+				if abp[1]~=nil then
+					ai1=abp[1][1]
+					ai1_hx=abp[1][2]
+				end
+				
+				debug_removeBreakpoint(ai1)
+				print(ai1_hx .. ' accessed!')
+				first=false
+				--count=count-1
+				setupWindow(count)
+				trace_w[2].Caption=spaceSep_int(count)..' '..s_pluralise(count,'step')..' remaining'		
+
+					table.insert(hits,addr)
+
+					local ix=#hits
+					local RIPx=string.format('%X',addr)
+					local hit_no=1
+					local hlk=hits_lookup[RIPx]
+					local dst = disassemble(addr)
+					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
+					hits_lookup[RIPx]={hit_no,{ix},la}
+
+					local deref={['hit_address']=RIPx}
+					
+				if stp==2 then
+						mri_isCall=false
+						if string.find(instruction,'^%s*call%s+')~=nil then
+							mri_isCall=true
+						end
+				end
+
+					--Get accessed memory addresses
+
+					-- EXTRA SUB-REGISTERS
+					local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+					local s=instruction_r  -- substitute register names for their spaces
+					
+					for i=1, #registers['list_regs'] do
+						local regs_pos={}
+						if string.find(s,'%u')~=nil then
+							local fnd=false
+							local lri=registers['list_regs'][i] --check for presence of register
+							local ri=lri[1] --check for presence of register
+							local ri_fnd=ri
+							local ri_alt=registers['alt_names'][ri]
+							local ri_pos=str_allPosPlain(s,ri)
+							if ri~=ri_alt and ri_alt~=nil then
+								local ri_alt_pos=str_allPosPlain(s,ri_alt)
+								if #ri_pos>0 then
+									fnd=true
+									regs_pos=ri_pos
+								elseif  #ri_alt_pos>0 then
+									fnd=true
+									ri_fnd=ri_alt
+									regs_pos=ri_alt_pos
+								end
+							else
+								if #ri_pos>0 then
+									fnd=true
+									regs_pos=ri_pos
+								end
+							end
+							
+							if  fnd==true then
+								s=plainReplace(s,ri_fnd,string.rep(' ',string.len(ri_fnd)))
+								present_r_last_lookup[ ri_fnd ]={ri_fnd,rg,regs_pos,ri,true}
+							end
+						else
+							break
+						end
+					end
+
+								local m_acc={}
+								local a = getNameFromAddress(addr) or ''
+								local pa=''
+								if a=='' then
+									pa=RIPx
+									m_acc['address_string']=pa
+								else
+									m_acc['address_string']=a
+									pa=RIPx .. ' ( ' .. a .. ' )'
+								end
+
+								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
+
+								local prinfo_cnt=deepcopy(prinfo)
+
+								if extraField~='' then
+									prinfo=prinfo .. ' ( ' .. extraField .. ' )'
+								end
+								m_acc['extraField']=extraField
+								m_acc['instruction']=instruction
+								m_acc['bytes']=bytes
+								m_acc['address']=address
+								m_acc['prinfo']=prinfo
+								m_acc['prinfo_cnt']=prinfo_cnt
+								m_acc['present_regs']=present_r
+								
+					deref['mem_accesses']=m_acc --List of accessed memory addresses; table of tables
+					deref['dec_address']=addr
+					deref['isJump']=false
+
+					hits_deref[ix]=deref -- hits_deref is a table of tables (full local scope)
+					deref['index']=ix
+
+					hits_deref[ix]['count']=hit_no
+end
+
 local function onBp()
 
 	debug_getContext(true)
@@ -2481,7 +2616,7 @@ local function onBp()
 			debug_setBreakpoint(abp[1][1], 1, bptExecute)
 			debug_continueFromBreakpoint(co_run)
 		else
-				
+
 				local runToRet=false
 				local rpt=false
 				local endTrace=false
@@ -2540,7 +2675,7 @@ local function onBp()
 					end
 
 					local deref={['hit_address']=RIPx}
-					
+						
 					if stp==2 then
 						if mri_skip==true then
 							debug_removeBreakpoint(mrc_retAdr)
@@ -2586,7 +2721,6 @@ local function onBp()
 					--local sd=instruction_r -- substitute register names for their decimals
 					local present_r={}
 					local present_r_lookup={}
-					
 					local maxRegSize=0
 					for i=1, #registers['list_regs'] do
 						local regs_pos={}
@@ -2645,9 +2779,13 @@ local function onBp()
 						end
 					end
 					
-					local og_present_r=deepcopy(present_r)
+										local og_present_r=deepcopy(present_r)
 					
 					for key, value in pairs(present_r_last_lookup) do
+						local rwt=false
+						if value[5]==true then
+							rwt=true
+						end
 						if present_r_lookup[key] == nil then
 								local insrt=true
 								local ri=value[4]
@@ -2664,7 +2802,7 @@ local function onBp()
 								end
 							if rg['aob']~=nil then
 									rg['aob_str']=table.concat(rg['aob'],' ')
-									if rg['aob_str']==value[2]['aob_str'] then
+									if rwt==false and rg['aob_str']==value[2]['aob_str'] then
 										insrt=false
 									end
 							end
@@ -2673,6 +2811,7 @@ local function onBp()
 							end
 						end
 					end
+						
 					present_r_last_lookup={}
 
 					local prl=#present_r
@@ -2793,7 +2932,6 @@ local function onBp()
 								end
 						end
 					end
-					
 					local og_present_mem=deepcopy(present_mem)
 					
 					for key, value in pairs(present_mem_last_lookup) do
@@ -2831,7 +2969,7 @@ local function onBp()
 						end
 					end
 					present_mem_last_lookup={}
-					
+
 					local prm=#present_mem
 					
 					for k=1, #og_present_mem do
@@ -2839,7 +2977,8 @@ local function onBp()
 						present_mem_last_lookup[ mk[1] ]=mk
 					end
 					
-								local a = getNameFromAddress(address) or ''
+								local a = getNameFromAddress(RIP) or ''
+
 								local pa=''
 								if a=='' then
 									pa=RIPx
@@ -2851,7 +2990,7 @@ local function onBp()
 
 								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_instruction)
 								local regs_mem_tbl={}
-								
+
 								if prl>0 then
 									for i=1, prl do
 										local pi=present_r[i]
@@ -2864,7 +3003,7 @@ local function onBp()
 										table.insert(regs_mem_tbl,pi[1]..dsp)
 									end
 								end
-								
+
 								if prm>0 then
 									for i=1, prm do
 										local pi=present_mem[i]
@@ -2873,7 +3012,7 @@ local function onBp()
 										table.insert(regs_mem_tbl,dsp)
 									end
 								end
-								
+
 								if #regs_mem_tbl>0 then
 									local regs_str=table.concat(regs_mem_tbl,', ')
 									prinfo=prinfo..'\t( '..regs_str..' )'
@@ -2903,6 +3042,7 @@ local function onBp()
 							deref['isJump']=true
 						end
 					end
+					
 					hits_deref[ix]=deref -- hits_deref is a table of tables (full local scope)
 					deref['index']=ix
 					local cnt=1
@@ -2918,16 +3058,15 @@ local function onBp()
 					hits_deref[ix]['count']=hit_no
 					
 					local ended=false
-					
+
 					if rpt==false then
 						if cnt_done==true then
-							if stopTraceEnd~=true then
-								debug_continueFromBreakpoint(co_run) --END OF TRACE!
-							end
 							runStop(true)
 							ended=true
 							if stopTraceEnd==true then
 								return 1
+							else
+								debug_continueFromBreakpoint(co_run) --END OF TRACE!
 							end
 						elseif runToRet==true then
 								if stopTraceEnd==true then
@@ -2963,6 +3102,136 @@ local function onBp()
 				end
 				end
 	end
+end
+
+local function attach_rw(a,c,w,z,s,n)
+	
+	local tya=type(a)
+	local ad
+	rw_lookup={0,{}}
+	
+	if tya=='table' and #a>1 then
+		ad=getAddress(a[1])
+		for i=2, #a do
+			local ai=a[i]
+			local aid=getAddress(ai)
+			local sz=getInstructionSize(aid)
+			local szx=string.format('%X',aid+sz)
+			rw_lookup[2][szx]=aid
+			rw_lookup[1]=rw_lookup[1]+1
+		end
+	elseif tya=='string' or tya=='number' then
+		ad=getAddress(a)
+	else
+		print('Argument "a" must be an address or a table containing >=2 addresses')
+		return
+	end
+	
+	if type(c)~='number' or c<=0 then
+			print('Argument "c" must be >0')
+			return
+	end
+	
+	if type(n)=='string' and n~=nil and n~='' then
+		forceSave=n
+	else
+		forceSave=''
+	end
+	
+	stopTraceEnd=false
+	if z==true then
+		stopTraceEnd=true
+	end
+	
+	abp={}
+	hits={}
+	hits_lookup={}
+	hits_deref={}
+	hits_deref_lookup={}
+	mem_accs_lookup={}
+	mem_accs_sorted={}
+	hp={}
+	hpp={}
+	currTraceDss={}
+	present_r_last_lookup={}
+	present_m_last_lookup={}
+	present_mem_last_lookup={}
+	mri_skip=false
+	mri_isCall=true
+	mrc_retAdr=nil
+	
+	instRep=nil
+	count=c
+	
+		local tys=type(s)
+	
+	stp=0
+	sio='step into'
+	if s==true then
+		stp=1
+		sio='step over previously run instructions'
+	elseif (tys=='string' and s~='') or (tys=='table' and #s>0) then
+		stp=2
+		sio='step into specified modules'
+		
+		traceModules={}
+		local lms={}
+		if tys=='string' then 
+			lms[s]=true
+		elseif tys=='table' then
+			for k=1, #s do
+				lms[ s[k] ]=true
+			end
+		end
+		
+		local modulesTable= enumModules()
+		for i,v in pairs(modulesTable) do
+			if lms[v.Name]==true then
+				local sz=getModuleSize(v.Name)
+				local tm={
+					['Size']=sz,
+					['Name']=v.Name,
+					['lastByte']=v.Address+sz-1,
+					['Address']=v.Address
+				}
+				table.insert(traceModules,tm)
+			end 
+		end
+	end
+	
+	condBpProg=false
+	prog=false
+	rw_trace=2
+	first=true
+	midTrace=true
+	
+	local trg=bptAccess
+	
+	if w==true then
+		trg=bptWrite
+	end
+	
+	abp={{ad,string.format('%X',ad)}}
+	
+	debug_setBreakpoint(ad,1,trg,bpmInt3,function()
+			debug_getContext()
+
+		local RIPx=string.format('%X',RIP)
+		local validAddr=rw_lookup[2][RIPx]
+		if rw_lookup[1]>0 then
+			validAddr=rw_lookup[2][RIPx]
+		else
+			validAddr=getPreviousOpcode(RIP)
+		end
+		print(type(validAddr))
+		if validAddr==nil then
+			debug_continueFromBreakpoint(co_run)
+		else --store data from previous instruction
+			onBp_rw_proc(validAddr)
+			onBp()
+			rw_trace=1
+		end
+	end)
 end
 
 local function condBp(a, c, s, bf)
@@ -3054,6 +3323,7 @@ local function condBp(a, c, s, bf)
 	present_mem_last_lookup={}
 	present_m_last_lookup={}
 	condBpProg=true
+	rw_trace=0
 	debug_setBreakpoint(condBpAddr[1][1], 1, bptExecute)
 	midTrace=true
 end
@@ -3516,9 +3786,7 @@ end
 							prinfo=prinfo .. ' ( ' .. extraField .. ' )'
 						end
 						prinfo=prinfo ..'\t〈 '..breakHere[2]..' 〉'
-					
-						print(prinfo)
-						
+											
 						if breakHere[3]~=nil then
 							getMemoryViewForm().HexadecimalView.address=breakHere[3]
 						end
@@ -3807,6 +4075,8 @@ end
 hv.OnSelectionChange=function (sender, address, address2)
 	if debug_isBroken()==true then
 		jumpMem(address)
+	else
+		jumpMemOnly(address)
 	end
 end
 
@@ -3818,7 +4088,11 @@ function onOpenProcess(processid)
 end
 
 function debugger_onBreakpoint()
-	if findWriteBp==true then
+	if rw_trace==2 then
+		return
+	elseif rw_trace==1 then
+		onBp()
+	elseif findWriteBp==true then
 		onFindWriteBp()
 	elseif liteBp==true then
 		onLiteBp()
@@ -3836,6 +4110,7 @@ end
 traceCount={}
 traceCount.isMidTrace=isMidTrace
 traceCount.attach=attach
+traceCount.attach_rw=attach_rw
 traceCount.stop=stop
 traceCount.printHits=printHits
 traceCount.save=save
