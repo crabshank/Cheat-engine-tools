@@ -1,6 +1,6 @@
 local frm = getMemoryViewForm()
-local hv = frm.DisassemblerView
-local hx=frm.HexadecimalView
+frm.hv = frm.DisassemblerView
+frm.hx=frm.HexadecimalView
 
 local trace_w={nil,nil} --form,label
 
@@ -1787,7 +1787,7 @@ local function jumpMemOnly(addr)
 		local mi1=mi[1]
 		local n=tonumber(mi1,16)
 		if n~=nil then
-			hx.address=n
+			frm.hx.address=n
 			break
 		end
 	end
@@ -2191,14 +2191,14 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 			local b,r=pcall(func) -- r=calculated address
 
 			if r~=nil and type(r)=='number' and math.tointeger (r)~=nil then
-                hx.address=r
+                frm.hx.address=r
 				memJmp=true
 				break
 			end
 		end
 
 		if memJmp==false then
-			hx.address=currRegsAddr
+			frm.hx.address=currRegsAddr
 		end
 		return
 end
@@ -4073,7 +4073,7 @@ local function onFindWriteBp()
 
 end
 
-hv.OnSelectionChange=function (sender, address, address2)
+frm.hv.OnSelectionChange=function (sender, address, address2)
 	if debug_isBroken()==true then
 		jumpMem(address)
 	else
