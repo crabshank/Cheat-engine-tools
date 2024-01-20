@@ -1,14 +1,20 @@
  <html>
  <head>
  <style>
-div.notes {
+
+.notes {
 	display: inline-block;
     border: #848484;
     border-width: 1px 1px 1px;
-    min-width: 10.5ch;
     border-style: outset;
     margin-right: 0.7ch;
+	min-width: 10.5ch;
+	font-family: monospace;
 	padding: 0.18ch;
+	margin-top: 1px;
+    margin-bottom: 1px;
+	text-rendering: optimizeSpeed;
+	-webkit-user-modify:read-write-plaintext-only;
 }
 span.memLink {
     text-decoration: underline;
@@ -380,7 +386,7 @@ registers['list_regs_len']= registers['list_regs'].length;
 					inst=rn+rn;
 				}
 				if(!empt){
-					inst=`<div contenteditable="true" ln="${c}" title="Notes" class="notes"></div>${inst}`;
+					inst=`<span contenteditable="true" ln="${c}" class="notes"></span>${inst}`;
                 let strs_last=[[inst,0]];
                 for(let h=0; h<regexp_length; h++){
                     let mtc=[];
@@ -436,7 +442,7 @@ registers['list_regs_len']= registers['list_regs'].length;
 		}
 		}
 		pre_el.innerHTML=insts.join('');
-		let nts=pre_el.querySelectorAll('div.notes');
+		let nts=pre_el.getElementsByClassName('notes');
         ntes=[];
         for(let k=0, len_k=nts.length;k<len_k;k++){
                 let nk=nts[k];
