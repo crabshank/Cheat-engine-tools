@@ -232,7 +232,11 @@ function insertText(tx,sta,mtc,bfr){
 function setLastCheck(v){
 		lastCheckVal=v;
 		if(v!==null){
-			check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${v}].scrollIntoView();">#${v+1}</span>`;
+			if(!rvc.checked){
+				check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${v}].scrollIntoView();">#${v+1}</span>`;
+			}else{
+				check_info.innerHTML=`First checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${v}].scrollIntoView();">#${v+1}</span>`;
+			}
 			check_info.style.display='initial';
 		}else{
 			check_info.style.display='none';
@@ -240,20 +244,33 @@ function setLastCheck(v){
 }
 
 function getLastCheck(){
-    let chk=document.querySelectorAll('input[type="checkbox"]:checked');
+    let chk=[...document.querySelectorAll('input[type="checkbox"]:checked')].filter(c=>{return c!==rvc});
     let ckl=chk.length;
-    let d='none';
-    let mx=null;
+    let d='none'; 
     if(ckl>0){
-        for(let i=0; i<ckl; ++i){
-            let ci=chk[i];
-            let n=parseInt(ci.getAttribute('ln'));
-            mx=(n>mx || mx==null)?n:mx;
-        }
-        d='initial';
-        check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx+1}</span>`;
+		if(!rvc.checked){
+			 let mx=null;
+			for(let i=0; i<ckl; ++i){
+				let ci=chk[i];
+				let n=parseInt(ci.getAttribute('ln'));
+				mx=(n>mx || mx==null)?n:mx;
+			}
+			d='initial';
+			check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx+1}</span>`;
+			lastCheckVal=mx;
+		}else{
+			let mn=null;
+			for(let i=ckl-1; i>=0; --i){
+				let ci=chk[i];
+				let n=parseInt(ci.getAttribute('ln'));
+				mn=(n<mn || mn==null)?n:mn;
+			}
+			d='initial';
+			check_info.innerHTML=`First checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mn}].scrollIntoView();">#${mn+1}</span>`;
+			lastCheckVal=mn;
+		}
     }
-	lastCheckVal=mx;
+	
     check_info.style.display=d;
 }
 
@@ -628,6 +645,7 @@ save_json.addEventListener('click',  async function () {
 	 fr.onload = function () {
 		let isJSON=fileName.endsWith('.json') ? true : false;
 		setLastCheck(null);
+		rvc.checked=false;
 		let str = this.result;
 		isRN=(str.split('\r\n').length>=str.split('\n').length)?true:false;
 		if(firstDone===true){
