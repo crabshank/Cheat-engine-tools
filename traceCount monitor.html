@@ -628,7 +628,7 @@ save_json.addEventListener('click',  async function () {
 		d[7]= registers['list_regs'];
 	let dlb_a=document.createElement('a');
 	save_json.insertAdjacentElement('beforebegin',dlb_a);
-	let nm=fileName+'.json';
+	let nm=fileName.split('.json').join('')+'.json';
 	
 	let setterTxt=await compress(JSON.stringify(d),'deflate');
 	let uint8Bytes = new Uint8Array(setterTxt);
