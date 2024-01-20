@@ -34,6 +34,7 @@ body {
   <section style="display: inline-flex;">
  <label for="openFile1">Load file: </label><input  type="file"  id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
  <section id="check_info"  style="display: none;width: min-content;height: min-content;border: 2px outset rgb(113, 0, 255);text-align: center;white-space: pre-wrap;position: fixed;right: 5px;background: #141414c2;z-index: 1;"></section>
+ <button id="save_json" style="margin-left: 0.63ch;">Save JSON</button> 
  </section>
  <pre id="preTag"></pre>
   <style>
@@ -44,17 +45,53 @@ body {
   <script>
   var firstDone=false;
   var isRN=true;
-  var chkRev=false;
   var meta_mems=[];
   var mems_chk={};
   const regexp=[/\([^\)]*\[[0-9A-F]+\] \= \{[^\}]+\}[^\)]*\)/g,/\[[0-9A-F]+\] \= \{[^\}]+\}/g,/(\[[0-9A-F]+\]|[0-9A-F]{2})/g];
   const regexp_length=regexp.length;
   const check_info=document.getElementById("check_info");
   const pre_el=document.getElementById('preTag');
-  
-window.onscroll=(e)=>{
-    let tp=(pre_el.getBoundingClientRect().top>0)?'':'5px';
+  const save_json=document.getElementById('save_json');
+  var preText='';
+  var fileName='';
+
+function elRemover(el){
+	if(typeof el!=='undefined' && !!el){
+	if(typeof el.parentNode!=='undefined' && !!el.parentNode){
+		el.parentNode.removeChild(el);
+	}
+	}
+}
+
+function compress(string, encoding) {
+  const byteArray = new TextEncoder().encode(string);
+  const cs = new CompressionStream(encoding);
+  const writer = cs.writable.getWriter();
+  writer.write(byteArray);
+  writer.close();
+  return new Response(cs.readable).arrayBuffer();
+}
+
+function decompress(byteArray, encoding) {
+  const cs = new DecompressionStream(encoding);
+  const writer = cs.writable.getWriter();
+  writer.write(byteArray);
+  writer.close();
+  return new Response(cs.readable).arrayBuffer().then(function (arrayBuffer) {
+    return new TextDecoder().decode(arrayBuffer);
+  });
+} //Source: https://stackoverflow.com/a/59469189 - 4esn0k
+
+function do_Scroll(e){
+	let t=pre_el.getBoundingClientRect().top;
+    let tp=(t>-5)?t+'px':'5px';
     check_info.style.top=tp;
+}
+
+do_Scroll();
+
+window.onscroll=(e)=>{
+	do_Scroll(e);
 }
   
   const rvc=document.getElementById("revChk");
@@ -176,6 +213,9 @@ window.onscroll=(e)=>{
 let chkCnt=0;
 let allChk=[];
 let ntes=[];
+let checkBytes=[];
+let checkMeta=[];
+let lastCheckVal=null;
 
 function insertText(tx,sta,mtc,bfr){
 
@@ -189,20 +229,31 @@ function insertText(tx,sta,mtc,bfr){
     return sta;
 }
 
+function setLastCheck(v){
+		lastCheckVal=v;
+		if(v!==null){
+			check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${v}].scrollIntoView();">#${v+1}</span>`;
+			check_info.style.display='initial';
+		}else{
+			check_info.style.display='none';
+		}
+}
+
 function getLastCheck(){
     let chk=document.querySelectorAll('input[type="checkbox"]:checked');
     let ckl=chk.length;
     let d='none';
-    let mx=0;
+    let mx=null;
     if(ckl>0){
         for(let i=0; i<ckl; ++i){
             let ci=chk[i];
             let n=parseInt(ci.getAttribute('ln'));
-            mx=(n>mx)?n:mx;
+            mx=(n>mx || mx==null)?n:mx;
         }
         d='initial';
         check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx+1}</span>`;
     }
+	lastCheckVal=mx;
     check_info.style.display=d;
 }
 
@@ -232,7 +283,7 @@ function do_chkClick_mem(event,isMeta){
         let x=parseInt(t.getAttribute('addr_ix'));
         let a=t.getAttribute('address');
         let ar=mems_chk[a];
-        if(!chkRev){
+        if(!rvc.checked){
             for(let i=x+1, len=ar.length; i<len; i++){
                 ar[i].checked=c;
                 do_chkClick_mem({target: ar[i]});
@@ -246,6 +297,66 @@ function do_chkClick_mem(event,isMeta){
     }
 }
 
+function popArrs(){
+		checkBytes=[];
+		checkMeta=[];
+		
+		let nts=pre_el.getElementsByClassName('notes');
+        ntes=[];
+        for(let k=0, len_k=nts.length;k<len_k;k++){
+                let nk=nts[k];
+                let ln=parseInt(nk.getAttribute('ln'));
+                ntes[ln]=nk;
+            }
+        
+        //click on meta mem - all byte ixs for each
+        	let ckbt=pre_el.getElementsByClassName('mem_check_byte');
+            let ckbs=[];
+            for(let k=0, len_k=ckbt.length;k<len_k;k++){
+                let ckb=ckbt[k];
+                let m=parseInt(ckb.getAttribute('meta_mem'));
+                let x=parseInt(ckb.getAttribute('mem_ix'));
+				checkBytes[x]=ckb;
+               if (typeof(meta_mems[m])==='undefined'){
+                meta_mems[m]=[ckb];
+               }else{
+                meta_mems[m].push(ckb);
+               }
+               ckbs[x]=ckb;
+            }
+            
+            let ckm=pre_el.getElementsByClassName('mem_check_meta');
+        
+		for(let k=0, len_k=ckm.length;k<len_k;k++){
+			let ckmk=ckm[k];
+			let m=parseInt(ckmk.getAttribute('meta_mem'));
+			checkMeta[m]=ckmk;
+			meta_mems[m].unshift(ckmk); //1st el is meta checkbox
+		}
+            
+		//sorted array for each address
+		for(let k=0, len_k=ckbs.length;k<len_k;k++){
+			let cs=ckbs[k];
+			let a=cs.getAttribute('address');
+			if(typeof(mems_chk[a])==='undefined'){
+				mems_chk[a]=[cs];
+				ckbs[k].setAttribute('addr_ix',0);
+			}else{
+				mems_chk[a].push(cs);
+				ckbs[k].setAttribute('addr_ix',mems_chk[a].length-1);
+			}
+		}
+        
+        let ck=pre_el.getElementsByClassName('reg_check');
+		for(let k=0, len_k=ck.length;k<len_k;k++){
+			let ckk=ck[k];
+			let x=parseInt(ckk.getAttribute('ovr_occ'));
+            allChk[x]=ckk;
+		}
+}
+
+
+
 function chkClick_mem(event,isMeta){
     do_chkClick_mem(event,isMeta);
     getLastCheck();
@@ -258,7 +369,7 @@ function chkClick(event){
 	let st=parseInt(t.getAttribute('occ'));
 	let oc=allChk[ocs[st]];
 	let flg=oc.checked;
-	if(!chkRev){
+	if(!rvc.checked){
 		for(let i=st+1, len=ocs.length; i<len; i++){
 			allChk[ocs[i]].checked=flg;
 		}
@@ -323,7 +434,8 @@ registers['list_regs_len']= registers['list_regs'].length;
 			}else if(lns[i].startsWith('Memory accesses index:')){
 				memAcc=true;
 				insts.push(lns[i]);
-				pre_el.innerHTML=insts.join('');
+				preText=insts.join('');
+				pre_el.innerHTML=preText;
 			}else{
 				let empt=(lns[i].trim()==='')?true:false;
 				let lnsi_spl =[...lns[i]];
@@ -441,68 +553,81 @@ registers['list_regs_len']= registers['list_regs'].length;
 				insts.push(inst);
 		}
 		}
-		pre_el.innerHTML=insts.join('');
-		let nts=pre_el.getElementsByClassName('notes');
-        ntes=[];
-        for(let k=0, len_k=nts.length;k<len_k;k++){
-                let nk=nts[k];
-                let ln=parseInt(nk.getAttribute('ln'));
-                ntes[ln]=nk;
-            }
-        
-        //click on meta mem - all byte ixs for each
-        	let ckbt=pre_el.getElementsByClassName('mem_check_byte');
-            let ckbs=[];
-            for(let k=0, len_k=ckbt.length;k<len_k;k++){
-                let ckb=ckbt[k];
-                let m=parseInt(ckb.getAttribute('meta_mem'));
-                let x=parseInt(ckb.getAttribute('mem_ix'));
-               if (typeof(meta_mems[m])==='undefined'){
-                meta_mems[m]=[ckb];
-               }else{
-                meta_mems[m].push(ckb);
-               }
-               ckbs[x]=ckb;
-            }
-            
-            	let ckm=pre_el.getElementsByClassName('mem_check_meta');
-        
-            for(let k=0, len_k=ckm.length;k<len_k;k++){
-                let ckmk=ckm[k];
-                let m=parseInt(ckmk.getAttribute('meta_mem'));
-                meta_mems[m].unshift(ckmk); //1st el is meta checkbox
-            }
-            
-  //sorted array for each address
-for(let k=0, len_k=ckbs.length;k<len_k;k++){
-    let cs=ckbs[k];
-    let a=cs.getAttribute('address');
-    if(typeof(mems_chk[a])==='undefined'){
-        mems_chk[a]=[cs];
-        ckbs[k].setAttribute('addr_ix',0);
-    }else{
-        mems_chk[a].push(cs);
-        ckbs[k].setAttribute('addr_ix',mems_chk[a].length-1);
-    }
-}
-        
-        let ck=pre_el.getElementsByClassName('reg_check');
-		for(let k=0, len_k=ck.length;k<len_k;k++){
-			let ckk=ck[k];
-			let x=parseInt(ckk.getAttribute('ovr_occ'));
-            allChk[x]=ckk;
-		}
+		preText=insts.join('');
+		pre_el.innerHTML=preText;
+		
+		popArrs();
 	
 	}
 		
- rvc.addEventListener('input',  function () {
-	 chkRev=rvc.checked;
+async function loadProc(str){
+	let uint8Bytes=JSON.parse(str);
+	let arrayBuff = Uint8Array.from(uint8Bytes).buffer;  //Other way
+	let decom=await decompress(arrayBuff,'deflate');
+	let d=JSON.parse(decom);
+	rvc.checked=d[0];
+	pre_el.innerHTML=d[1];
+	popArrs();
+	let d2=d[2];
+	for(let i=0, len=d2.length; i<len; i++){
+		let d2i=d2[i];
+		ntes[ d2i[0] ].innerText=d2i[1];
+	}
+	let d3=d[3];
+	for(let i=0, len=d3.length; i<len; i++){
+		let d3i=d3[i];
+		allChk[d3i].checked=true;
+	}
+	let d4=d[4];
+	for(let i=0, len=d4.length; i<len; i++){
+		let d4i=d4[i];
+		checkMeta[d4i].checked=true;
+	}
+	let d5=d[5];
+	for(let i=0, len=d5.length; i<len; i++){
+		let d5i=d5[i];
+		checkBytes[d5i].checked=true;
+	}
+	setLastCheck(d[6]);
+	registers['list_regs']=d[7];
+}
+		
+save_json.addEventListener('click',  async function () {
+
+		let d=[];
+		d[0]=rvc.checked;
+		d[1]=preText;
+			let nts=[...document.getElementsByClassName('notes')];
+			let ntsPop=nts.filter(n=>{return n.innerText!==''}).map(n=>{return [parseInt(n.getAttribute('ln')),n.innerText]});
+		d[2]=ntsPop; //non-empty notes
+			let chk=[...document.querySelectorAll('input[type="checkbox"]:checked')];
+				let chk_reg=chk.filter(c=>{return c.className==='reg_check'}).map(n=>{return parseInt(n.getAttribute('ovr_occ'))});
+				let chk_memMeta=chk.filter(c=>{return c.className==='mem_check_meta'}).map(n=>{return parseInt(n.getAttribute('meta_mem'))});
+				let chk_memByte=chk.filter(c=>{return c.className==='mem_check_byte'}).map(n=>{return parseInt(n.getAttribute('mem_ix'))});
+		d[3]=chk_reg;
+		d[4]=chk_memMeta;
+		d[5]=chk_memByte;
+		d[6]=lastCheckVal;
+		d[7]= registers['list_regs'];
+	let dlb_a=document.createElement('a');
+	save_json.insertAdjacentElement('beforebegin',dlb_a);
+	let nm=fileName+'.json';
+	
+	let setterTxt=await compress(JSON.stringify(d),'deflate');
+	let uint8Bytes = new Uint8Array(setterTxt);
+
+	dlb_a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent('['+uint8Bytes.join(',')+']'));
+	dlb_a.setAttribute('download', nm);
+	dlb_a.click();
+	elRemover(dlb_a);
+	
  });
  
  document.getElementById("openFile1").addEventListener('change',  function () {
-	 chkRev=rvc.checked;
 	 var fr = new FileReader();
 	 fr.onload = function () {
+		let isJSON=fileName.endsWith('.json') ? true : false;
+		setLastCheck(null);
 		let str = this.result;
 		isRN=(str.split('\r\n').length>=str.split('\n').length)?true:false;
 		if(firstDone===true){
@@ -517,14 +642,24 @@ for(let k=0, len_k=ckbs.length;k<len_k;k++){
 		allChk=[];
         meta_mems=[];
         mems_chk={};
-		proc(str);
+		if(isJSON){
+			loadProc(str);
 		}else{
 			proc(str);
+		}
+		}else{
+			if(isJSON){
+				loadProc(str);
+			}else{
+				proc(str);
+			}
 			firstDone=true;
 		}
 		
 	}
-	fr.readAsText(this.files[0]);
+	let tf0=this.files[0];
+	fileName=tf0.name;
+	fr.readAsText(tf0);
 }); 
  </script>
 </body>
