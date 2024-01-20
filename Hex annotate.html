@@ -555,6 +555,7 @@ function p_enter(event,n){
 }
 
 function whlVal(event,mn,ix){
+	event.preventDefault();
 	let t=event.target;
 	let v=parseInt(t.innerText);
 	if (event.deltaY < 0){
@@ -787,7 +788,7 @@ elems.save_json.onclick=(event)=>{
 	let dlb_a=document.createElement('a');
 	elems.save_json.insertAdjacentElement('beforebegin',dlb_a);
 	let nm='hex_annotation.json';
-	let setterTxt=`${JSON.stringify(notes_data)}`;
+	let setterTxt=JSON.stringify(notes_data);
 	dlb_a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(setterTxt));
 	dlb_a.setAttribute('download', nm);
 	dlb_a.click();
