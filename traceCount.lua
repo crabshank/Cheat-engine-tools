@@ -3223,7 +3223,7 @@ local function attach_rw(a,c,w,z,s,n)
 		else
 			validAddr=getPreviousOpcode(RIP)
 		end
-		print(type(validAddr))
+		
 		if validAddr==nil then
 			debug_continueFromBreakpoint(co_run)
 		else --store data from previous instruction
