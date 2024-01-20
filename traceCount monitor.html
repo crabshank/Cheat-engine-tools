@@ -15,14 +15,21 @@ span.memLink {
 	cursor: pointer;
     /* color: #167ac6; */
 }
+body {
+    background-color: hsl(0 0% 8% / 1);
+    color: white;
+}
  </style>
  </head>
  <body>
  <title>traceCount monitor</title>
  <h1 style="text-align: center;">traceCount monitor</h1>
  <label for="revChk" style="margin-bottom: 0.47ch;display: -webkit-inline-box;">Reverse auto-check direction: <input  type="checkbox"  id="revChk" style="vertical-align: bottom;margin-bottom: 0.2ch;margin-left: 0.2ch;"></input></label><br>
+  <section style="display: inline-flex;">
  <label for="openFile1">Load file: </label><input  type="file"  id="openFile1" style="margin-left: 4px;vertical-align: top;"></input>
  <section id="check_info"  style="display: none;width: min-content; height: min-content; border: 2px outset rgb(113, 0, 255); text-align: center; white-space: pre-wrap; position: fixed; right: 5px;"></section>
+ <button id="save_json" style="margin-left: 0.63ch;">Save JSON</button>
+ </section>
  <pre id="preTag"></pre>
   <style>
 	input[type="checkbox"]{
@@ -48,117 +55,117 @@ window.onscroll=(e)=>{
   const rvc=document.getElementById("revChk");
   var registers={};
   registers['list_regs']=[
-["ST(0)",71],
-["ST(1)",72],
-["ST(2)",73],
-["ST(3)",74],
-["ST(4)",75],
-["ST(5)",76],
-["ST(6)",77],
-["ST(7)",78],
-["XMM10",{"occs":[]}],
-["XMM11",{"occs":[]}],
-["XMM12",{"occs":[]}],
-["XMM13",{"occs":[]}],
-["XMM14",{"occs":[]}],
-["XMM15",{"occs":[]}],
-["XMM0",{"occs":[]}],
-["XMM1",{"occs":[]}],
-["XMM2",{"occs":[]}],
-["XMM3",{"occs":[]}],
-["XMM4",{"occs":[]}],
-["XMM5",{"occs":[]}],
-["XMM6",{"occs":[]}],
-["XMM7",{"occs":[]}],
-["XMM8",{"occs":[]}],
-["XMM9",{"occs":[]}],
-["R10D",56],
-["R10W",56],
-["R10L",56],
-["R10B",56],
-["R11D",57],
-["R11W",57],
-["R11L",57],
-["R11B",57],
-["R12D",58],
-["R12W",58],
-["R12L",58],
-["R12B",58],
-["R13D",59],
-["R13W",59],
-["R13L",59],
-["R13B",59],
-["R14D",60],
-["R14W",60],
-["R14L",60],
-["R14B",60],
-["R15D",61],
-["R15W",61],
-["R15L",61],
-["R15B",61],
-["RAX",{"occs":[]}],
-["RBX",{"occs":[]}],
-["RCX",{"occs":[]}],
-["RDX",{"occs":[]}],
-["RDI",{"occs":[]}],
-["RSI",{"occs":[]}],
-["RBP",{"occs":[]}],
-["RSP",{"occs":[]}],
-["R10",{"occs":[]}],
-["R11",{"occs":[]}],
-["R12",{"occs":[]}],
-["R13",{"occs":[]}],
-["R14",{"occs":[]}],
-["R15",{"occs":[]}],
-["EAX",48],
-["EBX",49],
-["ECX",50],
-["EDX",51],
-["EDI",52],
-["ESI",53],
-["EBP",54],
-["ESP",55],
-["RIP",{"occs":[]}],
-["EIP",70],
-["FP0",{"occs":[]}],
-["FP1",{"occs":[]}],
-["FP2",{"occs":[]}],
-["FP3",{"occs":[]}],
-["FP4",{"occs":[]}],
-["FP5",{"occs":[]}],
-["FP6",{"occs":[]}],
-["FP7",{"occs":[]}],
-["R8D",92],
-["R8W",92],
-["R8L",92],
-["R8B",92],
-["R9D",93],
-["R9W",93],
-["R9L",93],
-["R9B",93],
-["SIL",53],
-["DIL",52],
-["BPL",54],
-["SPL",55],
-["R8",{"occs":[]}],
-["R9",{"occs":[]}],
-["AX",48],
-["AL",48],
-["AH",48],
-["BX",49],
-["BL",49],
-["BH",49],
-["CX",50],
-["CL",50],
-["CH",50],
-["DX",51],
-["DL",51],
-["DH",51],
-["SI",53],
-["DI",52],
-["BP",54],
-["SP",55],
-["IP",70]
+	["ST(0)",71,10],
+	["ST(1)",72,10],
+	["ST(2)",73,10],
+	["ST(3)",74,10],
+	["ST(4)",75,10],
+	["ST(5)",76,10],
+	["ST(6)",77,10],
+	["ST(7)",78,10],
+	["XMM10", {"occs": []},16],
+	["XMM11", {"occs": []},16],
+	["XMM12", {"occs": []},16],
+	["XMM13", {"occs": []},16],
+	["XMM14", {"occs": []},16],
+	["XMM15", {"occs": []},16],
+	["XMM0", {"occs": []},16],
+	["XMM1", {"occs": []},16],
+	["XMM2", {"occs": []},16],
+	["XMM3", {"occs": []},16],
+	["XMM4", {"occs": []},16],
+	["XMM5", {"occs": []},16],
+	["XMM6", {"occs": []},16],
+	["XMM7", {"occs": []},16],
+	["XMM8", {"occs": []},16],
+	["XMM9", {"occs": []},16],
+	["R10D",56,4],
+	["R10W",56,2],
+	["R10L",56,1],
+	["R10B",56,1],
+	["R11D",57,4],
+	["R11W",57,2],
+	["R11L",57,1],
+	["R11B",57,1],
+	["R12D",58,4],
+	["R12W",58,2],
+	["R12L",58,1],
+	["R12B",58,1],
+	["R13D",59,4],
+	["R13W",59,2],
+	["R13L",59,1],
+	["R13B",59,1],
+	["R14D",60,4],
+	["R14W",60,2],
+	["R14L",60,1],
+	["R14B",60,1],
+	["R15D",61,4],
+	["R15W",61,2],
+	["R15L",61,1],
+	["R15B",61,1],
+	["RAX", {"occs": []},8],
+	["RBX", {"occs": []},8],
+	["RCX", {"occs": []},8],
+	["RDX", {"occs": []},8],
+	["RDI", {"occs": []},8],
+	["RSI", {"occs": []},8],
+	["RBP", {"occs": []},8],
+	["RSP", {"occs": []},8],
+	["R10", {"occs": []},8],
+	["R11", {"occs": []},8],
+	["R12", {"occs": []},8],
+	["R13", {"occs": []},8],
+	["R14", {"occs": []},8],
+	["R15", {"occs": []},8],
+	["EAX",48,4],
+	["EBX",49,4],
+	["ECX",50,4],
+	["EDX",51,4],
+	["EDI",52,4],
+	["ESI",53,4],
+	["EBP",54,4],
+	["ESP",55,4],
+	["RIP", {"occs": []},8],
+	["EIP",70,4],
+	["FP0", {"occs": []},10],
+	["FP1", {"occs": []},10],
+	["FP2", {"occs": []},10],
+	["FP3", {"occs": []},10],
+	["FP4", {"occs": []},10],
+	["FP5", {"occs": []},10],
+	["FP6", {"occs": []},10],
+	["FP7", {"occs": []},10],
+	["R8D",92,4],
+	["R8W",92,2],
+	["R8L",92,1],
+	["R8B",92,1],
+	["R9D",93,4],
+	["R9W",93,2],
+	["R9L",93,1],
+	["R9B",93,1],
+	["SIL",53,1],
+	["DIL",52,1],
+	["BPL",54,1],
+	["SPL",55,1],
+	["R8", {"occs": []},8],
+	["R9", {"occs": []},8],
+	["AX",48,2],
+	["AL",48,1],
+	["AH",48,1],
+	["BX",49,2],
+	["BL",49,1],
+	["BH",49,1],
+	["CX",50,2],
+	["CL",50,1],
+	["CH",50,1],
+	["DX",51,2],
+	["DL",51,1],
+	["DH",51,1],
+	["SI",53,2],
+	["DI",52,2],
+	["BP",54,2],
+	["SP",55,2],
+	["IP",70,2]
 ];
 
 let chkCnt=0;
@@ -242,7 +249,7 @@ function chkClick_mem(event,isMeta){
 function chkClick(event){
 	let t=event.target;
 	let rg=registers['list_regs'][parseInt(t.getAttribute('reg_ix'))];
-	let ocs=rg.at(-1).occs;
+	let ocs=rg[1].occs;
 	let st=parseInt(t.getAttribute('occ'));
 	let oc=allChk[ocs[st]];
 	let flg=oc.checked;
@@ -334,7 +341,8 @@ registers['list_regs_len']= registers['list_regs'].length;
 						inst=inst_spl.join('');
 						for (let k=0; k<registers['list_regs_len']; k++){
 							let ka=k;
-							let rk=registers['list_regs'][k];			
+							let rk_og=registers['list_regs'][k];			
+							let rk=rk_og;			
 							let r=rk[0];
 							if(typeof(rk[1])==='number'){
 								ka=rk[1];
@@ -349,10 +357,12 @@ registers['list_regs_len']= registers['list_regs'].length;
 									let s=mtc.index;
 									let d=s+mtc[0].length-1;
 									if(m===0){
-										let rk_obj=rk.at(-1);
+										let rk_obj=rk[1];
 										let ol=rk_obj.occs.length;
 										rk_obj.occs.push(chkCnt);
-										inst_spl2[s]=`<input type="checkbox" class="reg_check" reg_ix="${ka}" ln="${c}" title="${r}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
+										let by=rk_og[2];
+										let byl=(by!==1)?by+' bytes':by+' byte';
+										inst_spl2[s]=`<input type="checkbox" title="${rk_og[0]} - ${byl}" class="reg_check" reg_ix="${ka}" ln="${c}" title="${r}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
 										inst_spl2[d]+='</input>';
 										chkCnt++;
 									}
@@ -493,7 +503,7 @@ for(let k=0, len_k=ckbs.length;k<len_k;k++){
 		if(firstDone===true){
 		for (let k=0; k<registers['list_regs_len']; k++){
 			let rk=registers['list_regs'][k];
-			let rk_obj=rk.at(-1);
+			let rk_obj=rk[1];
 			if(typeof(rk_obj)==='object'){
 				rk_obj.occs=[];
 			}
