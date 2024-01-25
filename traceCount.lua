@@ -1033,8 +1033,8 @@ local function getAccessed(instruction)
 	local ptm='%s+ptr[^%[]*'
 	local mtc='%[%s*[^%]]+%s*%]' -- [...]
 	local mtc2='[^%[%]]+' -- [(...)]
-	local pts={'byte'..ptm..mtc,'dword'..ptm..mtc,'qword'..ptm..mtc,'word'..ptm..mtc,mtc}
-	local ptsz={1,4,8,2,0}
+	local pts={'byte'..ptm..mtc,'xmmword'..ptm..mtc,'ymmword'..ptm..mtc,'zmmword'..ptm..mtc,'dqword'..ptm..mtc,'dword'..ptm..mtc,'qword'..ptm..mtc,'tword'..ptm..mtc,'oword'..ptm..mtc,'yword'..ptm..mtc,'zword'..ptm..mtc,'word'..ptm..mtc,mtc}
+	local ptsz={1,16,32,64,16,4,8,10,16,32,64,2,0}
 	for i=1, #pts do
 		local pi=pts[i]
 		local sf=strPatCeption(instruction_arr_run,{pi,mtc,mtc2})
@@ -2778,6 +2778,12 @@ local function onBp()
 							break
 						end
 					end
+                    
+                    if string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
+                        maxRegSize=32
+                    elseif string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<32 then
+                        maxRegSize=64
+                    end
 					
 										local og_present_r=deepcopy(present_r)
 					
@@ -3499,6 +3505,13 @@ local function onCondBp()
 		end
 	end
 	
+    if string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
+            maxRegSize=32
+    elseif string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<32 then
+            maxRegSize=64
+    end
+    
+    
 	local og_present_r=deepcopy(present_r)
 
 	for key, value in pairs(present_r_last_lookup) do
