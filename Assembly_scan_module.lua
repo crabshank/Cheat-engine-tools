@@ -44,5 +44,3 @@ local sa_f=function(sa_tmr)
 end
 sa_tmr.Interval=1
 sa_tmr.onTimer=sa_f
-
-
