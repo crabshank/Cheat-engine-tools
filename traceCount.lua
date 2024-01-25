@@ -2779,10 +2779,10 @@ local function onBp()
 						end
 					end
                     
-                    if string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
-                        maxRegSize=32
-                    elseif string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<32 then
+                    if string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<64 then
                         maxRegSize=64
+                    elseif string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
+                        maxRegSize=32
                     end
 					
 										local og_present_r=deepcopy(present_r)
@@ -3505,10 +3505,10 @@ local function onCondBp()
 		end
 	end
 	
-    if string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
-            maxRegSize=32
-    elseif string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<32 then
-            maxRegSize=64
+    if string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<64 then
+        maxRegSize=64
+    elseif string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
+        maxRegSize=32
     end
     
     
