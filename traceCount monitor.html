@@ -57,6 +57,7 @@ body {
   var byLine=[];
   var byLine_length=0;
   var currScope=false;
+  var scrollProg=false;
   const regexp=[/\([^\)]*\[[0-9A-F]+\] \= \{[^\}]+\}[^\)]*\)/g,/\[[0-9A-F]+\] \= \{[^\}]+\}/g,/(\[[0-9A-F]+\]|[0-9A-F]{2})/g];
   const regexp_length=regexp.length;
   const check_info=document.getElementById("check_info");
@@ -246,10 +247,22 @@ window.onresize=(e)=>{
 	 getScoped(true);
 };
 
-window.onscrollend=(e)=>{
+function scrollEvt(e){
 	e.stopPropagation();
 	do_Scroll(e);
 	getScoped();
+}
+
+window.onscrollend=(e)=>{
+	scrollProg=false;
+	scrollEvt(e);
+}
+
+window.onscroll=(e)=>{
+	if(scrollProg===false){
+		scrollProg=true;
+		scrollEvt(e);
+	}
 }
   
   const rvc=document.getElementById("revChk");
