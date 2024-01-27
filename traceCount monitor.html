@@ -1,20 +1,18 @@
  <html>
  <head>
  <style>
-
-.notes {
-	display: inline-block;
-    border: #848484;
-    border-width: 1px 1px 1px;
-    border-style: outset;
-    margin-right: 0.7ch;
-	min-width: 10.5ch;
-	font-family: monospace;
-	padding: 0.18ch;
-	margin-top: 1px;
-    margin-bottom: 1px;
-	text-rendering: optimizeSpeed;
-	-webkit-user-modify:read-write-plaintext-only;
+.notes{
+    border: #848484 !important;
+    border-width: 1px 1px 1px !important;
+    border-style: outset !important;
+    margin-right: 0.7ch !important;
+	min-width: 10.5ch !important;
+	font-family: monospace !important;
+	padding: 0.18ch !important;
+	margin-top: 1px !important;
+    margin-bottom: 1px !important;
+	text-rendering: optimizeSpeed !important;
+	-webkit-user-modify:read-write-plaintext-only !important;
 }
 span.memLink {
     text-decoration: underline;
@@ -26,6 +24,14 @@ body {
     color: white;
 }
  </style>
+  <style id="ln_style">
+ [ln]{
+	display:none;
+}
+[ln].show{
+	display:inline-block;
+}
+</style>
  </head>
  <body>
  <title>traceCount monitor</title>
@@ -47,9 +53,14 @@ body {
   var isRN=true;
   var meta_mems=[];
   var mems_chk={};
+  var inScope=[0,0];
+  var byLine=[];
+  var byLine_length=0;
+  var currScope=false;
   const regexp=[/\([^\)]*\[[0-9A-F]+\] \= \{[^\}]+\}[^\)]*\)/g,/\[[0-9A-F]+\] \= \{[^\}]+\}/g,/(\[[0-9A-F]+\]|[0-9A-F]{2})/g];
   const regexp_length=regexp.length;
   const check_info=document.getElementById("check_info");
+  const ln_style=document.getElementById("ln_style");
   const pre_el=document.getElementById('preTag');
   const save_json=document.getElementById('save_json');
   var preText='';
@@ -82,6 +93,146 @@ function decompress(byteArray, encoding) {
   });
 } //Source: https://stackoverflow.com/a/59469189 - 4esn0k
 
+function recalcBounds(){
+		ln_style.innerHTML=`[ln]{
+	display:inline-block;
+}`;
+	for(let i=0; i<byLine_length; ++i){
+		try{
+			let r=byLine[i][0].getBoundingClientRect();
+			let ra={};
+			ra.top=r.top+window.scrollY;
+			ra.bottom=r.bottom+window.scrollY;
+			byLine[i][2]=ra;
+			r=null;
+		}catch(e){;}
+	}
+	ln_style.innerHTML=`[ln]{
+	display:none;
+	}
+	[ln].show2{
+		display:inline-block;
+	}`;
+}
+
+function getScoped(forceAll){
+	if (currScope===false){
+		currScope=true;
+		let vvh=window.visualViewport.height;
+		let vvh_half=vvh*0.5;
+		let vvh_lims=[-vvh_half,vvh+vvh_half];
+		let a=inScope[0];
+		let b=inScope[1];
+		let aa=[];
+		let ba=[];
+		
+		let c=a;
+		let d=b;
+		let ab=a;
+		let af=a;
+		let bb=b;
+		let bf=b;
+		let cnt=0;
+		let bi,br;
+		while(cnt<4){
+			
+			if(ab>=0){
+				bi=byLine[ab][0];
+				br=byLine[ab][2];
+				let r={};
+				//r.top=br.top-window.scrollY;
+				r.bottom=br.bottom-window.scrollY;
+				if(r.bottom<vvh_lims[0]){
+					aa[0]=ab+1;
+					ab=-1;
+					cnt++;
+				}else if(ab===0){
+					aa[0]=0;
+					ab=-1;
+					cnt++;
+				}
+				ab--;
+			}
+			
+			if(af<byLine_length){
+				bi=byLine[af][0];
+				br=byLine[af][2];
+				let r={};
+				r.top=br.top-window.scrollY;
+				//r.bottom=br.bottom-window.scrollY;
+				if(r.top>vvh_lims[1]){
+					aa[1]=af-1;
+					af=byLine_length;
+					cnt++;
+				}else if(af===byLine_length-1){
+					aa[1]=byLine_length-1;
+					af=byLine_length;
+					cnt++;
+				}
+				af++;
+			}
+			
+			if(bf<byLine_length){
+				bi=byLine[bf][0];
+				br=byLine[bf][2];
+				let r={};
+				r.top=br.top-window.scrollY;
+				//r.bottom=br.bottom-window.scrollY;
+				if(r.top>vvh_lims[1]){
+					ba[0]=bf-1;
+					bf=byLine_length;
+					cnt++;
+				}else if(bf===byLine_length-1){
+					ba[0]=byLine_length-1;
+					bf=byLine_length;
+					cnt++;
+				}
+				bf++;
+			}
+			
+			if(bb>=0){
+				bi=byLine[bb][0];
+				br=byLine[bb][2];
+				let r={};
+				//r.top=br.top-window.scrollY;
+				r.bottom=br.bottom-window.scrollY;
+				if(r.bottom<vvh_lims[0]){
+					ba[1]=bb+1;
+					bb=-1;
+					cnt++;
+				}else if(bb===0){
+					ba[1]=0;
+					bb=-1;
+					cnt++;
+				}
+				bb--;
+			}
+		
+				a=Math.min(aa[0],ba[1]);
+				b=Math.max(aa[1],ba[0]);	
+				c=Math.min(inScope[0],a);
+				d=Math.max(inScope[1],b);	
+		}
+		for(let i=c; i<=d; i++){
+				let b1=byLine[i][1];
+				let b1l=b1.length;
+				if(i<a || i>b){
+					for(let k=0; k<b1l; k++){
+						let bk=b1[k];
+						bk.classList.remove('show2');
+					}
+				}else{
+					for(let k=0; k<b1l; k++){
+						let bk=b1[k];
+						bk.classList.add('show2');
+					}
+				}
+		}
+		inScope=[a,b];
+		currScope=false;
+	}
+}
+
 function do_Scroll(e){
 	let t=pre_el.getBoundingClientRect().top;
     let tp=(t>-5)?t+'px':'5px';
@@ -90,8 +241,14 @@ function do_Scroll(e){
 
 do_Scroll();
 
+window.onresize=(e)=>{
+	 recalcBounds();
+	 getScoped(true);
+};
+
 window.onscroll=(e)=>{
 	do_Scroll(e);
+	getScoped();
 }
   
   const rvc=document.getElementById("revChk");
@@ -317,6 +474,8 @@ function do_chkClick_mem(event,isMeta){
 function popArrs(){
 		checkBytes=[];
 		checkMeta=[];
+		inScope=[0,0];
+		byLine=[];
 		
 		let nts=pre_el.getElementsByClassName('notes');
         ntes=[];
@@ -324,6 +483,11 @@ function popArrs(){
                 let nk=nts[k];
                 let ln=parseInt(nk.getAttribute('ln'));
                 ntes[ln]=nk;
+				let r=nk.getBoundingClientRect();
+				let ra={};
+				ra.top=r.top+window.scrollY;
+				ra.bottom=r.bottom+window.scrollY;
+				byLine[ln]=[nk,[],ra];
             }
         
         //click on meta mem - all byte ixs for each
@@ -370,9 +534,33 @@ function popArrs(){
 			let x=parseInt(ckk.getAttribute('ovr_occ'));
             allChk[x]=ckk;
 		}
+		
+		let allLn=document.querySelectorAll('[ln]');
+		for(let k=0, len_k=allLn.length;k<len_k;k++){
+			let lk=allLn[k];
+			let ln=parseInt(lk.getAttribute('ln'));
+			if(typeof(byLine[ln])!=='undefined'){
+				//lk.classList.remove('show');
+				byLine[ln][1].push(lk);
+			}else{
+				let r=lk.getBoundingClientRect();
+				let ra={};
+				ra.top=r.top+window.scrollY;
+				ra.bottom=r.bottom+window.scrollY;
+				//lk.classList.remove('show');
+				byLine[ln]=[lk,[lk],ra];
+			}
+		}
+		byLine_length=byLine.length;
+		ln_style.innerHTML=` [ln]{
+	display:none;
 }
-
-
+[ln].show2{
+	display:inline-block;
+}`;
+		
+		getScoped(true);
+}
 
 function chkClick_mem(event,isMeta){
     do_chkClick_mem(event,isMeta);
@@ -443,8 +631,9 @@ registers['list_regs_len']= registers['list_regs'].length;
 						if(hl>0){
 							for (let k=0; k<hl; k++){
 								let hk=hits[k];
-								inst=inst.split(hk).join(`<span class="memLink" title="Go to ${hk}" onclick="ntes[${hk.split('#')[1]-1}].scrollIntoView();">${hk}</span>`);
+								inst=inst.split(hk).join(`<span ln="${c}" class="memLink show" title="Go to ${hk}" onclick="ntes[${hk.split('#')[1]-1}].scrollIntoView();">${hk}</span>`);
 							}
+							c++;
 							insts.push(inst);
 					}
 				}
@@ -496,7 +685,7 @@ registers['list_regs_len']= registers['list_regs'].length;
 										rk_obj.occs.push(chkCnt);
 										let by=rk_og[2];
 										let byl=(by!==1)?by+' bytes':by+' byte';
-										inst_spl2[s]=`<input type="checkbox" title="${rk_og[0]} - ${byl}" class="reg_check" reg_ix="${ka}" ln="${c}" title="${r}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
+										inst_spl2[s]=`<input type="checkbox" title="${rk_og[0]} - ${byl}" class="reg_check show" reg_ix="${ka}" ln="${c}" title="${r}" occ="${ol}" ovr_occ="${chkCnt}" onclick="chkClick(event);">`+inst_spl[s];
 										inst_spl2[d]+='</input>';
 										chkCnt++;
 									}
@@ -515,7 +704,7 @@ registers['list_regs_len']= registers['list_regs'].length;
 					inst=rn+rn;
 				}
 				if(!empt){
-					inst=`<span contenteditable="true" ln="${c}" class="notes"></span>${inst}`;
+					inst=`<span contenteditable="true" ln="${c}" class="notes show"></span>${inst}`;
                 let strs_last=[[inst,0]];
                 for(let h=0; h<regexp_length; h++){
                     let mtc=[];
@@ -548,12 +737,12 @@ registers['list_regs_len']= registers['list_regs'].length;
                         adr=sj0.slice(1,-1);
                         adr_int=parseInt(adr,16);
                         ca=0;
-                        sta=insertText(`<input class="mem_check_meta" ln="${c}" title="${adr}" meta_mem="${cm}" onclick="chkClick_mem(event,true);" type="checkbox"></input>`,sta,sj);
+                        sta=insertText(`<input class="mem_check_meta show" ln="${c}" title="${adr}" meta_mem="${cm}" onclick="chkClick_mem(event,true);" type="checkbox"></input>`,sta,sj);
                         cm++;
                     }else{
                         let ai=adr_int+ca;
                         let aix=ai.toString(16).toUpperCase();
-                        sta=insertText(`<input class="mem_check_byte" ln="${c}" title="${aix}" address="${aix}" mem_ix="${mem_ix}" meta_mem="${cm-1}" onclick="chkClick_mem(event);" type="checkbox"></input>`,sta,sj);
+                        sta=insertText(`<input class="mem_check_byte show" ln="${c}" title="${aix}" address="${aix}" mem_ix="${mem_ix}" meta_mem="${cm-1}" onclick="chkClick_mem(event);" type="checkbox"></input>`,sta,sj);
                         ca++;
                         mem_ix++;
                     }
