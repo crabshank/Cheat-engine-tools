@@ -247,6 +247,7 @@ window.onresize=(e)=>{
 };
 
 window.onscroll=(e)=>{
+	e.stopPropagation();
 	do_Scroll(e);
 	getScoped();
 }
