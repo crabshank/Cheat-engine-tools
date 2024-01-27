@@ -1,6 +1,6 @@
-## Assembly_scan_module.lua
+## Set_window_content.lua
 
-Automatically populates the "From" and "To" addresses in the "Memory viewer > Search > Find assembly code" window with the first and last address of the process that Cheat Engine is attached to.
+Currently: Automatically populates the "From" and "To" addresses in the "Memory viewer > Search > Find assembly code" and "File > Save disassembled output" windows with the first and last address of the process that Cheat Engine is attached to.
 
 ## Hex annotate.html
 
