@@ -1027,15 +1027,25 @@ end
 
 local function getAccessed(instruction)
 	local t={}
+    local allOB={}
 	local instruction_arr=string_arr(instruction)
+    for i=1, #instruction_arr do
+        if instruction_arr[i] =='[' then
+            table.insert(allOB,i)
+        end
+    end
+    local aobl=#allOB
+    if aobl==0 then return t end
 	local instruction_arr_run=deepcopy(instruction_arr)
-	
+	local brack={}
+    
 	local ptm='%s+PTR[^%[]*'
 	local mtc='%[%s*[^%]]+%s*%]' -- [...]
 	local mtc2='[^%[%]]+' -- [(...)]
 	local pts={'BYTE'..ptm..mtc,'XMMWORD'..ptm..mtc,'YMMWORD'..ptm..mtc,'ZMMWORD'..ptm..mtc,'DQWORD'..ptm..mtc,'DWORD'..ptm..mtc,'QWORD'..ptm..mtc,'TWORD'..ptm..mtc,'OWORD'..ptm..mtc,'YWORD'..ptm..mtc,'ZWORD'..ptm..mtc,'WORD'..ptm..mtc,mtc}
 	local ptsz={1,16,32,64,16,4,8,10,16,32,64,2,0}
 	for i=1, #pts do
+        if #brack=aobl then return t end
 		local pi=pts[i]
 		local sf=strPatCeption(instruction_arr_run,{pi,mtc,mtc2})
 		if #sf>0 then
@@ -1044,7 +1054,11 @@ local function getAccessed(instruction)
 			local sf3_3=sf3[3]
 			local cpos=sf1[3]
 			for j=1, #cpos do
-				instruction_arr_run[ cpos[j] ]=' ' -- REPLACE WITH SPACES!
+				local cpsj=cpos[j]
+                if instruction_arr_run[ cpsj ]=='[' then
+                    table.insert(brack,cpsj)
+                end
+				instruction_arr_run[ cpsj ]=' ' -- REPLACE WITH SPACES!
 			end
 			table.insert(t,{  sf3[1], sf[2][1], { sf3_3[1], sf3_3[#sf3_3]},sf1[1],ptsz[i] })
 		end
