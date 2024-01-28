@@ -75,6 +75,7 @@
 							<option id="nbu">n bit unsigned int</option>
 						</optgroup>
 						<optgroup label="Floating point">
+                            <option id="hff">Half float</option>
 							<option id="flt">Float</option>
 							<option id="dbl">Double</option>
 						</optgroup>
@@ -544,7 +545,7 @@ var mxh=0;
 var mxw=0;
 
 elems.type_view = document.getElementById('type_view');
-elems.type_view.selectedIndex=8; //float
+elems.type_view.selectedIndex=9; //float
 
 var hx_interps={};
 var hx_interps_be={};
@@ -848,6 +849,57 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 						}
 					}
 			}
+		}else if(tp_id==='hff'){ // half float
+            function get_float16(h) {
+                let s = (h & 0x8000) >> 15; 
+                let ss = s?-1:1;
+                let e = (h & 0x7C00) >> 10;
+                let f = h & 0x03FF;
+    
+                if(e === 0){
+                    return ss * (1/16777216) * f;
+                }else if(e === 0x1F){
+                    return f ? NaN : ss*Infinity;
+                }
+
+                return ss * Math.pow(2, e-15) * (1+(f*9765625e-10));
+            }
+				let df=hx_arr_int.length-i;
+				if(df>=2){
+					let rhx=[];
+					if(!be){
+						rhx=get_subarray(hx_arr,i,i+1);
+					}else{
+						rhx=get_subarray(hx_arr,i,i+1,true);
+					}
+					let data = parseInt(rhx.join(''),16);
+					let f=get_float16(data);
+					if( isNaN(f) ){
+						if(typeof hx_interps_curr[tp_name]==='undefined'){
+							hx_interps_curr[tp_name]=[null];
+						}else{
+							hx_interps_curr[tp_name].push(null);
+						}
+					}else{
+						let x=3;
+						let opts={useGrouping: false, minimumFractionDigits: 0, maximumFractionDigits: x};
+						let d=getNoDigits(f);
+						let lb=0.001;
+						let lb2=0.05;
+						if(d>=x || (f<lb2 && f>0) || (f>-lb2 && f<0) ){
+							hx_interps_curr[tp_name].push( [f.toExponential(x),2] );
+						}else{
+							opts.maximumFractionDigits=Math.max(0, x+1-d );
+							hx_interps_curr[tp_name].push( [f.toLocaleString('en-GB',opts),2] );
+						}
+					}
+				}else{
+					if(typeof hx_interps_curr[tp_name]==='undefined'){
+						hx_interps_curr[tp_name]=[null];
+					}else{
+						hx_interps_curr[tp_name].push(null);
+					}
+				}
 		}else if(tp_id==='flt'){ //float
 				let df=hx_arr_int.length-i;
 				if(df>=4){
@@ -988,7 +1040,7 @@ async function makeSpans(i){
 				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
 				let nt=elems.n_count_div.innerText;
 				let tp_name=tp_id+'__'+nt;
-				let isFl=(tp_id==='flt'||tp_id==='dbl')?true:false;
+				let isFl=(tp_id==='hff'||tp_id==='flt'||tp_id==='dbl')?true:false;
 				let cc=hx_interps_curr[tp_name][i];
 				let x=hx_arr_offs[i];
 				let isCol=(tp_id==='col' )?true:false;
