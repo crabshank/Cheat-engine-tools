@@ -124,8 +124,6 @@ function getScoped(forceAll){
 		let vvh_lims=[-vvh_half,vvh+vvh_half];
 		let a=inScope[0];
 		let b=inScope[1];
-		let aa=[];
-		let ba=[];
 		
 		let c=a;
 		let d=b;
@@ -135,7 +133,7 @@ function getScoped(forceAll){
 		let bf=b;
 		let cnt=0;
 		let bi,br;
-		while(cnt<4){
+		while(cnt<2){
 			
 			if(ab>=0){
 				bi=byLine[ab][0];
@@ -144,15 +142,18 @@ function getScoped(forceAll){
 				//r.top=br.top-window.scrollY;
 				r.bottom=br.bottom-window.scrollY;
 				if(r.bottom<vvh_lims[0]){
-					aa[0]=ab+1;
+					a=ab+1;
 					ab=-1;
+					bb=-1;
 					cnt++;
 				}else if(ab===0){
-					aa[0]=0;
+					a=0;
 					ab=-1;
+					bb=-1;
 					cnt++;
+				}else{
+			    	ab--;
 				}
-				ab--;
 			}
 			
 			if(af<byLine_length){
@@ -162,15 +163,18 @@ function getScoped(forceAll){
 				r.top=br.top-window.scrollY;
 				//r.bottom=br.bottom-window.scrollY;
 				if(r.top>vvh_lims[1]){
-					aa[1]=af-1;
+					b=af-1;
 					af=byLine_length;
+					bf=byLine_length
 					cnt++;
 				}else if(af===byLine_length-1){
-					aa[1]=byLine_length-1;
+					b=byLine_length-1;
 					af=byLine_length;
+					bf=byLine_length;
 					cnt++;
+				}else{
+				    af++;
 				}
-				af++;
 			}
 			
 			if(bf<byLine_length){
@@ -180,15 +184,18 @@ function getScoped(forceAll){
 				r.top=br.top-window.scrollY;
 				//r.bottom=br.bottom-window.scrollY;
 				if(r.top>vvh_lims[1]){
-					ba[0]=bf-1;
+					b=bf-1;
 					bf=byLine_length;
+					af=byLine_length
 					cnt++;
 				}else if(bf===byLine_length-1){
-					ba[0]=byLine_length-1;
+					b=byLine_length-1;
 					bf=byLine_length;
+					af=byLine_length
 					cnt++;
+				}else{
+				    bf++;
 				}
-				bf++;
 			}
 			
 			if(bb>=0){
@@ -198,19 +205,20 @@ function getScoped(forceAll){
 				//r.top=br.top-window.scrollY;
 				r.bottom=br.bottom-window.scrollY;
 				if(r.bottom<vvh_lims[0]){
-					ba[1]=bb+1;
+					a=bb+1;
 					bb=-1;
+					ab=-1;
 					cnt++;
 				}else if(bb===0){
-					ba[1]=0;
+					a=0;
 					bb=-1;
+					ab=-1;
 					cnt++;
+				}else{
+			    	bb--;
 				}
-				bb--;
 			}
 		
-				a=Math.min(aa[0],ba[1]);
-				b=Math.max(aa[1],ba[0]);	
 				c=Math.min(inScope[0],a);
 				d=Math.max(inScope[1],b);	
 		}
