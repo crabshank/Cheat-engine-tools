@@ -1030,10 +1030,10 @@ local function getAccessed(instruction)
 	local instruction_arr=string_arr(instruction)
 	local instruction_arr_run=deepcopy(instruction_arr)
 	
-	local ptm='%s+ptr[^%[]*'
+	local ptm='%s+PTR[^%[]*'
 	local mtc='%[%s*[^%]]+%s*%]' -- [...]
 	local mtc2='[^%[%]]+' -- [(...)]
-	local pts={'byte'..ptm..mtc,'xmmword'..ptm..mtc,'ymmword'..ptm..mtc,'zmmword'..ptm..mtc,'dqword'..ptm..mtc,'dword'..ptm..mtc,'qword'..ptm..mtc,'tword'..ptm..mtc,'oword'..ptm..mtc,'yword'..ptm..mtc,'zword'..ptm..mtc,'word'..ptm..mtc,mtc}
+	local pts={'BYTE'..ptm..mtc,'XMMWORD'..ptm..mtc,'YMMWORD'..ptm..mtc,'ZMMWORD'..ptm..mtc,'DQWORD'..ptm..mtc,'DWORD'..ptm..mtc,'QWORD'..ptm..mtc,'TWORD'..ptm..mtc,'OWORD'..ptm..mtc,'YWORD'..ptm..mtc,'ZWORD'..ptm..mtc,'WORD'..ptm..mtc,mtc}
 	local ptsz={1,16,32,64,16,4,8,10,16,32,64,2,0}
 	for i=1, #pts do
 		local pi=pts[i]
@@ -1780,7 +1780,7 @@ end --eof
 local function jumpMemOnly(addr)
 	local dst = disassemble(addr)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	local m=getAccessed(instruction)
+	local m=getAccessed(upperc(instruction))
 	
 	for i=#m, 1, -1 do
 		local mi=m[i]
@@ -2085,7 +2085,7 @@ local function jumpMem(addr)
 			rc=rc+14
 				
 local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
-	local s=instruction_r  -- substitute register names for their spaces
+	local s=deepcopy(instruction_r)  -- substitute register names for their spaces
 	--local sd=instruction_r -- substitute register names for their decimals
 	local present_r={}
 	local present_r_lookup={}
@@ -2137,7 +2137,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 		local prl=#present_r
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
+		local asc=getAccessed(instruction_r) -- get memory "[...]" syntax matches
 		local ascl=#asc
 		ja=ascl
 		jb=1
@@ -2717,7 +2717,7 @@ local function onBp()
 
 					-- EXTRA SUB-REGISTERS
 					local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
-					local s=instruction_r  -- substitute register names for their spaces
+					local s=deepcopy(instruction_r)  -- substitute register names for their spaces
 					--local sd=instruction_r -- substitute register names for their decimals
 					local present_r={}
 					local present_r_lookup={}
@@ -2832,7 +2832,7 @@ local function onBp()
 					
 					local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 					--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-					local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
+					local asc=getAccessed(instruction_r) -- get memory "[...]" syntax matches
 					local m_acc={}
 					local reffed_instruction=instruction
 					local accessed_addrs={}
@@ -3442,7 +3442,7 @@ local function onCondBp()
 	
 		-- EXTRA SUB-REGISTERS
 	local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
-	local s=instruction_r  -- substitute register names for their spaces
+	local s=deepcopy(instruction_r)  -- substitute register names for their spaces
 	--local sd=instruction_r -- substitute register names for their decimals
 	local present_r={}
 	local present_r_lookup={}
@@ -3588,7 +3588,7 @@ local function onCondBp()
 		--print('HIT!')
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(instruction) -- get memory "[...]" syntax matches
+		local asc=getAccessed(instruction_r) -- get memory "[...]" syntax matches
 		local reffed_instruction=instruction
 		
 		local maxPtrSize=0
