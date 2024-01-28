@@ -1045,7 +1045,7 @@ local function getAccessed(instruction)
 	local pts={'BYTE'..ptm..mtc,'XMMWORD'..ptm..mtc,'YMMWORD'..ptm..mtc,'ZMMWORD'..ptm..mtc,'DQWORD'..ptm..mtc,'DWORD'..ptm..mtc,'QWORD'..ptm..mtc,'TWORD'..ptm..mtc,'OWORD'..ptm..mtc,'YWORD'..ptm..mtc,'ZWORD'..ptm..mtc,'WORD'..ptm..mtc,mtc}
 	local ptsz={1,16,32,64,16,4,8,10,16,32,64,2,0}
 	for i=1, #pts do
-        if #brack=aobl then return t end
+        if #brack==aobl then return t end
 		local pi=pts[i]
 		local sf=strPatCeption(instruction_arr_run,{pi,mtc,mtc2})
 		if #sf>0 then
