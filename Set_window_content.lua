@@ -12,6 +12,7 @@ local function setMember(v,t,n)
 	for i=1,lt do
 		if i==lt then
 			out[ t[i] ]=n
+			return
 		else
 			out=out[ t[i] ]
 		end
