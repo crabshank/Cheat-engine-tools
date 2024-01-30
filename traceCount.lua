@@ -5,9 +5,11 @@ frm.hx=frm.HexadecimalView
 local trace_w={nil,nil} --form,label
 
 local print=print
+local string=string
 local upperc=string.upper
 local string_gmatch=string.gmatch
 local string_match=string.match
+local string_find=string.find
 
 local condBpProg=false
 local condBpAddr={}
@@ -145,7 +147,7 @@ local function str_allPosPlain(s,p)
 	local c=1
 	local brk=false
 	while brk==false do
-		  local fa,fb=string.find(s,p,c,true)
+		  local fa,fb=string_find(s,p,c,true)
 		  if fa~=nil then
 			c=fa+1
 			table.insert(t,{fa,fb})
@@ -776,7 +778,7 @@ local function tprint(tbl, indent)
 	  elseif typv == 'boolean' then
 		print(formatting .. tostring(v))
 	  elseif typv == 'string' then
-		local la, lb=string.find(v, "\n")
+		local la, lb=string_find(v, "\n")
 		if la==nil then
 			print(formatting .. '"'.. v ..'"')
 		else
@@ -921,7 +923,7 @@ end
 local function plainSplitKeep(str,ptrn) -- coronalabs.com | https://stackoverflow.com/a/19263313
 	local out = {}
 	local strt_pos = 1
-	local sp_start, sp_end = string.find(str, ptrn, strt_pos,true)
+	local sp_start, sp_end = string_find(str, ptrn, strt_pos,true)
 
 	while sp_start do
 		local sa=string.sub(str, strt_pos, sp_start-1)
@@ -930,7 +932,7 @@ local function plainSplitKeep(str,ptrn) -- coronalabs.com | https://stackoverflo
 		end
 		table.insert( out, string.sub(str, sp_start, sp_end) )
 		strt_pos = sp_end + 1
-		sp_start, sp_end = string.find(str, ptrn, strt_pos,true)
+		sp_start, sp_end = string_find(str, ptrn, strt_pos,true)
 	end
 
 	local sl=string.sub( str, strt_pos )
@@ -1009,7 +1011,7 @@ local function strPatCeption(s,t,og)
 		local fnd_i={'',{},{}}
 		
 		if i==1 then
-			local fa,fb=string.find(str,ti)
+			local fa,fb=string_find(str,ti)
 			if fa==nil then
 				break
 			else
@@ -1024,7 +1026,7 @@ local function strPatCeption(s,t,og)
 			local lst=i-1
 			local flst=fnds[lst]
 			local flst_st=flst[3][1]
-			local fa,fb=string.find(flst[1],ti)
+			local fa,fb=string_find(flst[1],ti)
 			if fa==nil then
 				break
 			else
@@ -2132,7 +2134,7 @@ local instruction_r=upperc(instruction_rb)
 	
 	for i=1, #registers['list_regs'] do
 		local regs_pos={}
-		if string.find(s,'%u')~=nil then
+		if string_find(s,'%u')~=nil then
 			local fnd=false
 			local ri=registers['list_regs'][i][1] --check for presence of register
 			local ri_fnd=ri
@@ -2195,7 +2197,7 @@ local instruction_r=upperc(instruction_rb)
 			local mtc_hex="%x+"
 			local brk=false
 			while brk==false do
-				  local fa,fb=string.find(s,mtc_hex,c)
+				  local fa,fb=string_find(s,mtc_hex,c)
 				  if fa~=nil then
 					 sa[fa]='0x'..sa[fa]
 					 c=fb+1
@@ -2313,7 +2315,7 @@ local function onLiteBp()
 						if liteTrace_lookup[RIPx]==nil then
 									local dss = disassemble(RIP)
 									local extraField, instruction, bytes, address = splitDisassembledString(dss)
-									local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
+									local la,lb=string_find( instruction,"^%s*rep[^%s]*%s+")
 									liteTrace_lookup[RIPx]={true,instruction,la}
 						else --seen before
 							if liteTrace_lookup[RIPx][3]==nil then
@@ -2482,14 +2484,14 @@ local function onBp_rw_proc(addr)
 					local hlk=hits_lookup[RIPx]
 					local dst = disassemble(addr)
 					local extraField, instruction, bytes, address = splitDisassembledString(dst)
-					local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
+					local la,lb=string_find( instruction,"^%s*rep[^%s]*%s+")
 					hits_lookup[RIPx]={hit_no,{ix},la}
 
 					local deref={['hit_address']=RIPx}
 					
 				if stp==2 then
 						mri_isCall=false
-						if string.find(instruction,'^%s*call%s+')~=nil then
+						if string_find(instruction,'^%s*call%s+')~=nil then
 							mri_isCall=true
 						end
 				end
@@ -2505,7 +2507,7 @@ local function onBp_rw_proc(addr)
 					
 					for i=1, #registers['list_regs'] do
 						local regs_pos={}
-						if string.find(s,'%u')~=nil then
+						if string_find(s,'%u')~=nil then
 							local fnd=false
 							local lri=registers['list_regs'][i] --check for presence of register
 							local ri=lri[1] --check for presence of register
@@ -2713,7 +2715,7 @@ local function onBp()
 						hlk[1]=hit_no
 						table.insert(hits_lookup[RIPx][2],ix)
 					else --nil
-						local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
+						local la,lb=string_find( instruction,"^%s*rep[^%s]*%s+")
 						hits_lookup[RIPx]={hit_no,{ix},la}
 					end
 
@@ -2750,7 +2752,7 @@ local function onBp()
 						end
 						
 						mri_isCall=false
-						if string.find(instruction,'^%s*call%s+')~=nil then
+						if string_find(instruction,'^%s*call%s+')~=nil then
 							mri_isCall=true
 						end
 				end
@@ -2770,7 +2772,7 @@ local function onBp()
 					local maxRegSize=0
 					for i=1, #registers['list_regs'] do
 						local regs_pos={}
-						if string.find(s,'%u')~=nil then
+						if string_find(s,'%u')~=nil then
 							local fnd=false
 							local lri=registers['list_regs'][i] --check for presence of register
 							local ri=lri[1] --check for presence of register
@@ -2825,9 +2827,9 @@ local function onBp()
 						end
 					end
                     
-                    if string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<64 then
+                    if string_find(instruction_r,'ZMM%d+')~=nil and maxRegSize<64 then
                         maxRegSize=64
-                    elseif string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
+                    elseif string_find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
                         maxRegSize=32
                     end
 					
@@ -2900,7 +2902,7 @@ local function onBp()
 						local brk=false
 
 						while brk==false do
-							  local fa,fb=string.find(s,mtc_hex,c)
+							  local fa,fb=string_find(s,mtc_hex,c)
 							  if fa~=nil then
 								 sa[fa]='0x'..sa[fa]
 								 c=fb+1
@@ -3479,7 +3481,7 @@ local function onCondBp()
 					if cvp>0 then
 						for k=1, cvp do
 							local pk=condBpVals.opc[k]
-							if string.find(instruction,pk)~=nil then
+							if string_find(instruction,pk)~=nil then
 								breakHere={true, 'Instruction pattern match'}
 								break
 							end		
@@ -3498,7 +3500,7 @@ local function onCondBp()
 	
 	for i=1, #registers['list_regs'] do
 		local regs_pos={}
-		if string.find(s,'%u')~=nil then
+		if string_find(s,'%u')~=nil then
 			local fnd=false
 			lri=registers['list_regs'][i] --check for presence of register
 			local ri=lri[1]
@@ -3553,9 +3555,9 @@ local function onCondBp()
 		end
 	end
 	
-    if string.find(instruction_r,'ZMM%d+')~=nil and maxRegSize<64 then
+    if string_find(instruction_r,'ZMM%d+')~=nil and maxRegSize<64 then
         maxRegSize=64
-    elseif string.find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
+    elseif string_find(instruction_r,'YMM%d+')~=nil and maxRegSize<32 then
         maxRegSize=32
     end
     
@@ -3598,7 +3600,7 @@ local function onCondBp()
 						if cvs>0 then
 							for k=1, cvs do
 								local vk=condBpVals.str[k]
-								if string.find(rg['aob_str'],vk,1,true)~=nil then
+								if string_find(rg['aob_str'],vk,1,true)~=nil then
 									breakHere={true, 'AOB match in register ('..ri..')'}
 									break
 								end		
@@ -3656,7 +3658,7 @@ local function onCondBp()
 			local mtc_hex="%x+"
 			local brk=false
 			while brk==false do
-				  local fa,fb=string.find(s,mtc_hex,c)
+				  local fa,fb=string_find(s,mtc_hex,c)
 				  if fa~=nil then
 					 sa[fa]='0x'..sa[fa]
 					 c=fb+1
@@ -3799,7 +3801,7 @@ if breakHere[1]~=true then
 					
 						for k=ja, jb, jc do
 							local vk=condBpVals.str[k]
-							if string.find(v[4],vk,1,true)~=nil then
+							if string_find(v[4],vk,1,true)~=nil then
 							if chkMem_last[key]~=nil then
 								if chkMem_last[key][4]~=v[4] then
 									breakHere={true, 'AOB match at memory address',v[5]}
@@ -3943,7 +3945,7 @@ local function findWrite(n,aobs,m,b,f,p)
 				local lst=getPreviousOpcode(rd)
 				local dst = disassemble(lst)
 				local extraField, instruction, bytes, address = splitDisassembledString(dst)
-				if isRet[1]==true and findWriteLookup[dx]==nil and string.find(instruction,"^%s*call%s+")~=nil then
+				if isRet[1]==true and findWriteLookup[dx]==nil and string_find(instruction,"^%s*call%s+")~=nil then
 					table.insert(findWriteToAttach,rd)
 					findWriteLookup[dx]=#findWriteToAttach
 					table.insert(stackBPs,string.format("\t'%s'",isRet[2]))
@@ -4040,15 +4042,15 @@ local function onFindWriteBp()
 						isCall=false
 						isRep=false
 						
-						if string.find(instruction,"%s+ret%s*$")~=nil or string.find(instruction,"^%s*ret%s*$")~=nil then
+						if string_find(instruction,"%s+ret%s*$")~=nil or string_find(instruction,"^%s*ret%s*$")~=nil then
 							isRet=true
 						end
 						
-						if string.find(instruction,"^%s*call%s+")~=nil then
+						if string_find(instruction,"^%s*call%s+")~=nil then
 							isCall=true
 						end
 						
-						local la,lb=string.find( instruction,"^%s*rep[^%s]*%s+")
+						local la,lb=string_find( instruction,"^%s*rep[^%s]*%s+")
 						if la~=nil then
 							isRep=true
 						end
@@ -4057,7 +4059,7 @@ local function onFindWriteBp()
 							local pl=#findWritePatts
 							if pl>0 then
 								for i=1,pl do
-									if string.find(instruction,findWritePatts[i])~=nil then
+									if string_find(instruction,findWritePatts[i])~=nil then
 										isPatt=true
 										break
 									end
