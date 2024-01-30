@@ -976,15 +976,31 @@ local function get_substring_tbl(t, strt, ed)
 	return table.concat(ss,'')
 end
 
-local function strPatCeption(s,t)
-	local str, stt
+local function strPatCeption(s,t,og)
+	local str, stt --str gets searched (STRING!), stt is an array of the output (TABLE!)
 	local tys=type(s)
+	local ty_og=type(og)
+	
 	if tys=='string' then
 		str=s
-		stt=string_arr(str)
 	elseif tys=='table' then
 		str=table.concat(s,'')
-		stt=s
+	else
+		return {}
+	end
+	
+	if ty_og=='string' then
+		stt=string_arr(og)
+	elseif ty_og=='table' then
+		stt=og
+	elseif og==nil then
+		if tys=='string' then
+			stt=string_arr(s)
+		elseif tys=='table' then
+			stt=s
+		else
+			return {}
+		end
 	end
 	
 	local fnds={}
@@ -1025,18 +1041,25 @@ local function strPatCeption(s,t)
 	return fnds
 end
 
-local function getAccessed(instruction)
+local function getAccessed(instruction,instruction_upper)
+	--if instruction_upper==nil then 1st argument is uppercase already
 	local t={}
     local allOB={}
 	local instruction_arr=string_arr(instruction)
-    for i=1, #instruction_arr do
-        if instruction_arr[i] =='[' then
+	local instruction_arr_upper
+	if instruction_upper==nil then
+		instruction_arr_upper=deepcopy(instruction_arr)
+	else
+		 instruction_arr_upper=string_arr(instruction_upper)
+	end
+    for i=1, #instruction_arr_upper do
+        if instruction_arr_upper[i] =='[' then
             table.insert(allOB,i)
         end
     end
     local aobl=#allOB
     if aobl==0 then return t end
-	local instruction_arr_run=deepcopy(instruction_arr)
+	local instruction_arr_run=deepcopy(instruction_arr_upper)
 	local brack={}
     
 	local ptm='%s+PTR[^%[]*'
@@ -1047,7 +1070,7 @@ local function getAccessed(instruction)
 	for i=1, #pts do
         if #brack==aobl then return t end
 		local pi=pts[i]
-		local sf=strPatCeption(instruction_arr_run,{pi,mtc,mtc2})
+		local sf=strPatCeption(instruction_arr_run,{pi,mtc,mtc2},instruction_arr)
 		if #sf>0 then
 			local sf1=sf[1]
             local sf3=sf[3]
@@ -1794,7 +1817,9 @@ end --eof
 local function jumpMemOnly(addr)
 	local dst = disassemble(addr)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	local m=getAccessed(upperc(instruction))
+	local instruction_rb=string_match(instruction,'[^%s]+%s*(.*)')
+	local instruction_r=upperc(instruction_rb)
+	local m=getAccessed(instruction_rb,instruction_r)
 	
 	for i=#m, 1, -1 do
 		local mi=m[i]
@@ -2098,7 +2123,8 @@ local function jumpMem(addr)
 			writeBytes(currRegsAddr+( rc+4 ),FP7)
 			rc=rc+14
 				
-local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+local instruction_rb=string_match(instruction,'[^%s]+%s*(.*)')
+local instruction_r=upperc(instruction_rb)
 	local s=deepcopy(instruction_r)  -- substitute register names for their spaces
 	--local sd=instruction_r -- substitute register names for their decimals
 	local present_r={}
@@ -2151,7 +2177,7 @@ local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
 		local prl=#present_r
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(instruction_r) -- get memory "[...]" syntax matches
+		local asc=getAccessed(instruction_rb,instruction_r) -- get memory "[...]" syntax matches
 		local ascl=#asc
 		ja=ascl
 		jb=1
@@ -2471,7 +2497,10 @@ local function onBp_rw_proc(addr)
 					--Get accessed memory addresses
 
 					-- EXTRA SUB-REGISTERS
-					local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+
+					local instruction_rb=string_match(instruction,'[^%s]+%s*(.*)')
+					local instruction_r=upperc(instruction_rb)
+
 					local s=instruction_r  -- substitute register names for their spaces
 					
 					for i=1, #registers['list_regs'] do
@@ -2730,7 +2759,10 @@ local function onBp()
 					--Get accessed memory addresses
 
 					-- EXTRA SUB-REGISTERS
-					local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+
+					local instruction_rb=string_match(instruction,'[^%s]+%s*(.*)')
+					local instruction_r=upperc(instruction_rb)
+					
 					local s=deepcopy(instruction_r)  -- substitute register names for their spaces
 					--local sd=instruction_r -- substitute register names for their decimals
 					local present_r={}
@@ -2846,7 +2878,7 @@ local function onBp()
 					
 					local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 					--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-					local asc=getAccessed(instruction_r) -- get memory "[...]" syntax matches
+					local asc=getAccessed(instruction_rb,instruction_r) -- get memory "[...]" syntax matches
 					local m_acc={}
 					local reffed_instruction=instruction
 					local accessed_addrs={}
@@ -3455,7 +3487,9 @@ local function onCondBp()
 					end
 	
 		-- EXTRA SUB-REGISTERS
-	local instruction_r=upperc(string_match(instruction,'[^%s]+%s*(.*)'))
+	local instruction_rb=string_match(instruction,'[^%s]+%s*(.*)')
+	local instruction_r=upperc(instruction_rb)
+	
 	local s=deepcopy(instruction_r)  -- substitute register names for their spaces
 	--local sd=instruction_r -- substitute register names for their decimals
 	local present_r={}
@@ -3602,7 +3636,7 @@ local function onCondBp()
 		--print('HIT!')
 		local asc_nr=getAccessed(s) -- get memory "[...]" syntax matches with spaces in place of registers
 		--local asc_d=getAccessed(sd) -- get memory "[...]" syntax matches in decimal
-		local asc=getAccessed(instruction_r) -- get memory "[...]" syntax matches
+		local asc=getAccessed(instruction_rb,instruction_r) -- get memory "[...]" syntax matches
 		local reffed_instruction=instruction
 		
 		local maxPtrSize=0
