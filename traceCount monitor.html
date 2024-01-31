@@ -54,6 +54,7 @@ body {
   var meta_mems=[];
   var mems_chk={};
   var inScope=[0,0];
+  var inView=[0,0,false,false];
   var byLine=[];
   var byLine_length=0;
   var currScope=false;
@@ -116,7 +117,7 @@ function recalcBounds(){
 	}`;
 }
 
-function getScoped(forceAll){
+function getScoped(){
 	if (currScope===false){
 		currScope=true;
 		let vvh=window.visualViewport.height;
@@ -124,7 +125,9 @@ function getScoped(forceAll){
 		let vvh_lims=[-vvh_half,vvh+vvh_half];
 		let a=inScope[0];
 		let b=inScope[1];
-		
+		inView[2]=true;
+        inView[3]=true;
+        
 		let c=a;
 		let d=b;
 		let ab=a;
@@ -141,6 +144,12 @@ function getScoped(forceAll){
 				let r={};
 				//r.top=br.top-window.scrollY;
 				r.bottom=br.bottom-window.scrollY;
+                
+                if(ab===0 || (r.bottom<0 && inView[2]===true)){
+                    inView[0]= ab===0 ? 0 : ab+1;
+                    inView[2]=false;
+                }
+                
 				if(r.bottom<vvh_lims[0]){
 					a=ab+1;
 					ab=-1;
@@ -162,6 +171,12 @@ function getScoped(forceAll){
 				let r={};
 				r.top=br.top-window.scrollY;
 				//r.bottom=br.bottom-window.scrollY;
+                
+                if(af===byLine_length-1 || (r.top>vvh && inView[3]===true)){
+                    inView[1]= af===byLine_length-1 ? byLine_length-1 : af-1;
+                    inView[3]=false;
+                }
+                
 				if(r.top>vvh_lims[1]){
 					b=af-1;
 					af=byLine_length;
@@ -183,6 +198,12 @@ function getScoped(forceAll){
 				let r={};
 				r.top=br.top-window.scrollY;
 				//r.bottom=br.bottom-window.scrollY;
+                
+                if(bf===byLine_length-1 || (r.top>vvh && inView[3]===true)){
+                    inView[1]= bf===byLine_length-1 ? byLine_length-1 : bf-1;
+                    inView[3]=false;
+                }
+                
 				if(r.top>vvh_lims[1]){
 					b=bf-1;
 					bf=byLine_length;
@@ -204,6 +225,12 @@ function getScoped(forceAll){
 				let r={};
 				//r.top=br.top-window.scrollY;
 				r.bottom=br.bottom-window.scrollY;
+                
+                 if(bb===0 || (r.bottom<0 && inView[2]===true)){
+                    inView[0]= bb===0 ? 0 : bb+1;
+                    inView[2]=false;
+                }
+                
 				if(r.bottom<vvh_lims[0]){
 					a=bb+1;
 					bb=-1;
@@ -239,7 +266,10 @@ function getScoped(forceAll){
 				}
 		}
 		inScope=[a,b];
+        inView[2]=false;
+        inView[3]=false;
 		currScope=false;
+        getNextCheck();
 	}
 }
 
@@ -252,8 +282,10 @@ function do_Scroll(e){
 do_Scroll();
 
 window.onresize=(e)=>{
-	 recalcBounds();
-	 getScoped(true);
+    try{
+        recalcBounds();
+        getScoped();
+     }catch(e){;}
 };
 
 function scrollEvt(e){
@@ -395,7 +427,6 @@ let allChk=[];
 let ntes=[];
 let checkBytes=[];
 let checkMeta=[];
-let lastCheckVal=null;
 
 function insertText(tx,sta,mtc,bfr){
 
@@ -409,21 +440,7 @@ function insertText(tx,sta,mtc,bfr){
     return sta;
 }
 
-function setLastCheck(v){
-		lastCheckVal=v;
-		if(v!==null){
-			if(!rvc.checked){
-				check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${v}].scrollIntoView();">#${v+1}</span>`;
-			}else{
-				check_info.innerHTML=`First checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${v}].scrollIntoView();">#${v+1}</span>`;
-			}
-			check_info.style.display='initial';
-		}else{
-			check_info.style.display='none';
-		}
-}
-
-function getLastCheck(){
+function getNextCheck(){
     let chk=[...document.querySelectorAll('input[type="checkbox"]:checked')].filter(c=>{return c!==rvc});
     let ckl=chk.length;
     let d='none'; 
@@ -433,21 +450,25 @@ function getLastCheck(){
 			for(let i=0; i<ckl; ++i){
 				let ci=chk[i];
 				let n=parseInt(ci.getAttribute('ln'));
-				mx=(n>mx || mx==null)?n:mx;
+                if(n>=inView[0]){
+                    mx=n;
+                    break;
+                }
 			}
 			d='initial';
-			check_info.innerHTML=`Last checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx+1}</span>`;
-			lastCheckVal=mx;
+			check_info.innerHTML=`Next checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mx}].scrollIntoView();">#${mx+1}</span>`;
 		}else{
 			let mn=null;
 			for(let i=ckl-1; i>=0; --i){
 				let ci=chk[i];
 				let n=parseInt(ci.getAttribute('ln'));
-				mn=(n<mn || mn==null)?n:mn;
+                if(n<=inView[1]){
+                    mn=n;
+                    break;
+                }
 			}
 			d='initial';
-			check_info.innerHTML=`First checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mn}].scrollIntoView();">#${mn+1}</span>`;
-			lastCheckVal=mn;
+			check_info.innerHTML=`Next checked line:<br><span title="Click to scroll to" class="memLink" onclick="ntes[${mn}].scrollIntoView();">#${mn+1}</span>`;
 		}
     }
 	
@@ -498,9 +519,10 @@ function popArrs(){
 		checkBytes=[];
 		checkMeta=[];
 		inScope=[0,0];
+        inView=[0,0,false,false];
 		byLine=[];
 		
-		let nts=pre_el.getElementsByClassName('notes');
+		let nts=pre_el.querySelectorAll('.notes');
         ntes=[];
         for(let k=0, len_k=nts.length;k<len_k;k++){
                 let nk=nts[k];
@@ -514,7 +536,7 @@ function popArrs(){
             }
         
         //click on meta mem - all byte ixs for each
-        	let ckbt=pre_el.getElementsByClassName('mem_check_byte');
+        	let ckbt=pre_el.querySelectorAll('.mem_check_byte');
             let ckbs=[];
             for(let k=0, len_k=ckbt.length;k<len_k;k++){
                 let ckb=ckbt[k];
@@ -529,7 +551,7 @@ function popArrs(){
                ckbs[x]=ckb;
             }
             
-            let ckm=pre_el.getElementsByClassName('mem_check_meta');
+            let ckm=pre_el.querySelectorAll('.mem_check_meta');
         
 		for(let k=0, len_k=ckm.length;k<len_k;k++){
 			let ckmk=ckm[k];
@@ -551,7 +573,7 @@ function popArrs(){
 			}
 		}
         
-        let ck=pre_el.getElementsByClassName('reg_check');
+        let ck=pre_el.querySelectorAll('.reg_check');
 		for(let k=0, len_k=ck.length;k<len_k;k++){
 			let ckk=ck[k];
 			let x=parseInt(ckk.getAttribute('ovr_occ'));
@@ -581,13 +603,12 @@ function popArrs(){
 [ln].show2{
 	display:inline-block;
 }`;
-		
-		getScoped(true);
+
 }
 
 function chkClick_mem(event,isMeta){
     do_chkClick_mem(event,isMeta);
-    getLastCheck();
+    getNextCheck();
 }
 
 function chkClick(event){
@@ -606,7 +627,7 @@ function chkClick(event){
 			allChk[ocs[i]].checked=flg;
 		}
 	}
-    getLastCheck();
+    getNextCheck();
 }
 
 registers['list_regs_len']= registers['list_regs'].length;
@@ -786,7 +807,6 @@ registers['list_regs_len']= registers['list_regs'].length;
 		pre_el.innerHTML=preText;
 		
 		popArrs();
-	
 	}
 		
 async function loadProc(str){
@@ -817,8 +837,8 @@ async function loadProc(str){
 		let d5i=d5[i];
 		checkBytes[d5i].checked=true;
 	}
-	setLastCheck(d[6]);
-	registers['list_regs']=d[7];
+	registers['list_regs']=d[6];
+    getScoped();
 }
 		
 save_json.addEventListener('click',  async function () {
@@ -826,18 +846,17 @@ save_json.addEventListener('click',  async function () {
 		let d=[];
 		d[0]=rvc.checked;
 		d[1]=preText;
-			let nts=[...document.getElementsByClassName('notes')];
+			let nts=[...document.querySelectorAll('.notes')];
 			let ntsPop=nts.filter(n=>{return n.innerText!==''}).map(n=>{return [parseInt(n.getAttribute('ln')),n.innerText]});
 		d[2]=ntsPop; //non-empty notes
 			let chk=[...document.querySelectorAll('input[type="checkbox"]:checked')];
-				let chk_reg=chk.filter(c=>{return c.className==='reg_check'}).map(n=>{return parseInt(n.getAttribute('ovr_occ'))});
-				let chk_memMeta=chk.filter(c=>{return c.className==='mem_check_meta'}).map(n=>{return parseInt(n.getAttribute('meta_mem'))});
-				let chk_memByte=chk.filter(c=>{return c.className==='mem_check_byte'}).map(n=>{return parseInt(n.getAttribute('mem_ix'))});
+				let chk_reg=chk.filter(c=>{return c.classList.contains('reg_check');}).map(n=>{return parseInt(n.getAttribute('ovr_occ'))});
+				let chk_memMeta=chk.filter(c=>{return c.classList.contains('mem_check_meta');}).map(n=>{return parseInt(n.getAttribute('meta_mem'))});
+				let chk_memByte=chk.filter(c=>{return c.classList.contains('mem_check_byte');}).map(n=>{return parseInt(n.getAttribute('mem_ix'))});
 		d[3]=chk_reg;
 		d[4]=chk_memMeta;
 		d[5]=chk_memByte;
-		d[6]=lastCheckVal;
-		d[7]= registers['list_regs'];
+		d[6]= registers['list_regs'];
 	let dlb_a=document.createElement('a');
 	save_json.insertAdjacentElement('beforebegin',dlb_a);
 	let nm=fileName.split('.json').join('')+'.json';
@@ -856,7 +875,7 @@ save_json.addEventListener('click',  async function () {
 	 var fr = new FileReader();
 	 fr.onload = function () {
 		let isJSON=fileName.endsWith('.json') ? true : false;
-		setLastCheck(null);
+        check_info.style.display='none';
 		rvc.checked=false;
 		let str = this.result;
 		isRN=(str.split('\r\n').length>=str.split('\n').length)?true:false;
