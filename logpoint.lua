@@ -547,9 +547,14 @@ local function dumpRegistersChrono(k,bin,f)
 				local rivc=riv[cc2]
 				local x=rivc[1]
 				local x6=rivc[6]
-				if (bny==1 or bny==2) and x6~=nil then 
-					x=x6 
+				local x7=rivc[7]
+				
+				if x6~=nil then
+					if (bny==1 and x7~=true) or (bny==2 and x7~=false) then
+						x=x6
+					end
 				end
+				
 				ptct='#'..cnt..' - '..rivc[4]..'('..ak['address_hex']..' - #'..kt_cnt[tix]..') '..rivc[3]..':\t'..x
 				table.insert(jmpTbl,rivc[2])
 				if pth~=nil then
@@ -751,9 +756,8 @@ local function onBp(rw,noRun)
 				-- EXTRA SUB-REGISTERS
 			
 			ar=abpx.regs
-			if #ar==0 then
-				print(RIPx..' hit!') 
-			end
+			local isFirst=false
+			if #ar==0 then isFIrst=true end
 			arc=ar.counts
 			local addedLines=0
 			local prfx=''
@@ -941,7 +945,9 @@ local function onBp(rw,noRun)
 									debug_continueFromBreakpoint(co_run)
 								end		
 							end
-
+			if #ar>0 and isFIrst==true then
+				print(RIPx..' hit!') 
+			end
 end
 
 local function attachLpAddr(atb,c,bpst,cnt)
