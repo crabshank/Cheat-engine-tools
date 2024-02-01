@@ -95,7 +95,8 @@ wfm.set= function (i,z)
 		end
 	end
 	
-	for j=i, i+z-1 do
+	local tz=#wfm.table
+	for j=i, math.min(i+z-1,tz) do
 		debug_setBreakpoint(wfm.table[j].Address, 1, bptExecute, bpmDebugRegister, function()
 			local wjn=wfm.table[j].Name
 			local wjnh=wfm.hits[wjn]
