@@ -916,8 +916,10 @@ local function onBp(rw,noRun)
 				if addedLines>1 or isRetLog==true then
 					if isRetLog==true and isRet==true then
 						ar[#ar][1]=ar[#ar][1]..'\n\n'
+						ar[#ar][6]=ar[#ar][6]..'\n\n'
 					else
 						ar[#ar][1]=ar[#ar][1]..'\n'
+						ar[#ar][6]=ar[#ar][6]..'\n'
 					end
 				end
 				restoreGlobals()
