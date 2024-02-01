@@ -29,6 +29,28 @@ local function trim_str(s)
 	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
 end
 
+local function string_arr(s)
+	local spl={}
+	local sl=string.len(s)
+	for i=1, sl do
+		table.insert(spl,string.sub(s,i,i))
+	end
+	return spl
+end
+
+local function trim_str_nl(s)
+	local st=string_arr(s)
+	for i=#st, 1, -1 do
+		local si=st[i]
+		if si=='\n' then
+			st[i]=''
+		else
+			break
+		end
+	end
+	return table.concat(st,'')
+end
+
 local function tableToAOB_esc(t)
 	local out={}
 	for i=1, #t do
@@ -455,9 +477,16 @@ local function dumpRegisters(bin,f,k)
 								x=x6
 							end
 						end
+						if i==rivl and j==ks then
+							x=trim_str_nl(x)
+						end
 						ptct=riv[i][4]..'#'..i..' '..riv[i][3]..':\t'..x
 						if pth~=nil then
-							pth:write(ptct..'\n')
+							if i==rivl and j==ks then
+								pth:write(ptct)
+							else
+								pth:write(ptct..'\n')
+							end
 						else
 							print(ptct)
 						end
@@ -465,7 +494,9 @@ local function dumpRegisters(bin,f,k)
 				end
 				if c==true and bny~=1 then
 						if pth~=nil then
-							pth:write('\n')
+							if j~=ks then
+								pth:write('\n')
+							end
 						else
 							print('')
 						end
@@ -535,6 +566,7 @@ local function dumpRegistersChrono(k,bin,f)
 	
 		local cl=#chrono
 		local cnt=0
+		local lst=nil
 		for c=1, cl do
 			local cc1=chrono[c][1]
 			local tix=table_ix(kt,cc1)
@@ -554,20 +586,27 @@ local function dumpRegistersChrono(k,bin,f)
 						x=x6
 					end
 				end
-				
-				ptct='#'..cnt..' - '..rivc[4]..'('..ak['address_hex']..' - #'..kt_cnt[tix]..') '..rivc[3]..':\t'..x
+				x=trim_str_nl(x)
+				local nl=''
+				if lst~=nil and ak['address_hex']~=lst then nl='\n' end
+				lst=ak['address_hex']
+				ptct=nl..'#'..cnt..' - '..rivc[4]..'('..ak['address_hex']..' - #'..kt_cnt[tix]..') '..rivc[3]..':\t'..x
 				table.insert(jmpTbl,rivc[2])
 				if pth~=nil then
-					pth:write(ptct..'\n')
+					if c==cl then
+						pth:write(ptct)
+					else
+						pth:write(ptct..'\n')
+					end
 				else
 					print(ptct)
 				end
 			end
 		end
-	if pth~=nil then
-		io.close(pth)
-		print('Logs saved!')
-	end
+		if pth~=nil then
+			io.close(pth)
+			print('Logs saved!')
+		end
 	end
 end
 
