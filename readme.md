@@ -40,7 +40,7 @@ local function filt (v,k,t)
 	local la,lb=string.find(v.Name,'open')
 	return la~=nil
 end
-local tf=table_filter(s,filt) -- contains all entries that satisfy the condition
+local tf=table_filter(s,filt) -- contains all entries that satisfy the condition(s)
 ```
 
 * **table_map(t,f)**
@@ -67,7 +67,7 @@ end
 local function mapf (v,k,t)
 	return v[1]
 end
-local tm=table_map({{6,9},{60,90}},mapf) --contains map
+local tm=table_map({{6,9},{60,90}},mapf) -- contains map
 ```
 
 ## Set_window_content.lua
