@@ -167,7 +167,7 @@ local function userdata_table(v)
 				end
 					cnt=cnt+1
 				end
-				
+
 				for i=1, #plt do
 					local pi=plt[i]
 					--local d=pi['data']
@@ -208,7 +208,7 @@ local function userdata_table(v)
 						end
 						runEl=runEl[pj]
 					end
-					
+
 				end
 				local pltRet=pltFinal
 				if act_vn_Name==true then
@@ -224,12 +224,14 @@ function tprint(tbl, indent)
 
 	local function actualPrint(k,v,indent,notTable,do_tprint,zero)
 		local formatting=''
-			
+
 		if notTable~=true or zero==true then
 			formatting = string.rep("	", indent) .. k .. ": "
 		 end
 		  local typv=type(v)
-		  if typv == "table" then
+		  if v == nil then
+			print(formatting..'nil')
+		  elseif typv == "table" then
 			local ln=pairsLen(v)
 			if ln<1 then
 				print(formatting..'{}')
@@ -257,7 +259,10 @@ function tprint(tbl, indent)
 	end
 
   local function do_tprint(tbl, indent,notTable) -- https://gist.github.com/ripter/4270799
-	if notTable==true then
+	if tbl==nil then
+		actualPrint(nil,nil,indent,true,do_tprint)
+		return
+	elseif notTable==true then
 		tbl={tbl}
 		indent = 0
 	else
