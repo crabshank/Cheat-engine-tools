@@ -1001,9 +1001,11 @@ local function attachLpAddr(atb,c,bpst,cnt)
 	local cu={}
 	local cu_syntx={}
 	local mtc='%[%s*([^%]]+)%s*%]' -- [(...)]
-	local mtcd='%[%s*[^%]]+%s*%]%(%s*([^%,]+%s*%,%s*[^%)]+)%s*%)' -- [...]((...,...))
+	local mtcd='%[%s*[^%]]+%s*%]%(([^%,]*%,.*)%)' -- [...]((...,...))
 	local mtcd1='([^%,]+)%s*%,' -- 1st arg
-	local mtcd2=',%s*([^%)]+)' -- 2nd arg
+	local mtcd2=',(.*)' -- 2nd arg
+	
+	
 	local isRet=false
 	local s=0
 	local typ,typd,a1,a2
