@@ -120,8 +120,10 @@ local ops={}
 				s=table.concat(st,', ')
 				return s..' '..by..'==0?'
 			end
-		else
+		elseif op1==op2 then
 			return op1..'==0? '..op1..'<0? Parity?'
+		else
+			return ''
 		end
 	end
 	
@@ -144,12 +146,10 @@ local ops={}
 				s=table.concat(st,', ')
 				return 'Invert: '..s..' '..by
 			end
+		elseif op1==op2 then
+			return 'Clear '..op1
 		else
-			if op1==op2 then
-				return 'Clear '..op1
-			else
-				return ''
-			end
+			return ''
 		end
 	end
 	
