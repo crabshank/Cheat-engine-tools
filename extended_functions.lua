@@ -29,7 +29,7 @@ function enumModuleSymbols()
 	return out
 end
 
-local function table_filter(t,f)
+function table_filter(t,f)
 	local out={}
 	for k,v in pairs(t) do
 		local tyk=type(k)
@@ -44,7 +44,7 @@ local function table_filter(t,f)
 	return out
 end
 
-local function table_map(t,f) -- Javascript port
+function table_map(t,f) -- Javascript port
 	local out={}
 	for k,v in pairs(t) do
 		out[k]=f(v,k,t)
