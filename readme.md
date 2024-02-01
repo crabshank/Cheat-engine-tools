@@ -43,6 +43,75 @@ end
 local tm=table_map({{6,9},{60,90}},mapf) -- contains map
 ```
 
+Script to break on file creation code:
+
+```
+local s=enumModuleSymbols()
+
+local wf={
+    "CreateFile2",
+    "CreateFile2FromAppW",
+    "CreateFileA",
+    "CreateFileFromAppW",
+    "CreateFileTransactedA",
+    "CreateFileTransactedW",
+    "CreateFileW",
+    "CreateIoCompletionPort",
+    "GetTempFileName",
+    "GetTempFileNameA",
+    "GetTempFileNameW",
+    "LZInit",
+    "LZOpenFileA",
+    "LZOpenFileW",
+    "OpenFile",
+    "TxfLogCreateFileReadContext",
+    "basic_filebuf",
+    "basic_ofstream",
+    "basic_fstream",
+    "open",
+}
+
+local function filt (v,k,t)
+	local mtc=false
+	for i=1, #wf do
+		local wfi=wf[i]
+		local la,lb=string.find(v.Name,wfi)
+		if la~=nil then
+			return true
+		end
+	end
+	return false
+end
+
+wfm={}
+wfm.hits={}
+wfm.table=table_filter(s,filt)
+wfm.set= function (i,z)
+	os.remove("...") -- file path to created file
+	local bpl=debug_getBreakpointList()
+	if bpl~=nil then
+		for i=1, #bpl do
+			debug_removeBreakpoint(bpl[i])
+		end
+	end
+	
+	for j=i, i+z-1 do
+		debug_setBreakpoint(wfm.table[j].Address, 1, bptExecute, bpmDebugRegister, function()
+			local wjn=wfm.table[j].Name
+			local wjnh=wfm.hits[wjn]
+			if  wjnh==nil then
+				print(wjn..' hit!')
+				wfm.hits[wjn]=1
+			else
+				wfm.hits[wjn]=wjnh+1
+			end
+		end)
+	end
+end
+
+wfm.set(1+4*(0),4) -- increment number in bracket; After executing the whole code once, only execute this line with incremented number
+```
+
 ## Set_window_content.lua
 
 Currently: Automatically populates the "From" and "To" addresses in the "Memory viewer > Search > Find assembly code" and "File > Save disassembled output" windows with the first and last address of the process that Cheat Engine is attached to.
