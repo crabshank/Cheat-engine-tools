@@ -449,8 +449,11 @@ local function dumpRegisters(bin,f,k)
 					else
 						local x=riv[i][1]
 						local x6=riv[i][6]
-						if (bny==2 or bny==3) and x6~=nil then
-							x=x6
+						local x7=riv[i][7]
+						if x6~=nil then
+							if (bny==2 and x7~=true) or (bny==3 and x7~=false) then
+								x=x6
+							end
 						end
 						ptct=riv[i][4]..'#'..i..' '..riv[i][3]..':\t'..x
 						if pth~=nil then
@@ -544,7 +547,7 @@ local function dumpRegistersChrono(k,bin,f)
 				local rivc=riv[cc2]
 				local x=rivc[1]
 				local x6=rivc[6]
-				if (bny==1 or bny==2)and x6~=nil then 
+				if (bny==1 or bny==2) and x6~=nil then 
 					x=x6 
 				end
 				ptct='#'..cnt..' - '..rivc[4]..'('..ak['address_hex']..' - #'..kt_cnt[tix]..') '..rivc[3]..':\t'..x
@@ -823,10 +826,11 @@ local function onBp(rw,noRun)
 									end
 								else
 									local instr='('..abpxc[j]..')'
-									local artb={hexByteString,dec,instr,prfx,hexByteString_esc}  -- [5] is raw bytes (escaped)+
+									local artb={hexByteString,dec,instr,prfx,hexByteString_esc,nil,false}  -- [5] is raw bytes (escaped)+
 									if addr~= nil then
 										instr='['..addr..']'
-										table.insert(artb,le_hex)
+										artb[6]=le_hex
+										artb[7]=true
 									end
 									if addedLines>0 then
 										prfx=''
