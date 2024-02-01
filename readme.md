@@ -1,6 +1,6 @@
 ## extended_functions.lua
 
-This file contains functions that expand upon existing ones:
+This file contains functions that expand upon existing ones and ports from other code:
 
 * **enumModuleSymbols()**
 
@@ -11,6 +11,63 @@ This function returns a Lua table containing:
 [ HexAddress: hexadecimal address of the symbol ]
 [ Name: symbol name ]
 [ ModuleName ]
+```
+
+* **table_filter()**
+
+This function is a port of Javascript's `Array.prototype.filter()`
+
+Example script:
+
+```
+local function table_filter(t,f)
+	local out={}
+	for k,v in pairs(t) do
+		local tyk=type(k)
+		if f(v,k,t) then
+			if tyk=='number' then
+				table.insert(out,v)
+			else
+				 out[k]=v
+			end
+		end
+	end
+	return out
+end
+
+local s=enumModuleSymbols()
+local function filt (v,k,t)
+	local la,lb=string.find(v.Name,'open')
+	return la~=nil
+end
+local tf=table_filter(s,filt) -- contains all entries that satisfy the condition
+```
+
+* **table_map()**
+
+This function is a port of Javascript's `Array.prototype.map()`
+
+Example script:
+
+```
+local function table_map(t,f) -- Javascript port
+	local out={}
+	for k,v in pairs(t) do
+		local tyk=type(k)
+		local vm=f(v,k,t)
+		if tyk=='number' then
+			table.insert(out,vm)
+		else
+			 out[k]=vm
+		end
+	end
+	return out
+end
+
+local function mapf (v,k,t)
+	return v[1]
+end
+local tm=table_map({{6,9},{60,90}},mapf) --contains map
 ```
 
 ## Set_window_content.lua
