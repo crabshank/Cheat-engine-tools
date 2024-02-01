@@ -17,17 +17,16 @@ local function table_ix(t,n)
 	return 0
 end
 
-local function trim_str(s)
-	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
-end
-
-local function memNum(s,neg)
-	local n=tonumber(s)
+local function memNum(n,neg)
 	local tyn=type(n)
 	if (tyn~='number') or (neg==true and n>0) or (neg~=true and n<0) then
 		n=0
 	end
 	return n
+end
+
+local function trim_str(s)
+	return str_match(s,'^()%s*$') and '' or str_match(s,'^%s*(.*%S)')
 end
 
 local function tableToAOB_esc(t)
@@ -401,7 +400,7 @@ local function dumpRegisters(bin,f,k)
 	end
 	local bny
 	
-	if (type(bin)~='number') or (bin~=1 and bin~=2) then
+	if (type(bin)~='number') or (bin~=1 and bin~=2 and bin~=3) then
 		bny=0
 	else
 		bny=bin
@@ -450,7 +449,7 @@ local function dumpRegisters(bin,f,k)
 					else
 						local x=riv[i][1]
 						local x6=riv[i][6]
-						if bny==2 and x6~=nil then
+						if (bny==2 or bny==3) and x6~=nil then
 							x=x6
 						end
 						ptct=riv[i][4]..'#'..i..' '..riv[i][3]..':\t'..x
@@ -515,7 +514,7 @@ local function dumpRegistersChrono(k,bin,f)
 		end
 		local bny
 		
-		if (type(bin)~='number') or (bin~=1) then
+		if (type(bin)~='number') or (bin~=1 and bin~=2) then
 			bny=0
 		else
 			bny=bin
@@ -545,7 +544,7 @@ local function dumpRegistersChrono(k,bin,f)
 				local rivc=riv[cc2]
 				local x=rivc[1]
 				local x6=rivc[6]
-				if bny==1 and x6~=nil then 
+				if (bny==1 or bny==2)and x6~=nil then 
 					x=x6 
 				end
 				ptct='#'..cnt..' - '..rivc[4]..'('..ak['address_hex']..' - #'..kt_cnt[tix]..') '..rivc[3]..':\t'..x
@@ -749,6 +748,9 @@ local function onBp(rw,noRun)
 				-- EXTRA SUB-REGISTERS
 			
 			ar=abpx.regs
+			if #ar==0 then
+				print(RIPx..' hit!') 
+			end
 			arc=ar.counts
 			local addedLines=0
 			local prfx=''
@@ -789,8 +791,14 @@ local function onBp(rw,noRun)
 						local b,r=pcall(func())
 						
 						if addr~=nil then
-							local bw=sj[3]
-							local fd=sj[4]
+							func= load("return function() return "..sj[3].." end")
+							local b1,bw=pcall(func())						
+							bw=memNum(bw)
+							
+							func= load("return function() return "..sj[4].." end")
+							local b2,fd=pcall(func())
+							fd=memNum(fd)
+							
 							local rb=r+bw
 							local rf=r+fd
 							local rg=rf-rb+1
@@ -815,13 +823,15 @@ local function onBp(rw,noRun)
 									end
 								else
 									local instr='('..abpxc[j]..')'
+									local artb={hexByteString,dec,instr,prfx,hexByteString_esc}  -- [5] is raw bytes (escaped)+
 									if addr~= nil then
 										instr='['..addr..']'
+										table.insert(artb,le_hex)
 									end
 									if addedLines>0 then
 										prfx=''
 									end
-									table.insert(ar,{hexByteString,dec,instr,prfx,hexByteString_esc}) -- [5] is raw bytes (escaped)+
+									table.insert(ar,artb)
 									table.insert(chrono,{ix,#ar})
 									addedLines=addedLines+1
 									if newReg==false then
@@ -890,9 +900,6 @@ local function onBp(rw,noRun)
 								chk=true
 							end
 						end
-				end
-				if #ar==1 then
-					print('Breakpoint at ' .. abpx['address_hex'] .. ' hit!') 
 				end
 				if addedLines>1 or isRetLog==true then
 					if isRetLog==true and isRet==true then
@@ -970,8 +977,8 @@ local function attachLpAddr(atb,c,bpst,cnt)
 								if typ~= nil then
 									typd=str_match(upj,mtcd)
 									if typd~=nil then
-										a1=memNum(str_match(typd,mtcd1))
-										a2=memNum(str_match(typd,mtcd2))
+										a1=str_match(typd,mtcd1)
+										a2=str_match(typd,mtcd2)
 										table.insert(cuis,{true,typ,a1,a2}) -- Address
 									else
 										table.insert(cuis,{true,typ,0,0}) -- Address
@@ -987,8 +994,8 @@ local function attachLpAddr(atb,c,bpst,cnt)
 						if typ~= nil then
 							typd=str_match(upj,mtcd)
 							if typd~=nil then
-								a1=memNum(str_match(typd,mtcd1))
-								a2=memNum(str_match(typd,mtcd2))
+								a1=str_match(typd,mtcd1)
+								a2=str_match(typd,mtcd2)
 								table.insert(cuis,{true,typ,a1,a2}) -- Address
 							else
 								table.insert(cuis,{true,typ,0,0}) -- Address
@@ -1006,8 +1013,8 @@ local function attachLpAddr(atb,c,bpst,cnt)
 						if typ~= nil then
 							typd=str_match(upj,mtcd)
 							if typd~=nil then
-								a1=memNum(str_match(typd,mtcd1))
-								a2=memNum(str_match(typd,mtcd2))
+								a1=str_match(typd,mtcd1)
+								a2=str_match(typd,mtcd2)
 								table.insert(cu_syntx,{true,typ,a1,a2}) -- Address
 							else
 								table.insert(cu_syntx,{true,typ,0,0}) -- Address
@@ -1023,8 +1030,8 @@ local function attachLpAddr(atb,c,bpst,cnt)
 					if typ~= nil then
 						typd=str_match(upj,mtcd)
 						if typd~=nil then
-							a1=memNum(str_match(typd,mtcd1))
-							a2=memNum(str_match(typd,mtcd2))
+							a1=str_match(typd,mtcd1)
+							a2=str_match(typd,mtcd2)
 							table.insert(cu_syntx,{true,typ,a1,a2}) -- Address
 						else
 							table.insert(cu_syntx,{true,typ,0,0}) -- Address
