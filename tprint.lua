@@ -181,7 +181,24 @@ local function userdata_table(v)
 						local pj=p[j]
 						if runEl[pj]==nil then
 							if j==lp then
-								runEl[pj]={type=pi['type'], path=table.concat(p2,'.')}
+								for y=2,#p2 do
+									local py=p2[y]
+									local sf1, sf2=string.find(py,'[%s%.\'\"]+')
+									if sf1==nil then
+										p2[y]="."..py
+									else
+										local sf3, sf4=string.find(py,'"')
+										local smk='"'
+										if sf3~=nil then
+											smk="'"
+											py=string.gsub(py, "'", "\\'")
+										else
+											py=string.gsub(py, '"', '\\"')
+										end
+										p2[y]='['..smk..py..smk..']'
+									end
+								end
+								runEl[pj]={type=pi['type'], path=table.concat(p2,'')}
 								if v~=nil then
 									runEl[pj].value=v
 								end
