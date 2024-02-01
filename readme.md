@@ -541,7 +541,7 @@ To use: place the the file into your autorun folder, open the LUA Engine and typ
 
 **a** is an address(in string or number form, use '0x…' for addresses in hexadecimal) of an instruction that when that instruction is executed, the breakpoint will hit, *or* a table with: {address, onWrite}; where if **onWrite**==true, the breakpoint will hit if **address** is written to, and otherwise the breakpoint will hit when the **address** is accessed.
 
-**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (to specifiy the byte range you wish to log use `[…](b,f)` syntax {e.g. `[RSP](0,7)` will log 8 bytes: RSP to RSP+7}, to be specific for this log. If you do not do either of these, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). N.B. This argument is only optional when argument **a** is a table.
+**c** is a string or table of strings specifying what to log (could be a (sub-)register or e.g. register*y+x or, XMM0-15 or FP0-7, or any of those surrounded by square brackets to indicate a pointer (to specifiy the byte range you wish to log use `[…](b,f)` syntax {e.g. `[RSP](0,7)` will log 8 bytes: RSP to RSP+7; you can also do something like `[RDX](0,R8-1)` to read function argument pointers}, to be specific for this log. If you do not do either of these, it will default to logging 1 byte.), depending on whether you're using x64 or x86. Use "0x…", again, for hex offsets e.g. "RAX+0xC". Sub-registers are also available (the variable names defined below "-- EXTRA SUB-REGISTERS AVAILABLE:", in the code). N.B. This argument is only optional when argument **a** is a table.
 
 ***To log values in functions and the return values of these:***
 
@@ -563,6 +563,8 @@ If **bin**==:
 
 2 -> Non-pointer and non-table registers are printed as little endian hex rather than as arrays of bytes.
 
+3 -> Everything but non-table registers is printed as little endian hex rather than as arrays of bytes.
+
 Otherwise (default) -> Print all logged data as arrays of bytes.
 
 **f** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
@@ -576,6 +578,8 @@ Argument **k** is the index printed by *printAttached()* before the address (e.g
 If **bin**==:
 
 1 -> Non-pointer and non-table registers are printed as little endian hex rather than as arrays of bytes.
+
+2 -> Everything but non-table registers is printed as little endian hex rather than as arrays of bytes.
 
 Otherwise (default) -> Print all logged data as arrays of bytes.
 
