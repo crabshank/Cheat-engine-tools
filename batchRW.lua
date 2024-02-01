@@ -11,6 +11,38 @@ local bps={}
 local xcld={['Decimal address']=true}
 local jumpRes={['sel']='',['rsp']={},['stack']={}}
 
+local function getSymbolNameFromAddress(a, outBoth)
+    local out = {getNameFromAddress(a, true, true, true, true), getNameFromAddress(a, true, true, false)} --[1]= preferred
+    local su1, su2 = string.find(out[1], "[\128-\255]") -- non-ascii?
+
+    if su1~=nil then
+        local o2=out[2]
+        out[2]=out[1]
+        out[1]=o2
+    end
+
+    if outBoth~=true then
+        if out[1]==nil or out[1]=="" then
+            return string.format("%X", a)
+        end
+        return out[1]
+    else
+        local hxv = ""
+        if out[1]==nil or out[1]=="" then
+            hxv = string.format("%X", a)
+            out[1]=hxv
+        end
+        if out[2]==nil or out[2]=="" then
+            if hxv=="" then
+                out[2]=string.format("%X", a)
+            else
+                out[2]=hxv
+            end
+        end
+        return {out[1], out[2]}
+    end
+end
+
 local function print_th(t,p)
 	if p~=nil then
 		p:write(t..'\n')
@@ -359,16 +391,26 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 							local lst=getPreviousOpcode(RIP)
 							local dst = disassemble(lst)
 							local extraField, instruction, bytes, address = splitDisassembledString(dst)
-							local a = getNameFromAddress(address) or ''
-							local pa=''
 							local bx=string.format('%X',b[1])
 							local lstx=string.format('%X',lst)
 							timer_attach.accessed[bx]=b[1]
-							if a=='' then
-								pa=lstx
+							
+							local a = getSymbolNameFromAddress(lst,true)
+							local pa=lstx
+							if a[1]==a[2] then
+								if a[1]~=lstx then
+									pa=lstx .. ' [ ' .. a[1] .. ' ]'
+								end
 							else
-								pa=lstx .. ' ( ' .. a .. ' )'
+								if a[1]~=lstx and a[2]~=lstx then
+									pa=lstx .. string.format(' [ %s (%s) ]',a[1],a[2])
+								elseif a[1]~=lstx and a[2]==lstx then
+									pa=lstx .. ' [ ' .. a[1] .. ' ]'
+								elseif a[1]==lstx and a[2]~=lstx then
+									pa=lstx .. ' [ ' .. a[2] .. ' ]'
+								end
 							end
+
 							local prinfo=string.format('%s:\t%s  -  %s }', pa, bytes, instruction)
 							if ch==true then
 										prinfo=prinfo..'\t[ '..mtc[2]..' ]'

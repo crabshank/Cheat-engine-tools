@@ -44,6 +44,38 @@ local lastAddr_findWrite={}
 
 local rw_trace=0
 
+local function getSymbolNameFromAddress(a, outBoth)
+    local out = {getNameFromAddress(a, true, true, true, true), getNameFromAddress(a, true, true, false)} --[1]= preferred
+    local su1, su2 = string.find(out[1], "[\128-\255]") -- non-ascii?
+
+    if su1~=nil then
+        local o2=out[2]
+        out[2]=out[1]
+        out[1]=o2
+    end
+
+    if outBoth~=true then
+        if out[1]==nil or out[1]=="" then
+            return string.format("%X", a)
+        end
+        return out[1]
+    else
+        local hxv = ""
+        if out[1]==nil or out[1]=="" then
+            hxv = string.format("%X", a)
+            out[1]=hxv
+        end
+        if out[2]==nil or out[2]=="" then
+            if hxv=="" then
+                out[2]=string.format("%X", a)
+            else
+                out[2]=hxv
+            end
+        end
+        return {out[1], out[2]}
+    end
+end
+
 local function s_pluralise(c,t)
 	if c~=1 then
 		return t..'s'
@@ -1772,13 +1804,23 @@ local function getLiteCounts()
 			local tix=lirx[k]
 			local dsti=disassemble(cr)
 			local extraField, instruction, bytes, address=splitDisassembledString(dsti)
-			local a = getNameFromAddress(cr) or ''
-			local pa=''
-			if a=='' then
-				pa=tix
+			
+			local a = getSymbolNameFromAddress(cr,true)
+			local pa=tix
+			if a[1]==a[2] then
+				if a[1]~=tix then
+					pa=tix .. ' [ ' .. a[1] .. ' ]'
+				end
 			else
-				pa=tix .. ' ( ' .. a .. ' )'
+				if a[1]~=tix and a[2]~=tix then
+					pa=tix .. string.format(' [ %s (%s) ]',a[1],a[2])
+				elseif a[1]~=tix and a[2]==tix then
+					pa=tix .. ' [ ' .. a[1] .. ' ]'
+				elseif a[1]==tix and a[2]~=tix then
+					pa=tix .. ' [ ' .. a[2] .. ' ]'
+				end
 			end
+			
 			local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
 
 			if extraField~='' then
@@ -2541,14 +2583,21 @@ local function onBp_rw_proc(addr)
 					end
 
 								local m_acc={}
-								local a = getNameFromAddress(addr) or ''
-								local pa=''
-								if a=='' then
-									pa=RIPx
-									m_acc['address_string']=pa
+								
+								local a = getSymbolNameFromAddress(addr,true)
+								local pa=RIPx
+								if a[1]==a[2] then
+									if a[1]~=RIPx then
+										pa=RIPx .. ' [ ' .. a[1] .. ' ]'
+									end
 								else
-									m_acc['address_string']=a
-									pa=RIPx .. ' ( ' .. a .. ' )'
+									if a[1]~=RIPx and a[2]~=RIPx then
+										pa=RIPx .. string.format(' [ %s (%s) ]',a[1],a[2])
+									elseif a[1]~=RIPx and a[2]==RIPx then
+										pa=RIPx .. ' [ ' .. a[1] .. ' ]'
+									elseif a[1]==RIPx and a[2]~=RIPx then
+										pa=RIPx .. ' [ ' .. a[2] .. ' ]'
+									end
 								end
 
 								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, instruction)
@@ -3031,15 +3080,20 @@ local function onBp()
 						present_mem_last_lookup[ mk[1] ]=mk
 					end
 					
-								local a = getNameFromAddress(RIP) or ''
-
-								local pa=''
-								if a=='' then
-									pa=RIPx
-									m_acc['address_string']=pa
+								local a = getSymbolNameFromAddress(RIP,true)
+								local pa=RIPx
+								if a[1]==a[2] then
+									if a[1]~=RIPx then
+										pa=RIPx .. ' [ ' .. a[1] .. ' ]'
+									end
 								else
-									m_acc['address_string']=a
-									pa=RIPx .. ' ( ' .. a .. ' )'
+									if a[1]~=RIPx and a[2]~=RIPx then
+										pa=RIPx .. string.format(' [ %s (%s) ]',a[1],a[2])
+									elseif a[1]~=RIPx and a[2]==RIPx then
+										pa=RIPx .. ' [ ' .. a[1] .. ' ]'
+									elseif a[1]==RIPx and a[2]~=RIPx then
+										pa=RIPx .. ' [ ' .. a[2] .. ' ]'
+									end
 								end
 
 								local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_instruction)
@@ -3820,12 +3874,20 @@ end
 
 
 					if breakHere[1]==true then
-						local a = getNameFromAddress(address) or ''
-						local pa=''
-						if a=='' then
-							pa=RIPx
+						local a = getSymbolNameFromAddress(address,true)
+						local pa=RIPx
+						if a[1]==a[2] then
+							if a[1]~=RIPx then
+								pa=RIPx .. ' [ ' .. a[1] .. ' ]'
+							end
 						else
-							pa=RIPx .. ' ( ' .. a .. ' )'
+							if a[1]~=RIPx and a[2]~=RIPx then
+								pa=RIPx .. string.format(' [ %s (%s) ]',a[1],a[2])
+							elseif a[1]~=RIPx and a[2]==RIPx then
+								pa=RIPx .. ' [ ' .. a[1] .. ' ]'
+							elseif a[1]==RIPx and a[2]~=RIPx then
+								pa=RIPx .. ' [ ' .. a[2] .. ' ]'
+							end
 						end
 
 						local prinfo=string.format('%s:\t%s  -  %s', pa, bytes, reffed_instruction)		
