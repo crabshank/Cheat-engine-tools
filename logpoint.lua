@@ -757,7 +757,7 @@ local function onBp(rw,noRun)
 			
 			ar=abpx.regs
 			local isFirst=false
-			if #ar==0 then isFIrst=true end
+			if #ar==0 then isFirst=true end
 			arc=ar.counts
 			local addedLines=0
 			local prfx=''
@@ -945,7 +945,7 @@ local function onBp(rw,noRun)
 									debug_continueFromBreakpoint(co_run)
 								end		
 							end
-			if #ar>0 and isFIrst==true then
+			if #ar>0 and isFirst==true then
 				print(RIPx..' hit!') 
 			end
 end
