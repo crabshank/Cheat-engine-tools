@@ -83,7 +83,7 @@ local function filt (v,k,t)
 	return false
 end
 
-wfm={}
+wfm={} -- GLOBAL!
 wfm.hits={}
 wfm.table=table_filter(s,filt)
 wfm.set= function (i,z)
