@@ -1,3 +1,18 @@
+## extended_functions.lua
+
+This file contains functions that expand upon existing ones:
+
+* **enumModuleSymbols()**
+
+This function returns a Lua table containing:
+
+```
+[ Address: decimal address of the symbol ]
+[ HexAddress: hexadecimal address of the symbol ]
+[ Name: symbol name ]
+[ ModuleName ]
+```
+
 ## Set_window_content.lua
 
 Currently: Automatically populates the "From" and "To" addresses in the "Memory viewer > Search > Find assembly code" and "File > Save disassembled output" windows with the first and last address of the process that Cheat Engine is attached to.
