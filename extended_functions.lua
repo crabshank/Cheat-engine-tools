@@ -47,9 +47,7 @@ end
 local function table_map(t,f) -- Javascript port
 	local out={}
 	for k,v in pairs(t) do
-		local tyk=type(k)
-		local vm=f(v,k,t)
-		out[k]=vm
+		out[k]=f(v,k,t)
 	end
 	return out
 end
