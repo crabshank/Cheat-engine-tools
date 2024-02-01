@@ -647,6 +647,10 @@ local function onBp(rw,noRun)
 			
 			if ix>=0 then
 				abpx=abp[ix]
+				if abpx['first']==false then
+					abp[ix]['first']=true
+					print(RIPx..' hit!')
+				end
 				local dst = disassemble(RIP)
 				--local extraField, instruction, bytes, address = splitDisassembledString(dst)
 					if abpx['retOfs']~=nil then
@@ -756,8 +760,6 @@ local function onBp(rw,noRun)
 				-- EXTRA SUB-REGISTERS
 			
 			ar=abpx.regs
-			local isFirst=false
-			if #ar==0 then isFirst=true end
 			arc=ar.counts
 			local addedLines=0
 			local prfx=''
@@ -920,9 +922,6 @@ local function onBp(rw,noRun)
 			end
 	end
 	
-							if #ar>0 and isFirst==true then
-								print(RIPx..' hit!') 
-							end
 							local bpst=abpx['bpst']
 							
 							if chk==true and bpst~=nil and #bpst>0 then
@@ -1053,11 +1052,11 @@ local function attachLpAddr(atb,c,bpst,cnt)
 			end
 			local ab_type=atb[2]
 	if isRet==true then
-		table.insert(abp,{['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['retAddr']={},['retOfs']=s,['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
+		table.insert(abp,{['first']=false,['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['retAddr']={},['retOfs']=s,['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
 	elseif cnt==true then
-		table.insert(abp,{['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt})
+		table.insert(abp,{['first']=false,['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={	['counts']={}	},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['count']=cnt})
 	else
-		table.insert(abp,{['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
+		table.insert(abp,{['first']=false,['address_bpt']=ab_type,['address']=a,['address_hex']=string.format('%X',a),['calcs']={},['regs']={},['calc']=cu,['calc_syntax']=cu_syntx,['c_type']=tyc,['bpst']=bpst,['count']=cnt})
 	end
 	if ab_type==0 then
 		if debug_isBroken()==true and RIP==a then
