@@ -49,11 +49,7 @@ local function table_map(t,f) -- Javascript port
 	for k,v in pairs(t) do
 		local tyk=type(k)
 		local vm=f(v,k,t)
-		if tyk=='number' then
-			table.insert(out,vm)
-		else
-			 out[k]=vm
-		end
+		out[k]=vm
 	end
 	return out
 end
