@@ -96,6 +96,10 @@ wfm.set= function (i,z)
 	end
 	
 	local tz=#wfm.table
+	if i>tz then 
+		print('i > #wfm.table ('..tz..')')
+		return
+	end
 	for j=i, math.min(i+z-1,tz) do
 		debug_setBreakpoint(wfm.table[j].Address, 1, bptExecute, bpmDebugRegister, function()
 			local wjn=wfm.table[j].Name
