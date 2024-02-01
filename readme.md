@@ -13,7 +13,7 @@ This function returns a Lua table containing:
 [ ModuleName ]
 ```
 
-* **table_filter()**
+* **table_filter(t,f)**
 
 This function is a port of Javascript's `Array.prototype.filter()`
 
@@ -43,7 +43,7 @@ end
 local tf=table_filter(s,filt) -- contains all entries that satisfy the condition
 ```
 
-* **table_map()**
+* **table_map(t,f)**
 
 This function is a port of Javascript's `Array.prototype.map()`
 
