@@ -919,6 +919,10 @@ local function onBp(rw,noRun)
 				restoreGlobals()
 			end
 	end
+	
+							if #ar>0 and isFirst==true then
+								print(RIPx..' hit!') 
+							end
 							local bpst=abpx['bpst']
 							
 							if chk==true and bpst~=nil and #bpst>0 then
@@ -945,9 +949,6 @@ local function onBp(rw,noRun)
 									debug_continueFromBreakpoint(co_run)
 								end		
 							end
-			if #ar>0 and isFirst==true then
-				print(RIPx..' hit!') 
-			end
 end
 
 local function attachLpAddr(atb,c,bpst,cnt)
