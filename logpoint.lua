@@ -834,12 +834,14 @@ local function onBp(rw,noRun)
 									local instr='('..abpxc[j]..')'
 									local artb={hexByteString,dec,instr,prfx,hexByteString_esc,nil,false}  -- [5] is raw bytes (escaped)+
 									if addr~= nil then
-										instr='['..addr..']'
+										--instr='['..addr..']'
+										artb[3]='['..addr..']'
 										artb[6]=le_hex
 										artb[7]=true
 									end
 									if addedLines>0 then
-										prfx=''
+										--prfx=''
+										artb[4]=''
 									end
 									table.insert(ar,artb)
 									table.insert(chrono,{ix,#ar})
