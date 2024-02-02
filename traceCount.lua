@@ -42,6 +42,8 @@ local findWriteWasPatt=false
 local modulesList_findWrite={}
 local lastAddr_findWrite={}
 
+local findWriteAlreadyStep={}
+
 local rw_trace=0
 
 local function getSymbolNameFromAddress(a, outBoth)
@@ -4142,7 +4144,7 @@ local function onFindWriteBp()
 		end
 	end
 	
-	local writeFound=false
+	--local writeFound=false
 	local scanHere=false
 	if modCurr[1]==true then
 		if findWriteStepOver==2 or ( findWriteStepOver==3  and ft==true) then --into
@@ -4162,12 +4164,29 @@ local function onFindWriteBp()
 			local res=AOBScan(ai,"",0)
 			if res~=nil then
 				local rCnt= res.Count
+				local rCnt_1= rCnt-1
+				local resLookup={}
 				if rCnt>0 then
-					print( string.format("'%s' was written to memory between: '%s' and '%s'",ai,lastAddr_findWrite[2],modCurr[2]))
-					writeFound=true
+					for w=0, rCnt_1 do 
+						local rw=res[w]
+						resLookup[rw]=true
+					end
+					for k,v in pairs(findWriteAlreadyStep) do
+						if resLookup[k]~=true then
+							findWriteAlreadyStep[k]=nil
+						end
+					end
+					for w=0, rCnt_1 do 
+						local rw=res[w]
+						if findWriteAlreadyStep[rw]~=true then
+							print( string.format("'%s' was written to memory between: '%s' and '%s' at %s",ai,lastAddr_findWrite[2],modCurr[2],res[w]))
+							findWriteAlreadyStep[rw]=true
+						end
+					end
+					--[[writeFound=true
 					findWriteBp=false
 					midTrace=false
-					break
+					break]] -- keep going until user ends it!
 				else
 					lastAddr_findWrite={RIP,modCurr[2]}
 				end
@@ -4188,9 +4207,9 @@ local function onFindWriteBp()
 		findWriteWasPatt=false
 	end
 
-	if writeFound==true then
+	--[[if writeFound==true then
 		debug_continueFromBreakpoint(co_run)
-	elseif findWriteStepOver==2 or (findWriteStepOver==3 and ft==true) then --into
+	else]]if findWriteStepOver==2 or (findWriteStepOver==3 and ft==true) then --into
 		debug_continueFromBreakpoint(co_stepinto)
 	else -- step over
 		debug_continueFromBreakpoint(co_stepover)
