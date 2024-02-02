@@ -167,48 +167,62 @@ local function userdata_table(v)
 				end
 					cnt=cnt+1
 				end
+				
+				if #plt==0 then
+					local vc=nil
+					if type(v.Count)=='number' then 
+						vc=v.Count 
+					elseif type(v.count)=='number' then 
+						vc=v.count
+					end
+					
+					if vc~=nil then
+							for i=0, vc-1 do
+								pltFinal[i]=v[i]
+							end
+					end
+				else
+						for i=1, #plt do
+							local pi=plt[i]
+							--local d=pi['data']
+							local v=pi['val']
+							local p=pi['path']
+							local p2=pi['path2']
 
-				for i=1, #plt do
-					local pi=plt[i]
-					--local d=pi['data']
-					local v=pi['val']
-					local p=pi['path']
-					local p2=pi['path2']
-
-					local runEl=pltFinal
-					local lp=#p
-					for j=1, lp do
-						local pj=p[j]
-						if runEl[pj]==nil then
-							if j==lp then
-								for y=2,#p2 do
-									local py=p2[y]
-									local sf1, sf2=string.find(py,'[%s%.\'\"]+')
-									if sf1==nil then
-										p2[y]="."..py
-									else
-										local sf3, sf4=string.find(py,'"')
-										local smk='"'
-										if sf3~=nil then
-											smk="'"
-											py=string.gsub(py, "'", "\\'")
-										else
-											py=string.gsub(py, '"', '\\"')
+							local runEl=pltFinal
+							local lp=#p
+							for j=1, lp do
+								local pj=p[j]
+								if runEl[pj]==nil then
+									if j==lp then
+										for y=2,#p2 do
+											local py=p2[y]
+											local sf1, sf2=string.find(py,'[%s%.\'\"]+')
+											if sf1==nil then
+												p2[y]="."..py
+											else
+												local sf3, sf4=string.find(py,'"')
+												local smk='"'
+												if sf3~=nil then
+													smk="'"
+													py=string.gsub(py, "'", "\\'")
+												else
+													py=string.gsub(py, '"', '\\"')
+												end
+												p2[y]='['..smk..py..smk..']'
+											end
 										end
-										p2[y]='['..smk..py..smk..']'
+										runEl[pj]={type=pi['type'], path=table.concat(p2,'')}
+										if v~=nil then
+											runEl[pj].value=v
+										end
+									else
+										runEl[pj]={}
 									end
 								end
-								runEl[pj]={type=pi['type'], path=table.concat(p2,'')}
-								if v~=nil then
-									runEl[pj].value=v
-								end
-							else
-								runEl[pj]={}
+								runEl=runEl[pj]
 							end
-						end
-						runEl=runEl[pj]
-					end
-
+				end
 				end
 				local pltRet=pltFinal
 				if act_vn_Name==true then
