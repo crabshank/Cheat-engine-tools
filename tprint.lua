@@ -54,7 +54,9 @@
 		local vn=v.Name
 		local vna=vn
 		local act_vn_Name=true
-		if type(vn)~='string' or trim_str(vn)=='' then
+		local vnf=load("return ".. vn)
+		local vnb,vnr=pcall(vnf) 
+		if vnr==nil then
 			vn='…'
 		   vna='(…)'
 		   act_vn_Name=false;
@@ -255,7 +257,10 @@
 				local mtvb,mtvr=pcall(mtv)
 				if mtvb==true and type(mtvr)=='table' then
 					local vs=tostring(v)
-					if v.Name~=nil then vs=v.Name end
+					local vnm= v.Name
+							local vnf=load("return "..vnm)
+							local vnb,vnr=pcall(vnf) 
+					if vnr~=nil then vs=vnm end
 					print(string.rep("	", indent) .. vs..':')
 					v=mtvr
 					spm=true
