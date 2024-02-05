@@ -37,15 +37,17 @@
 
 	local function getmetatable_formatted(v)
 
-		local proc=function(k,v,p)
+		local proc=function(k,v,p,vna)
+				local n,n2
 				fp=function() return p[k] end
 				fpb, fpr=pcall(fp)
 				if fpr==nil then
 					n='(…):'..k..'(…)'
-				else
+					n2=n
 					 n=k..'(…)'
+					 n2=vna..'.'..n
 				end
-				return n
+				return {n,n2}
 		end
 		local plt={}
 		local pltFinal={}
@@ -87,11 +89,11 @@
 					local n
 					for k0, v0 in pairs(mt) do
 						--if string.sub(k0,1,2)~="__" then
-							n=proc(k0,v0,v)
+							n=proc(k0,v0,v,vna)
 							local np=deepcopy(p)
-							table.insert(np,n)
+							table.insert(np,n[1])
 							local np2=deepcopy(p2)
-							table.insert(np2,n)
+							table.insert(np2,n[2])
 							table.insert(plt,{path2=np2,path=np, data=v0,  val=v0, type='Method'})
 						--end
 					end
