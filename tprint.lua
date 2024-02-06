@@ -59,7 +59,6 @@ local function getmetatable_formatted(v)
 
 		--[[while true do --FULL DEPTH LOOP!
 		if w>0 then
-			break
 			plw=function() return plt[w] end
 			cb,cr =pcall(plw)
 			if cr==nil then
