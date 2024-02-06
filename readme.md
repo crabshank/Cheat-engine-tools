@@ -43,6 +43,36 @@ end
 local tm=table_map({{6,9},{60,90}},mapf) -- contains map
 ```
 
+* **full_internal(v)**
+
+This probes a Cheat Engine internal object to it's full depth (e.g. **v**=GetMemoryViewForm()), and returns a table which can be filtered.
+
+This function returns a Lua table containing:
+
+```
+[ value: value of property or a table containing "__get/set" functions ]
+[ path: path to data ]
+[ type: "Value ([0/1/2/…])/Property/Component/Method (Function)" ]
+```
+
+Example script:
+
+```
+local m=full_internal(GetMemoryViewForm())
+local function filt (v,k,t)
+      local val=v.value
+      if type(val)=='string' then
+	local la,lb=string.find(val,'memory page')
+	return la~=nil
+      else
+        return false
+      end
+end
+
+local tf=table_filter(m,filt) -- contains all entries that satisfy the condition(s)
+tprint(tf)
+```
+
 Script to break on file creation code:
 
 ```
