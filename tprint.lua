@@ -42,7 +42,7 @@ local function getmetatable_formatted(v)
 	local plt={}
 	local pltFinal={}
 	local out={}
-	local mt, cb,cr,gmtb,plw,vc
+	local mt,gmtb,vc --,cb,cr,plw
 	local vn=v.Name
 	local vna=vn
 	local act_vn_Name=true
@@ -89,7 +89,7 @@ local function getmetatable_formatted(v)
 			end
 		--end
 
-		local getComponents=function()
+		local getComponents=function(v)
 						local plc=v.getComponentCount()
 					for i=0, plc-1 do
 							local pli=v.getComponent(i)
@@ -115,9 +115,9 @@ local function getmetatable_formatted(v)
 						table.insert(plt,{path2=np2,path=np, data=pli,  val=nil, type='Component'})
 					end
 			end
-		cb,cr =pcall(getComponents)
+		getComponents(v)
 
-			local getProperties=function()
+			local getProperties=function(v)
 				  local propertyList=getPropertyList(v)
 				local plc=propertyList.Count
 						for i=0, plc-1 do
@@ -150,7 +150,7 @@ local function getmetatable_formatted(v)
 						end
 				propertyList.destroy()
 		end
-		cb,cr =pcall(getProperties)
+		getProperties(v)
 		--w=w+1
 	--end
 
