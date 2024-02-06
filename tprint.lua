@@ -208,9 +208,6 @@ local function getmetatable_formatted(v)
 				   end
 				end
 
-
-
-				local pltRet=pltFinal
 				--[[if act_vn_Name==true then
 					local out={}
 					out[vn]=pltFinal
