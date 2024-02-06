@@ -10,16 +10,6 @@
 		return c
 	end
 
-	local function get_subtable(t, strt, ed)
-	  local out = {}
-
-	  for i =strt, ed do
-		table.insert(out,t[i])
-	  end
-
-	  return out
-	end
-
 	local function deepcopy(orig)
 		local orig_type = type(orig)
 		local copy
