@@ -34,6 +34,7 @@ local function getmetatable_formatted(v)
 			if fpr==nil then
 				n='(…):'..k..'(…)'
 				n2=n
+			else
 				 n=k..'(…)'
 				 n2=vna..'.'..n
 			end
