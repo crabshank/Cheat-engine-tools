@@ -203,17 +203,34 @@ local function getmetatable_formatted(v)
 			end
 
 									vc=nil
-				if type(v.Count)=='number' then
-					vc=v.Count
-				elseif type(v.count)=='number' then
-					vc=v.count
-				elseif type(v.Count.__get())=='number' then
-					vc=v.Count
-				elseif type(v.count.__get())=='number' then
-					vc=v.count
+									
+				local fnd=false
+				local tycn=type(v.Count)
+				if tycn~='nil' then
+					if tycn=='number' then
+						vc=v.Count
+						fnd=true
+					elseif type(v.Count.__get())=='number'  then
+						vc=v.Count.__get()
+						fnd=true
+					end
 				end
+				
+				if fnd==false then
+					local tycn=type(v.count)
+					if tycn~='nil' then
+						if tycn=='number' then
+							vc=v.count
+							fnd=true
+						elseif type(v.count.__get())=='number'  then
+							vc=v.count.__get()
+							fnd=true
+						end
+					end
+				end
+				
 
-				if vc~=nil then
+				if fnd==true then
 				   for i=0, vc-1 do
 					   pltFinal[i]=v[i]
 				   end
