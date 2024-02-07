@@ -44,15 +44,19 @@ local function getmetatable_formatted(v)
 	local pltFinal={}
 	local out={}
 	local mt,gmtb,vc --,cb,cr,plw
-	local vn=v.Name
-	local vna=vn
-	local act_vn_Name=true
+
+	local vn,vna,act_vn_Name='','',false
+	
 	local vnf=load("return ".. vn)
 	local vnb,vnr=pcall(vnf) 
 	if vnr==nil then
 		vn='…'
 	   vna='(…)'
 	   act_vn_Name=false;
+	else
+		vn=v.Name
+		vna=vn
+		act_vn_Name=true
 	end
 	--local w=0
 	local p={}
@@ -116,7 +120,8 @@ local function getmetatable_formatted(v)
 						table.insert(plt,{path2=np2,path=np, data=pli,  val=nil, type='Component'})
 					end
 			end
-		getComponents(v)
+		local mtv=function() return getComponents(v) end
+		local mtvb,mtvr=pcall(mtv)
 
 			local getProperties=function(v)
 				  local propertyList=getPropertyList(v)
@@ -151,7 +156,9 @@ local function getmetatable_formatted(v)
 						end
 				propertyList.destroy()
 		end
-		getProperties(v)
+
+		mtv=function() return getProperties(v) end
+		mtvb,mtvr=pcall(mtv)
 		--w=w+1
 	--end
 
@@ -200,6 +207,10 @@ local function getmetatable_formatted(v)
 					vc=v.Count
 				elseif type(v.count)=='number' then
 					vc=v.count
+				elseif type(v.Count.__get())=='number' then
+					vc=v.Count
+				elseif type(v.count.__get())=='number' then
+					vc=v.count
 				end
 
 				if vc~=nil then
@@ -231,13 +242,18 @@ function tprint(tbl, indent)
 			local mtvb,mtvr=pcall(mtv)
 			if mtvb==true and type(mtvr)=='table' then
 				local vs=tostring(v)
-				local vnm= v.Name
-						local vnf=load("return "..vnm)
-						local vnb,vnr=pcall(vnf) 
-				if vnr~=nil then vs=vnm end
-				print(string.rep("	", indent) .. vs..':')
-				v=mtvr
-				spm=true
+						local vnm=''
+					if v.Name~=nil then
+					local vnf=load("return ".. v.Name)
+					local vnb,vnr=pcall(vnf) 
+					if vnr~=nil then 
+						vs=vnm
+						vnm=v.Name
+					end
+				end
+					print(string.rep("	", indent) .. vs..':')
+					v=mtvr
+					spm=true
 			end
 		end
 		  local typv=type(v)
