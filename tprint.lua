@@ -217,7 +217,7 @@ local function getmetatable_formatted(v)
 				end
 				
 				if fnd==false then
-					local tycn=type(v.count)
+					tycn=type(v.count)
 					if tycn~='nil' then
 						if tycn=='number' then
 							vc=v.count
