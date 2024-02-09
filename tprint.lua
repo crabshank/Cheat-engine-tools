@@ -10,6 +10,32 @@ local function pairsLen(t)
 	return c
 end
 
+local function bubbleSort(a, asc) -- for descending order, asc=false
+  local n=#a
+  local swapped = false
+  if asc~=false then
+	  repeat
+			swapped = false
+			for i=2, n do
+			  if a[i-1] > a[i] then
+				a[i-1],a[i] = a[i],a[i-1]
+				swapped = true
+			  end
+			end
+	  until (swapped==false)
+  else
+		repeat
+			swapped = false
+			for i=2, n do
+			  if a[i-1] < a[i] then
+				a[i-1],a[i] = a[i],a[i-1]
+				swapped = true
+			  end
+			end
+	  until (swapped==false)
+  end
+end
+
 local function deepcopy(orig)
 	local orig_type = type(orig)
 	local copy
@@ -202,27 +228,27 @@ local function getmetatable_formatted(v)
 			end
 			end
 
-									vc=nil
-									
+				vc=nil
+
 				local fnd=false
 				local tycn=type(v.Count)
 				if tycn~='nil' then
 					if tycn=='number' then
 						vc=v.Count
 						fnd=true
-					elseif type(v.Count.__get())=='number'  then
+					elseif type(v.Count.__get)=='function' and type(v.Count.__get())=='number'  then
 						vc=v.Count.__get()
 						fnd=true
 					end
 				end
-				
+
 				if fnd==false then
 					tycn=type(v.count)
 					if tycn~='nil' then
 						if tycn=='number' then
 							vc=v.count
 							fnd=true
-						elseif type(v.count.__get())=='number'  then
+						elseif type(v.count.__get)=='function' and type(v.count.__get())=='number'  then
 							vc=v.count.__get()
 							fnd=true
 						end
@@ -247,10 +273,10 @@ end
 
 function tprint(tbl, indent)
 
-	local function actualPrint(k,v,indent,notTable,do_tprint,zero,suppressMeta)
+	local function actualPrint(k,v,indent,notTable,do_tprint,suppressMeta)
 		local formatting=''
 		local mtv
-		if notTable~=true or zero==true then
+		if notTable~=true then
 			formatting = string.rep("	", indent) .. k .. ": "
 		 end
 		 local spm=nil
@@ -305,7 +331,7 @@ function tprint(tbl, indent)
 
 	  local function do_tprint(tbl, indent,notTable,suppressMeta) -- https://gist.github.com/ripter/4270799
 		if tbl==nil then
-			actualPrint(nil,nil,indent,true,do_tprint,nil,suppressMeta)
+			actualPrint(nil,nil,indent,true,do_tprint,suppressMeta)
 			return
 		elseif notTable==true then
 			tbl={tbl}
@@ -313,18 +339,35 @@ function tprint(tbl, indent)
 		else
 			if not indent then indent = 0 end
 		end
+		local kys={{},{}}
+		
 		if tbl[0]~=nil then
-			local nt=false
-			if type(tbl[0])~=table then
-				nt=true
-			end
-			actualPrint(0,tbl[0],indent,nt,do_tprint,true,suppressMeta)
+			table.insert(kys[1],0)
 		end
+		
 		for k, v in pairs(tbl) do
 			if k~=0 then
-				actualPrint(k,v,indent,notTable,do_tprint,nil,suppressMeta)
+				if type(k)=='number' then
+					table.insert(kys[1],k)
+				else
+					table.insert(kys[2],k)
+				end
 			end
 		end
+		
+		bubbleSort(kys[1])
+		local ks=kys[1] 
+		for k=1,#ks do
+			local ky=ks[k]
+			actualPrint(ky,tbl[ky],indent,notTable,do_tprint,suppressMeta)
+		end
+		
+		ks=kys[2] 
+		for k=1,#ks do
+			local ky=ks[k]
+			actualPrint(ky,tbl[ky],indent,notTable,do_tprint,suppressMeta)
+		end
+
 	  end
 
   local notTable=false
