@@ -1,5 +1,5 @@
 local timer
-local lprog=false;
+local lprog=false
 local timer_attach={['accessed']={}}
 local addr_stack=nil
 local empty_stack=true
@@ -51,6 +51,20 @@ local function print_th(t,p)
 	end
 end
 
+local function deepcopy(orig)
+	local orig_type = type(orig)
+	local copy
+	if orig_type == 'table' then
+		copy = {}
+		for orig_key, orig_value in next, orig, nil do
+			copy[deepcopy(orig_key)] = deepcopy(orig_value)
+		end
+		setmetatable(copy, deepcopy(getmetatable(orig)))
+	else -- number, string, boolean, etc
+		copy = orig
+	end
+	return copy
+end
 
 local function tprint(tbl, lookup_exclude, indent,suppressNL,pth)
   local function do_tprint(tbl, lookup_exclude, indent,pth) -- https://gist.github.com/ripter/4270799
@@ -99,7 +113,6 @@ local function tprint(tbl, lookup_exclude, indent,suppressNL,pth)
 		end
   end
 end
-
 
 local function tprint_kv(k,v, lookup_exclude, indent,suppressNL)
   local function do_tprint_kv(k,v, lookup_exclude, indent) -- https://gist.github.com/ripter/4270799
@@ -825,6 +838,49 @@ local function jump(i)
 	end
 end
 
+local function region(a)
+	local out={}
+	local finalOut={}
+	local rt=enumMemoryRegions()
+	local ad=getAddress(a)
+	for k, v in pairs(rt) do
+		local vab=v.AllocationBase
+		local vabx=string.format('%X',vab)
+		local vba=v.BaseAddress
+		local vbax=string.format('%X',vba)
+
+		if out[vbax]==nil then
+			out[vbax]=deepcopy(v)
+			out[vbax].RegionType='Base'
+			out[vbax].RelevantBase=vba
+		end
+			
+		if vab>=vba and out[vabx]==nil then
+			out[vabx]=deepcopy(v)
+			out[vabx].RegionType='AllocationBase'
+			out[vbax].RelevantBase=vab
+		end
+		
+	end
+	
+	for k, v in pairs(out) do
+		local vb=v.RelevantBase
+		if ad>=vb and ad<=vb+v.RegionSize-1 then
+			local vt={}
+			for k1, v1 in pairs(v) do
+				if string.find(k1,'Base')==nil then
+					vt[k1]=v1
+				end
+			end
+			vt.Offset=string.format('%X+%X',vb,ad-vb)
+			vt.Address=string.format('%X',ad)
+			finalOut[k]=vt
+		end
+	end
+     
+	 tprint(finalOut)
+end
+
 batchRW={
 	attach=attach,
 	attach_loop=attach_loop,
@@ -836,5 +892,6 @@ batchRW={
 	end_stack=end_stack,
 	stack=stack,
 	rsp=rsp,
-	jump=jump
+	jump=jump,
+	region=region
 }
