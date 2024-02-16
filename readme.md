@@ -750,6 +750,8 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **jump(i)** -> Jumps to the **i**th result, as shown by "Jump #" in the printout from "batchRW.end_stack/rsp(…)".
 
+* **region(a)** -> Diplays memory regions containing address **a**
+
 ## attachBpLog.lua
 
 #### Log registers at a breakpoint, then print those registers if another breakpoint is hit. Used to provide extra data from earlier in the program's execution. Set a breakpoint on code that you know runs before the breakpoint you set with Cheat Engine's GUI. Useful for shared instructions.
