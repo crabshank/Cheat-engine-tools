@@ -261,6 +261,11 @@ local function getmetatable_formatted(v)
 					   pltFinal[i]=v[i]
 				   end
 				end
+				if type(v)=='table' then
+					for key, value in pairs(v) do
+						 pltFinal[key]=value
+					end
+				end
 
 				--[[if act_vn_Name==true then
 					local out={}
@@ -276,29 +281,30 @@ function tprint(tbl, indent)
 	local function actualPrint(k,v,indent,notTable,do_tprint,suppressMeta)
 		local formatting=''
 		local mtv
-		if notTable~=true then
-			formatting = string.rep("	", indent) .. k .. ": "
-		 end
 		 local spm=nil
 		 if suppressMeta~=true then
 			local mtv=function() return getmetatable_formatted(v) end
 			local mtvb,mtvr=pcall(mtv)
 			if mtvb==true and type(mtvr)=='table' then
-				local vs=tostring(v)
-						local vnm=''
+				--local vs=tostring(v)
+					local vnm=''
 					if v.Name~=nil then
 					local vnf=load("return ".. v.Name)
 					local vnb,vnr=pcall(vnf) 
 					if vnr~=nil then 
-						vs=vnm
+						--vs=vnm
 						vnm=v.Name
 					end
 				end
-					print(string.rep("	", indent) .. vs..':')
+					if notTable~=true then
+						print(string.rep("	", indent) .. k..':')
+					else
+						print(string.rep("	", indent) .. tostring(v)..':')
+					end
 					v=mtvr
 					spm=true
-			end
-		end
+			else formatting = string.rep("	", indent) .. k .. ": " end
+		else formatting = string.rep("	", indent) .. k .. ": " end
 		  local typv=type(v)
 		  if v == nil then
 			print(formatting..'nil')
