@@ -845,42 +845,57 @@ local function region(a)
 	local finalOut={}
 	local rt=enumMemoryRegions()
 	local ad=getAddress(a)
+
 	for k, v in pairs(rt) do
 		local vab=v.AllocationBase
 		local vabx=string.format('%X',vab)
 		local vba=v.BaseAddress
 		local vbax=string.format('%X',vba)
-
-		if out[vbax]==nil then
-			out[vbax]=deepcopy(v)
-			out[vbax].RegionType='Base'
-			out[vbax].RelevantBase=vba
-		end
-			
-		if vab>=vba and out[vabx]==nil then
-			out[vabx]=deepcopy(v)
-			out[vabx].RegionType='AllocationBase'
-			out[vbax].RelevantBase=vab
-		end
 		
+			if out[vbax]==nil then
+				local ov=deepcopy(v)
+				ov.RegionType='Base'
+				ov.RelevantBase=vba
+				out[vbax]={ov}
+			else
+				local ov=deepcopy(v)
+				ov.RegionType='Base'
+				ov.RelevantBase=vba
+				table.insert(out[vbax],ov)
+			end
+			
+			if out[vabx]==nil then
+				local ov=deepcopy(v)
+				ov.RegionType='AllocationBase'
+				ov.RelevantBase=vab
+				out[vabx]={ov}
+			else
+				local ov=deepcopy(v)
+				ov.RegionType='AllocationBase'
+				ov.RelevantBase=vab
+				table.insert(out[vabx],ov)
+			end
 	end
 	
 	for k, v in pairs(out) do
-		local vb=v.RelevantBase
-		if ad>=vb and ad<=vb+v.RegionSize-1 then
-			local vt={}
-			for k1, v1 in pairs(v) do
-				if string.find(k1,'Base')==nil then
-					if type(v1)=='number' then
-						vt[k1]=string.format('%d (0x%X)',v1,v1)
-					else
-						vt[k1]=v1
+		for ki=1, #v do
+			local vki=v[ki]
+			local vb=vki.RelevantBase
+			if ad>=vb and ad<=vb+vki.RegionSize-1 then
+				local vt={}
+				for k1, v1 in pairs(vki) do
+					if string.find(k1,'Base')==nil then
+						if type(v1)=='number' then
+							vt[k1]=string.format('%d (0x%X)',v1,v1)
+						else
+							vt[k1]=v1
+						end
 					end
 				end
+				vt.Offset=string.format('%X+%X',vb,ad-vb)
+				vt.Address=string.format('%X',ad)
+				finalOut[k]=vt
 			end
-			vt.Offset=string.format('%X+%X',vb,ad-vb)
-			vt.Address=string.format('%X',ad)
-			finalOut[k]=vt
 		end
 	end
      
