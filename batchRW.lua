@@ -66,8 +66,8 @@ local function deepcopy(orig)
 	return copy
 end
 
-local function tprint(tbl, lookup_exclude, indent,suppressNL,pth)
-  local function do_tprint(tbl, lookup_exclude, indent,pth) -- https://gist.github.com/ripter/4270799
+local function tprint(tbl, lookup_exclude, indent,suppressNL,pth,noQM)
+  local function do_tprint(tbl, lookup_exclude, indent,pth,noQM) -- https://gist.github.com/ripter/4270799
 	if indent==nil then indent = 0 end
 	for k, v in pairs(tbl) do
 		local tyk=type(k)
@@ -86,15 +86,17 @@ local function tprint(tbl, lookup_exclude, indent,suppressNL,pth)
 			  local typv=type(v)
 			  if typv == "table" then
 				print_th(formatting,pth)
-				do_tprint(v, lookup_exclude, indent+1,pth)
+				do_tprint(v, lookup_exclude, indent+1,pth,noQM)
 			  elseif typv == 'boolean' then
 				print_th(formatting .. tostring(v),pth)
 			  elseif typv == 'string' then
-				local la, lb=string.find(v, "\n")
-				if la==nil then
-					print_th(formatting .. '"'.. v ..'"',pth)
-				else
-					print_th(formatting .. '[['.. v ..']]',pth)
+				if noQM==true then print_th(formatting..v,pth) else
+					local la, lb=string.find(v, "\n")
+					if la==nil then
+						print_th(formatting .. '"'.. v ..'"',pth)
+					else
+						print_th(formatting .. '[['.. v ..']]',pth)
+					end
 				end
 			  elseif typv == 'function' then
 				print_th(formatting .. 'function () … end',pth)
@@ -104,7 +106,7 @@ local function tprint(tbl, lookup_exclude, indent,suppressNL,pth)
 		end
 	end
   end
-  do_tprint(tbl, lookup_exclude, indent,pth)
+  do_tprint(tbl, lookup_exclude, indent,pth,noQM)
   if suppressNL~=true then
 		if pth~=nil then
 			pth:write('\n')
@@ -869,7 +871,11 @@ local function region(a)
 			local vt={}
 			for k1, v1 in pairs(v) do
 				if string.find(k1,'Base')==nil then
-					vt[k1]=v1
+					if type(v1)=='number' then
+						vt[k1]=string.format('%d (0x%X)',v1,v1)
+					else
+						vt[k1]=v1
+					end
 				end
 			end
 			vt.Offset=string.format('%X+%X',vb,ad-vb)
@@ -878,7 +884,7 @@ local function region(a)
 		end
 	end
      
-	 tprint(finalOut)
+	 tprint(finalOut,nil, nil,nil,nil,true)
 end
 
 batchRW={
