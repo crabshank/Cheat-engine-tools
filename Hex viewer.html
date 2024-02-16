@@ -113,6 +113,10 @@
 						<input type="checkbox" id="big_end"></input>
 						<label for="big_end">Big endian</label>
 					</section>
+					<section id='dec_box' title="Unchecked: Hex out" style="display: none;padding-left: 0.2ch;padding-right: 0.43ch;">
+						<input type="checkbox" id="dec_out"></input>
+						<label for="dec_out">Decimal out</label>
+					</section>
 				<button id="conv" style="margin-left: 0.16ch;">Convert hex</button>
 				<section id='rv_box' style="display: inline-block;float:right;">
 					<input type="checkbox" id="revOut"></input>
@@ -547,6 +551,9 @@ var mxw=0;
 elems.type_view = document.getElementById('type_view');
 elems.type_view.selectedIndex=9; //float
 
+elems.dec_out = document.getElementById('dec_out');
+elems.dec_out.checked=true;
+
 var hx_interps={};
 var hx_interps_be={};
 
@@ -563,6 +570,7 @@ elems.hex2 = document.getElementById('hex2');
 elems.big_end = document.getElementById('big_end');
 elems.revOut = document.getElementById('revOut');
 elems.be_box = document.getElementById('be_box');
+elems.dec_box = document.getElementById('dec_box');
 elems.doc_CSS2 = document.getElementById('doc_CSS2');
 elems.ttl = document.getElementById('ttl');
 elems.offset_info = document.getElementById('offset_info');
@@ -830,8 +838,12 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 				let rhx=[];
 				if(!be){
 					rhx=get_subarray(hx_arr,i,i+n-1);
+					hx_interps_curr['nby__hex_le_'+ns].push([rhx.join(''),n]);
+					hx_interps_curr['nby__hex_be_'+ns].push([rhx.reverse().join(''),n]);
 				}else{
 					rhx=get_subarray(hx_arr,i,i+n-1,true);
+					hx_interps_curr['nby__hex_be_'+ns].push([rhx.join(''),n]);
+					hx_interps_curr['nby__hex_le_'+ns].push([rhx.reverse().join(''),n]);
 				}
 				let b=n_byte_unit8_to_int(rhx);
 				let p=(b.u===b.s)?b.u:`(${b.u}, ${b.s})`;
@@ -839,7 +851,7 @@ async function get_interps_byte(i, tp_id, be, hx_interps_curr, n, tp_name){
 				hx_interps_curr['nbys__'+ns].push([b.s,n]);
 				hx_interps_curr['nbyu__'+ns].push([b.u,n]);
 			}else{
-					let tp_names=['nbyus__'+ns,'nbys__'+ns,'nbyu__'+ns];
+					let tp_names=['nbyus__'+ns,'nbys__'+ns,'nbyu__'+ns,'nby__hex_le_'+ns,'nby__hex_be_'+ns];
 					for(let k=0; k<3; ++k){
 						let tp_name=tp_names[k];
 						if(typeof hx_interps_curr[tp_name]==='undefined'){
@@ -1040,6 +1052,13 @@ async function makeSpans(i){
 				let hx_interps_curr=(be)?hx_interps_be:hx_interps;
 				let nt=elems.n_count_div.innerText;
 				let tp_name=tp_id+'__'+nt;
+				if((tp_id==='nbyus' || tp_id==='nbys' || tp_id==='nbyu') && !elems.dec_out.checked){  // n-byte (un)signed
+					if(be){
+						tp_name='nby__hex_be_'+nt
+					}else{
+						tp_name='nby__hex_le_'+nt
+					}
+				}
 				let isFl=(tp_id==='hff'||tp_id==='flt'||tp_id==='dbl')?true:false;
 				let cc=hx_interps_curr[tp_name][i];
 				let x=hx_arr_offs[i];
@@ -1174,6 +1193,8 @@ async function interp_span(t){
 				hx_interps_curr['nbyus__'+nt]=[];
 				hx_interps_curr['nbys__'+nt]=[];
 				hx_interps_curr['nbyu__'+nt]=[];
+				hx_interps_curr['nby__hex_le_'+nt]=[];
+				hx_interps_curr['nby__hex_be_'+nt]=[];
 		}else{
 			hx_interps_curr[tp_name]=[];
 		}
@@ -1316,8 +1337,12 @@ function type_change(event){
 	let is_n=( isBit || tp_id==='nbyus' || tp_id==='nbys' || tp_id==='nbyu' || tp_id==='nbc' )?true:false
 	if(is_n){
 		elems.n_count_div.style.display='-webkit-inline-box';
+		if(!isBit){
+			elems.dec_box.style.display='inline-block';
+		}
 	}else{
 		elems.n_count_div.style.display='none';
+		elems.dec_box.style.display='none';
 	}
 	if(tp_id==='col'){
 		elems.rgba_sel.style.display='-webkit-inline-box';
