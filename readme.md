@@ -750,7 +750,7 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **jump(i)** -> Jumps to the **i**th result, as shown by "Jump #" in the printout from "batchRW.end_stack/rsp(…)".
 
-* **region(a)** -> Diplays memory regions containing address **a**
+* **region(a)** -> Diplays memory regions containing address **a** (**a** may be a number [0x… for hexadecimal] or string).
 
 ## attachBpLog.lua
 
