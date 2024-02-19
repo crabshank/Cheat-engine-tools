@@ -279,6 +279,7 @@ end
 function tprint(tbl, indent)
 
 	local function actualPrint(k,v,indent,notTable,do_tprint,suppressMeta)
+		if k==nil then k='' end
 		local formatting=''
 		local mtv
 		 local spm=nil
@@ -307,7 +308,11 @@ function tprint(tbl, indent)
 		else formatting = string.rep("	", indent) .. k .. ": " end
 		  local typv=type(v)
 		  if v == nil then
-			print(formatting..'nil')
+			if notTable==true then
+				print('nil')
+			else
+				print(formatting..'nil')
+			end
 		  elseif typv == "table" then
 			local ln=pairsLen(v)
 			if ln<1 then
@@ -336,7 +341,6 @@ function tprint(tbl, indent)
 	end
 
 	  local function do_tprint(tbl, indent,notTable,suppressMeta) -- https://gist.github.com/ripter/4270799
-		if not indent then indent = 0 end
 		if tbl==nil then
 			actualPrint(nil,nil,indent,true,do_tprint,suppressMeta)
 			return
@@ -380,7 +384,7 @@ function tprint(tbl, indent)
   if tyb~='table' then
 	notTable=true
   end
-
+	if not indent then indent = 0 end
   do_tprint(tbl,indent,notTable)
   print('\n')
 end
