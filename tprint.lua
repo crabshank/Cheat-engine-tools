@@ -336,14 +336,13 @@ function tprint(tbl, indent)
 	end
 
 	  local function do_tprint(tbl, indent,notTable,suppressMeta) -- https://gist.github.com/ripter/4270799
+		if not indent then indent = 0 end
 		if tbl==nil then
 			actualPrint(nil,nil,indent,true,do_tprint,suppressMeta)
 			return
 		elseif notTable==true then
 			tbl={tbl}
 			indent = 0
-		else
-			if not indent then indent = 0 end
 		end
 		local kys={{},{}}
 		
