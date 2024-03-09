@@ -1,5 +1,5 @@
 local function bubbleSort(a, asc) -- for descending order, asc=false
-  loca l n=#a
+  local n=#a
   local swapped = false
   if asc~=false then
 	  repeat
