@@ -1,15 +1,3 @@
-local function trim_str(s)
-	return string.match(s,'^()%s*$') and '' or string.match(s,'^%s*(.*%S)')
-end
-
-local function pairsLen(t)
-	local c=0
-	for key, value in pairs(t) do
-		c=c+1
-	end
-	return c
-end
-
 local function bubbleSort(a, asc) -- for descending order, asc=false
   local n=#a
   local swapped = false
@@ -34,6 +22,18 @@ local function bubbleSort(a, asc) -- for descending order, asc=false
 			end
 	  until (swapped==false)
   end
+end
+
+local function trim_str(s)
+	return string.match(s,'^()%s*$') and '' or string.match(s,'^%s*(.*%S)')
+end
+
+local function pairsLen(t)
+	local c=0
+	for key, value in pairs(t) do
+		c=c+1
+	end
+	return c
 end
 
 local function deepcopy(orig)
@@ -276,98 +276,37 @@ local function getmetatable_formatted(v)
 				--end
 end
 
-function tprint(tbl, indent)
-	local function get_string(v,formatting,typv,notTable,do_tprint)
-		local out=''
-		if v == nil then
-			if notTable==true then
-				out='nil'
-			else
-				out=formatting..'nil'
-			end
-		  elseif typv == "table" then
-			local ln=pairsLen(v)
-			if ln<1 then
-				out=formatting..'{}'
-			else
-				if spm~=true then
-				   out=formatting
-				end
-				do_tprint(v, indent+1,nil,true)
-			end
-		  elseif typv == 'boolean' then
-			out=formatting .. tostring(v)
-		  elseif typv == 'string' then
-			local la, lb=string.find(v, "\n")
-			if la==nil then
-				out=formatting .. '"'.. v ..'"'
-			else
-				out=formatting .. '[['.. v ..']]'
-			end
-		  elseif typv == 'function' then
-			out=formatting .. 'function (…) … end'
-		  else
-			out=formatting .. tostring(v)
-		  end
-
-		return out
-	end
-	local function actualPrint(k,v,indent,notTable,do_tprint,suppressMeta)
-		if k==nil then k='' end
-		local formatting=''
-		local mtv
-		 local spm=nil
-		 if suppressMeta~=true then
-			local mtv=function() return getmetatable_formatted(v) end
-			local mtvb,mtvr=pcall(mtv)
-			if mtvb==true and type(mtvr)=='table' then
-				--local vs=tostring(v)
-					local vnm=''
-					if v.Name~=nil then
-					local vnf=load("return ".. v.Name)
-					local vnb,vnr=pcall(vnf)
-					if vnr~=nil then
-						--vs=vnm
-						vnm=v.Name
-					end
-				end
-					local tyv=type(v)
-					if tyv~='table' then
-						if notTable~=true then
-							print(string.rep("	", indent) .. k..':'..get_string(v," ",tyv,false,do_tprint))
-						else
-							print(string.rep("	", indent) .. get_string(v,"",tyv,false,do_tprint)..':')
-						end
-					else
-						if notTable~=true then
-							print(string.rep("	", indent) .. k..':')
-						else
-							print(string.rep("	", indent))
-						end
-					end
-					v=mtvr
-					spm=true
-			else formatting = string.rep("	", indent) .. k .. ": " end
-		else formatting = string.rep("	", indent) .. k .. ": " end
-		  local typv=type(v)
-		  print(get_string(v,formatting,typv,notTable,do_tprint))
-
-	end
-
-	  local function do_tprint(tbl, indent,notTable,suppressMeta) -- https://gist.github.com/ripter/4270799
-		if tbl==nil then
-			actualPrint(nil,nil,indent,true,do_tprint,suppressMeta)
-			return
-		elseif notTable==true then
-			tbl={tbl}
-			indent = 0
+local function actualPrint(v,formatting,indent,do_tprint,typv)
+	  if typv == "table" then
+		if pairsLen(v)==0 then
+			return formatting..'{}'
+		else
+			return formatting
 		end
-		local kys={{},{}}
-
-		if tbl[0]~=nil then
-			table.insert(kys[1],0)
+	  elseif typv == 'boolean' then
+		return formatting .. tostring(v)
+	  elseif typv == 'string' then
+		local la, lb=string.find(v, "\n")
+		if la==nil then
+			return formatting .. '"'.. v ..'"'
+		else
+			return formatting .. '[['.. v ..']]'
 		end
+	  elseif typv == 'function' then
+		return formatting .. 'function () … end'
+	  else
+		return formatting .. tostring(v)
+	  end
+end
 
+local function tprint(tbl)
+  local function do_tprint(tbl, indent,notTable,supressMeta) -- https://gist.github.com/ripter/4270799
+        local formatting=''
+        local mtv,mtvb,mtvr,typv,fOnce
+
+		local kys={{},{},{}}
+
+		if tbl[0]~=nil then table.insert(kys[1],0) end
 		for k, v in pairs(tbl) do
 			if k~=0 then
 				if type(k)=='number' then
@@ -379,26 +318,51 @@ function tprint(tbl, indent)
 		end
 
 		bubbleSort(kys[1])
-		local ks=kys[1]
-		for k=1,#ks do
-			local ky=ks[k]
-			actualPrint(ky,tbl[ky],indent,notTable,do_tprint,suppressMeta)
+		for j=1,#kys[1] do
+			table.insert(kys[3],kys[1][j])
+		end
+		for j=1,#kys[2] do
+			table.insert(kys[3],kys[2][j])
 		end
 
-		ks=kys[2]
-		for k=1,#ks do
-			local ky=ks[k]
-			actualPrint(ky,tbl[ky],indent,notTable,do_tprint,suppressMeta)
-		end
+		for j=1,#kys[3] do
+			local k=kys[3][j]
+			local v=tbl[k]
+			typv=type(v)
+			if notTable~=true then
+		  formatting = string.rep("	", indent) .. k .. ": "
+			end
+			if supressMeta~=true then
+				mtv=function() return getmetatable_formatted(v) end
+				mtvb,mtvr=pcall(mtv)
+				if mtvb==true and type(mtvr)=='table' then
+                                              fOnce=true
+					 print(actualPrint(v,formatting,indent,do_tprint,typv)..': ')
+					  if typv == "table" then
+						do_tprint(v, indent+1,nil,true)
+					  end
+					 v=mtvr
+					 typv=type(v)
+				  end
+			end
 
+                 if typv == "table" then
+                             if fOnce~=true then
+                              print(formatting)
+                             end
+		             do_tprint(v, indent+1,nil,true)
+		         else
+                   print(actualPrint(v,formatting,indent,do_tprint,typv))
+                 end
 	  end
-
-  local notTable=false
-  local tyb=type(tbl)
-  if tyb~='table' then
-	notTable=true
   end
-	if not indent then indent = 0 end
-  do_tprint(tbl,indent,notTable)
+  local nt=false
+  if type(tbl)~='table' then
+     tbl={tbl}
+     nt=true
+  else
+
+  end
+  do_tprint(tbl,0,nt)
   print('\n')
 end
