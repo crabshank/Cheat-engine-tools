@@ -302,7 +302,7 @@ end
 function tprint(tbl)
   local function do_tprint(tbl, indent,notTable,supressMeta) -- https://gist.github.com/ripter/4270799
         local formatting=''
-        local mtv,mtvb,mtvr,typv,fOnce
+        local mtv,mtvb,mtvr,typv,fOnce,initVal
         local kys={{},{},{}}
         if notTable~=true then
 
@@ -326,6 +326,7 @@ function tprint(tbl)
 			table.insert(kys[3],kys[2][j])
 		end
 else
+                initVal=true
                 for j=1,#tbl do
 			table.insert(kys[3],j)
 		end
@@ -351,14 +352,12 @@ end
 				  end
                         end
 
-                 if typv == "table" then
+               if typv == "table" then
                              if fOnce~=true then
                               print(formatting .. ": ")
                               do_tprint(v, indent+1,nil,true)
                              end
-
-		         else
-                         print(type(v))
+		         elseif initVal~=true then
                    print(actualPrint(v,formatting .. ": ",indent,do_tprint,typv))
                  end
 	  end
