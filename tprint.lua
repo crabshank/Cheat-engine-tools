@@ -277,7 +277,7 @@ local function getmetatable_formatted(v)
 end
 
 function tprint(tbl, indent)
-	local function get_string(v,formatting,typv,notTable,do_tprint)
+	local function get_string(v,formatting,typv,notTable,do_tprint,indent2)
 		local out=''
 		if v == nil then
 			if notTable==true then
@@ -293,7 +293,7 @@ function tprint(tbl, indent)
 				if spm~=true then
 				   out=formatting
 				end
-				do_tprint(v, indent+1,nil,true)
+				do_tprint(v, indent2+1,nil,true)
 			end
 		  elseif typv == 'boolean' then
 			out=formatting .. tostring(v)
@@ -341,7 +341,7 @@ function tprint(tbl, indent)
 			else formatting = string.rep("	", indent) .. k .. ": " end
 		else formatting = string.rep("	", indent) .. k .. ": " end
 		  local typv=type(v)
-		  print(get_string(v,formatting,typv,notTable,do_tprint))
+		  print(get_string(v,formatting,typv,notTable,do_tprint,indent))
 
 	end
 
