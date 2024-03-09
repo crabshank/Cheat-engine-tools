@@ -331,10 +331,19 @@ function tprint(tbl, indent)
 						vnm=v.Name
 					end
 				end
-					if notTable~=true then
-						print(string.rep("	", indent) .. k..':'..get_string(v," ",type(v),false,do_tprint))
+					local tyv=type(v)
+					if tyv~='table' then
+						if notTable~=true then
+							print(string.rep("	", indent) .. k..':'..get_string(v," ",tyv,false,do_tprint))
+						else
+							print(string.rep("	", indent) .. get_string(v,"",tyv,false,do_tprint)..':')
+						end
 					else
-						print(string.rep("	", indent) .. get_string(v,"",type(v),false,do_tprint)..':')
+						if notTable~=true then
+							print(string.rep("	", indent) .. k..':')
+						else
+							print(string.rep("	", indent))
+						end
 					end
 					v=mtvr
 					spm=true
