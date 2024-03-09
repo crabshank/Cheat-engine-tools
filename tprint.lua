@@ -1,5 +1,5 @@
 local function bubbleSort(a, asc) -- for descending order, asc=false
-  local n=#a
+  loca l n=#a
   local swapped = false
   if asc~=false then
 	  repeat
@@ -299,7 +299,7 @@ local function actualPrint(v,formatting,indent,do_tprint,typv)
 	  end
 end
 
-local function tprint(tbl)
+function tprint(tbl)
   local function do_tprint(tbl, indent,notTable,supressMeta) -- https://gist.github.com/ripter/4270799
         local formatting=''
         local mtv,mtvb,mtvr,typv,fOnce
