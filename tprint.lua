@@ -72,9 +72,9 @@ local function getmetatable_formatted(v)
 	local mt,gmtb,vc --,cb,cr,plw
 
 	local vn,vna,act_vn_Name='','',false
-	
+
 	local vnf=load("return ".. vn)
-	local vnb,vnr=pcall(vnf) 
+	local vnb,vnr=pcall(vnf)
 	if vnr==nil then
 		vn='…'
 	   vna='(…)'
@@ -254,7 +254,7 @@ local function getmetatable_formatted(v)
 						end
 					end
 				end
-				
+
 
 				if fnd==true then
 				   for i=0, vc-1 do
@@ -277,7 +277,41 @@ local function getmetatable_formatted(v)
 end
 
 function tprint(tbl, indent)
+	local function get_string(v,formatting,typv,notTable,do_tprint)
+		local out=''
+		if v == nil then
+			if notTable==true then
+				out='nil'
+			else
+				out=formatting..'nil'
+			end
+		  elseif typv == "table" then
+			local ln=pairsLen(v)
+			if ln<1 then
+				out=formatting..'{}'
+			else
+				if spm~=true then
+				   out=formatting
+				end
+				do_tprint(v, indent+1,nil,true)
+			end
+		  elseif typv == 'boolean' then
+			out=formatting .. tostring(v)
+		  elseif typv == 'string' then
+			local la, lb=string.find(v, "\n")
+			if la==nil then
+				out=formatting .. '"'.. v ..'"'
+			else
+				out=formatting .. '[['.. v ..']]'
+			end
+		  elseif typv == 'function' then
+			out=formatting .. 'function (…) … end'
+		  else
+			out=formatting .. tostring(v)
+		  end
 
+		return out
+	end
 	local function actualPrint(k,v,indent,notTable,do_tprint,suppressMeta)
 		if k==nil then k='' end
 		local formatting=''
@@ -291,14 +325,14 @@ function tprint(tbl, indent)
 					local vnm=''
 					if v.Name~=nil then
 					local vnf=load("return ".. v.Name)
-					local vnb,vnr=pcall(vnf) 
-					if vnr~=nil then 
+					local vnb,vnr=pcall(vnf)
+					if vnr~=nil then
 						--vs=vnm
 						vnm=v.Name
 					end
 				end
 					if notTable~=true then
-						print(string.rep("	", indent) .. k..':')
+						print(string.rep("	", indent) .. k..':'..get_string(v," ",type(v),false,do_tprint))
 					else
 						print(string.rep("	", indent) .. tostring(v)..':')
 					end
@@ -307,36 +341,7 @@ function tprint(tbl, indent)
 			else formatting = string.rep("	", indent) .. k .. ": " end
 		else formatting = string.rep("	", indent) .. k .. ": " end
 		  local typv=type(v)
-		  if v == nil then
-			if notTable==true then
-				print('nil')
-			else
-				print(formatting..'nil')
-			end
-		  elseif typv == "table" then
-			local ln=pairsLen(v)
-			if ln<1 then
-				print(formatting..'{}')
-			else
-				if spm~=true then
-				   print(formatting)
-				end
-				do_tprint(v, indent+1,nil,true)
-			end
-		  elseif typv == 'boolean' then
-			print(formatting .. tostring(v))
-		  elseif typv == 'string' then
-			local la, lb=string.find(v, "\n")
-			if la==nil then
-				print(formatting .. '"'.. v ..'"')
-			else
-				print(formatting .. '[['.. v ..']]')
-			end
-		  elseif typv == 'function' then
-			print(formatting .. 'function (…) … end')
-		  else
-			print(formatting .. tostring(v))
-		  end
+		  print(get_string(v,formatting,typv,notTable,do_tprint))
 
 	end
 
@@ -349,11 +354,11 @@ function tprint(tbl, indent)
 			indent = 0
 		end
 		local kys={{},{}}
-		
+
 		if tbl[0]~=nil then
 			table.insert(kys[1],0)
 		end
-		
+
 		for k, v in pairs(tbl) do
 			if k~=0 then
 				if type(k)=='number' then
@@ -363,15 +368,15 @@ function tprint(tbl, indent)
 				end
 			end
 		end
-		
+
 		bubbleSort(kys[1])
-		local ks=kys[1] 
+		local ks=kys[1]
 		for k=1,#ks do
 			local ky=ks[k]
 			actualPrint(ky,tbl[ky],indent,notTable,do_tprint,suppressMeta)
 		end
-		
-		ks=kys[2] 
+
+		ks=kys[2]
 		for k=1,#ks do
 			local ky=ks[k]
 			actualPrint(ky,tbl[ky],indent,notTable,do_tprint,suppressMeta)
