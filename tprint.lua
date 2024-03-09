@@ -303,8 +303,9 @@ function tprint(tbl)
   local function do_tprint(tbl, indent,notTable,supressMeta) -- https://gist.github.com/ripter/4270799
         local formatting=''
         local mtv,mtvb,mtvr,typv,fOnce
+        local kys={{},{},{}}
+        if notTable~=true then
 
-		local kys={{},{},{}}
 
 		if tbl[0]~=nil then table.insert(kys[1],0) end
 		for k, v in pairs(tbl) do
@@ -324,35 +325,41 @@ function tprint(tbl)
 		for j=1,#kys[2] do
 			table.insert(kys[3],kys[2][j])
 		end
-
+else
+                for j=1,#tbl do
+			table.insert(kys[3],j)
+		end
+end
 		for j=1,#kys[3] do
 			local k=kys[3][j]
 			local v=tbl[k]
 			typv=type(v)
 			if notTable~=true then
-		  formatting = string.rep("	", indent) .. k .. ": "
-			end
+		  formatting = string.rep("	", indent) .. k
+			else
+                        formatting = string.rep("	", indent) .. actualPrint(v,'',indent,do_tprint,typv)
+
+                         end
 			if supressMeta~=true then
 				mtv=function() return getmetatable_formatted(v) end
 				mtvb,mtvr=pcall(mtv)
 				if mtvb==true and type(mtvr)=='table' then
-                                              fOnce=true
-					 print(actualPrint(v,formatting,indent,do_tprint,typv)..': ')
-					  if typv == "table" then
-						do_tprint(v, indent+1,nil,true)
-					  end
-					 v=mtvr
-					 typv=type(v)
+					 print(actualPrint(mtvr,formatting,indent,do_tprint,type(mtvr))..': ')
+                                          do_tprint(mtvr, indent+1,nil,true)
+                                          fOnce=true
+
 				  end
-			end
+                        end
 
                  if typv == "table" then
                              if fOnce~=true then
-                              print(formatting)
+                              print(formatting .. ": ")
+                              do_tprint(v, indent+1,nil,true)
                              end
-		             do_tprint(v, indent+1,nil,true)
+
 		         else
-                   print(actualPrint(v,formatting,indent,do_tprint,typv))
+                         print(type(v))
+                   print(actualPrint(v,formatting .. ": ",indent,do_tprint,typv))
                  end
 	  end
   end
