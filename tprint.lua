@@ -341,7 +341,7 @@ end
                         formatting = string.rep("	", indent) .. actualPrint(v,'',indent,do_tprint,typv)
 
                          end
-			if supressMeta~=true then
+			if supressMeta~=true and notTable==true then
 				mtv=function() return getmetatable_formatted(v) end
 				mtvb,mtvr=pcall(mtv)
 				if mtvb==true and type(mtvr)=='table' then
