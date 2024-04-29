@@ -60,21 +60,36 @@ end
 
 local shfs={}
 
-	shfs['rol']=function(op)
+	shfs['rol']=function(op,nimm)
+        if nimm==true then
+            return string.format('Rotate bits (position: n -> n+%s)',op)
+        end
 		return string.format('Rotate bits (position: n -> n+%d)',op)
 	end
-	shfs['ror']=function(op)
+	shfs['ror']=function(op,nimm)
+        if nimm==true then
+            return string.format('Rotate bits (position: n -> n-%s)',op)
+        end
 		return string.format('Rotate bits (position: n -> n-%d)',op)
 	end
-	shfs['shl']=function(op)
+	shfs['shl']=function(op,nimm)
+        if nimm==true then
+            return string.format('Shift bits (position: n -> n+%s)',op)
+        end
 		return string.format('Shift bits (position: n -> n+%d)',op)
 	end
 	shfs['sal']=shfs['shl']
 	
-	shfs['shr']=function(op)
+	shfs['shr']=function(op,nimm)
+        if nimm==true then
+            return string.format('Shift bits (position: n -> n-%s)',op)
+        end
 		return string.format('Shift bits (position: n -> n-%d)',op)
 	end
-	shfs['sar']=function(op)
+	shfs['sar']=function(op,nimm)
+        if nimm==true then
+            return string.format('Shift bits, but disregard sign bit (position: n -> n-%s)',op)
+        end
 		return string.format('Shift bits, but disregard sign bit (position: n -> n-%d)',op)
 	end
 
@@ -97,7 +112,7 @@ local ops={}
 				return 'Clear all '..by..' except: '..s
 			end
 		else
-			return ''
+			return 'If the nth bit of '..op2..'~=1, then clear the nth bit of '..op1
 		end
 	end
 	
@@ -123,7 +138,7 @@ local ops={}
 		elseif op1==op2 then
 			return op1..'==0? '..op1..'<0? Parity?'
 		else
-			return ''
+			return 'Get the positions of the "1" bits in '..op2..', do all the bits in those positions of '..op1..'==0?'
 		end
 	end
 	
@@ -149,7 +164,7 @@ local ops={}
 		elseif op1==op2 then
 			return 'Clear '..op1
 		else
-			return ''
+			return 'If the nth bit of '..op2..'==1, then invert the nth bit of '..op1
 		end
 	end
 	
@@ -173,7 +188,7 @@ local ops={}
 				return 'Set: '..s..' '..by..' to 1'
 			end
 		else
-			return ''
+			return 'If the nth bit of '..op2..'==1, then set the nth bit of '..op1..' to 1'
 		end
 	end
 	
@@ -244,7 +259,10 @@ function f(sender, address, LastDisassembleData, result, description)
 								n_s=max_s+(imm-min_s)+1
 							end
 						txt= txt..' || '..shfs[opcd](n_s)
-					end
+					else -- no immediate
+                        ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
+                        txt= txt..' || '..shfs[opcd](ops2,true)
+                    end
 			elseif ops[opcd]~=nil then -- bitwise op
 					local dst = disassemble(address)
 					local extraField, instruction, bytes, address = splitDisassembledString(dst)
@@ -254,7 +272,7 @@ function f(sender, address, LastDisassembleData, result, description)
 					local imm=tonumber(ops2,16)
 					
 					if imm==nil then --not immediate
-							local ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
+							ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
 							local txt1=ops[opcd](false,nil,ops1,ops2)
 							if ops1~=nil and ops2~=nil and txt1~='' then
 								txt=txt..' || '..txt1
