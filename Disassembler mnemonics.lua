@@ -3,6 +3,15 @@ local procID=getOpenedProcessID()
 
 local string=string
 local string_match=string.match
+local string_format=string.format
+
+local function trim_str(s)
+	return string_match(s,'^()%s*$') and '' or string_match(s,'^%s*(.*%S)')
+end
+
+local function string_match_t(s,p)
+	return trim_str(string_match(s,p))
+end
 
 local visDis = getVisibleDisassembler()
 local allDisassemblerNotes={}
@@ -196,11 +205,15 @@ local round = function(a, prec)
     return math.floor(a + 0.5*prec)
 end
 
-local getBits= function (num, asTable)
+local getBits= function (num, asTable,paddTable)
 							local x = {}
 							if num==0 then
 								if asTable==true then
-									return {0}
+									x={0}
+									for i=#x+1, paddTable do
+										x[i]=0
+									end
+									return x
 								else
 									return '0'
 								end
@@ -211,6 +224,9 @@ local getBits= function (num, asTable)
 								num = (num - rest) / 2
 							end
 							if asTable==true then
+								for i=#x+1, paddTable do
+									x[i]=0
+								end
 								return x
 							else
 								return table.concat(x)
@@ -236,12 +252,93 @@ function f(sender, address, LastDisassembleData, result, description)
 		local opcd=trim_str(LastDisassembleData['opcode'])
 			if opcd=='lea' then
 				txt=txt..' || Load value in brackets into first operand'
+			elseif opcd=='shufps' or opcd=='shufpd' then
+					local dst = disassemble(address)
+					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					
+					local op1=string_match_t(instruction,'%s+([^,]+),.+')
+					local op2=string_match_t(instruction,'%s+[^,]+,([^,]+)')
+					local imm8=string_match_t(instruction,'%s+[^,]+,[^,]+,(.+)')
+					
+					local imm=tonumber(imm8,16)
+						local abs_imm= math.abs(imm)
+						local b=1
+						if abs_imm>1 then
+							b=math.ceil((math.log( abs_imm ) / math.log( 2 )/8)) --bytes required to represent this number
+						end
+							local max_u=string.rep('FF',b)
+							max_u=tonumber(max_u,16)
+							local max_s=math.floor(max_u/2)
+							local min_s=-(max_s+1)
+							local n_s=imm
+							if imm<0 then
+								n_s=max_s+(imm-min_s)+1
+							end
+							local bn=getBits(n_s,true,8)
+							
+							local msk={}
+							local shf_txt=''
+							local mask_cases={}
+							if opcd=='shufps' then
+								msk={
+									tonumber(bn[1]..bn[2],2),
+									tonumber(bn[3]..bn[4],2),
+									tonumber(bn[5]..bn[6],2),
+									tonumber(bn[7]..bn[8],2),
+								}
+								mask_cases={
+									string_format('%s[0]:=%s[0] |',op1,op1),
+									string_format('%s[0]:=%s[1] |',op1,op1),
+									string_format('%s[0]:=%s[2] |',op1,op1),
+									string_format('%s[0]:=%s[3] |',op1,op1)
+								}
+								shf_txt=mask_cases[msk[1]+1]
+								
+								mask_cases={
+									string_format(' %s[1]:=%s[0] |',op1,op1),
+									string_format(' %s[1]:=%s[1] |',op1,op1),
+									string_format(' %s[1]:=%s[2] |',op1,op1),
+									string_format(' %s[1]:=%s[3] |',op1,op1)
+								}
+								shf_txt=shf_txt..mask_cases[msk[2]+1]
+								
+								mask_cases={
+									string_format(' %s[2]:=%s[0] |',op1,op2),
+									string_format(' %s[2]:=%s[1] |',op1,op2),
+									string_format(' %s[2]:=%s[2] |',op1,op2),
+									string_format(' %s[2]:=%s[3] |',op1,op2)
+								}
+								shf_txt=shf_txt..mask_cases[msk[3]+1]
+								
+								mask_cases={
+									string_format(' %s[3]:=%s[0]',op1,op2),
+									string_format(' %s[3]:=%s[1]',op1,op2),
+									string_format(' %s[3]:=%s[2]',op1,op2),
+									string_format(' %s[3]:=%s[3]',op1,op2)
+								}
+								shf_txt=shf_txt..mask_cases[msk[4]+1]
+
+								txt= txt..' || '.. shf_txt
+							else -- shufpd
+								if bn[1]==0 then
+									shf_txt=string_format('%s[0]:=%s[0] |',op1,op1)
+								else
+									shf_txt=string_format('%s[0]:=%s[1] |',op1,op1)
+								end
+								if bn[2]==0 then
+									shf_txt=shf_txt..string_format(' %s[0]:=%s[0]',op1,op2)
+								else
+									shf_txt=shf_txt..string_format(' %s[0]:=%s[1]',op1,op2)
+								end
+								txt= txt..' || '.. shf_txt
+							end
+						
 			elseif shfs[opcd]~=nil then -- shift
 					local dst = disassemble(address)
 					local extraField, instruction, bytes, address = splitDisassembledString(dst)
 					
-					local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
-					local ops2=string_match(instruction,'%s+[^,]+%s*,%s*([^%s]+)')
+					local ops1=string_match_t(instruction,'%s+([^,]+),.+')
+					local ops2=string_match_t(instruction,'%s+[^,]+,(.+)')
 					local imm=tonumber(ops2,16)
 					
 					if imm~=nil then -- immediate
@@ -260,19 +357,19 @@ function f(sender, address, LastDisassembleData, result, description)
 							end
 						txt= txt..' || '..shfs[opcd](n_s)
 					else -- no immediate
-                        ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
+                        ops2=string_match_t(instruction,'%s+[^,]+,(.+)')
                         txt= txt..' || '..shfs[opcd](ops2,true)
                     end
 			elseif ops[opcd]~=nil then -- bitwise op
 					local dst = disassemble(address)
 					local extraField, instruction, bytes, address = splitDisassembledString(dst)
 					
-					local ops1=string_match(instruction,'%s+([^,]+)%s*,%s*.+')
-					local ops2=string_match(instruction,'%s+[^,]+%s*,%s*([^%s]+)')
+					local ops1=string_match_t(instruction,'%s+([^,]+),.+')
+					local ops2=string_match_t(instruction,'%s+[^,]+,(.+)')
 					local imm=tonumber(ops2,16)
 					
 					if imm==nil then --not immediate
-							ops2=string_match(instruction,'%s+[^,]+%s*,%s*(.+)')
+							ops2=string_match_t(instruction,'%s+[^,]+,(.+)')
 							local txt1=ops[opcd](false,nil,ops1,ops2)
 							if ops1~=nil and ops2~=nil and txt1~='' then
 								txt=txt..' || '..txt1
@@ -303,7 +400,7 @@ function f(sender, address, LastDisassembleData, result, description)
 		txt=allDisassemblerNotes[ads].text
 	end
 
-	local s=string.match(getComment(LastDisassembleData.address),"[^〈]*%s*〈" )
+	local s=string_match(getComment(LastDisassembleData.address),"[^〈]*%s*〈" )
 	if s ==nil then
 		s="〈"
 	end
