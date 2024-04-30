@@ -231,8 +231,9 @@ local function getmetatable_formatted(v)
 				vc=nil
 
 				local fnd=false
-				local tycn=type(v.Count)
-				if tycn~='nil' then
+				local gcnt=function() return type(v.Count) end
+				local gcntb,gcntr=pcall(mtv)
+				if gcntb==true then
 					if tycn=='number' then
 						vc=v.Count
 						fnd=true
@@ -243,8 +244,9 @@ local function getmetatable_formatted(v)
 				end
 
 				if fnd==false then
-					tycn=type(v.count)
-					if tycn~='nil' then
+				gcnt=function() return type(v.count) end
+				gcntb,gcntr=pcall(mtv)
+				if gcntb==true then
 						if tycn=='number' then
 							vc=v.count
 							fnd=true
@@ -272,7 +274,11 @@ local function getmetatable_formatted(v)
 					out[vn]=pltFinal
 					return out
 				else]]
-					return pltFinal
+					if pairsLen(pltFinal)>0 then
+						return pltFinal
+					else
+						return nil
+					end
 				--end
 end
 
@@ -302,7 +308,7 @@ end
 function tprint(tbl)
   local function do_tprint(tbl, indent,notTable,supressMeta) -- https://gist.github.com/ripter/4270799
         local formatting=''
-        local mtv,mtvb,mtvr,typv,fOnce,initVal
+        local mtv,mtvb,mtvr,typv,fOnce,initVal,kys3l
         local kys={{},{},{}}
         if notTable~=true then
 
@@ -331,7 +337,13 @@ else
 			table.insert(kys[3],j)
 		end
 end
-		for j=1,#kys[3] do
+		
+		kys3l=#kys[3]
+		if kys3l==0 and notTable~=true then
+			 print(actualPrint(tbl,'',indent,do_tprint,'table'))
+			 return
+		end
+		for j=1,kys3l do
 			local k=kys[3][j]
 			local v=tbl[k]
 			typv=type(v)
@@ -359,6 +371,8 @@ end
                              end
 		         elseif initVal~=true then
                    print(actualPrint(v,formatting .. ": ",indent,do_tprint,typv))
+                 elseif mtvr==nil then
+                   print(actualPrint(v,'',indent,do_tprint,typv))
                  end
 	  end
   end
