@@ -210,8 +210,10 @@ local getBits= function (num, asTable,paddTable)
 							if num==0 then
 								if asTable==true then
 									x={0}
-									for i=#x+1, paddTable do
-										x[i]=0
+									if paddTable~=nil then
+										for i=#x+1, paddTable do
+											x[i]=0
+										end
 									end
 									return x
 								else
@@ -224,8 +226,10 @@ local getBits= function (num, asTable,paddTable)
 								num = (num - rest) / 2
 							end
 							if asTable==true then
-								for i=#x+1, paddTable do
-									x[i]=0
+								if paddTable~=nil then
+									for i=#x+1, paddTable do
+										x[i]=0
+									end
 								end
 								return x
 							else
