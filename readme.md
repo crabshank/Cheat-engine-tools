@@ -98,7 +98,7 @@ local wf={
     "basic_filebuf",
     "basic_ofstream",
     "basic_fstream",
-    "open",
+    "open"
 }
 
 local function filt (v,k,t)
