@@ -1236,7 +1236,7 @@ unregistersymbol(${nmb})
 console.log(ct);
 	let dl_a=document.createElement('a');
 	document.body.appendChild(dl_a);
-	let nm=((t[1]==='')? 'AOB_table': (t[1]+'__') )+t[0]+'.CT';
+	let nm=((t[1]==='')? 'AOB_table_': (t[1]+'__') )+t[0]+'.CT';
 	dl_a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(ct));
 	dl_a.setAttribute('download', nm);
 	dl_a.click();
