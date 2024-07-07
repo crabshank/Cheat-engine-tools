@@ -1166,6 +1166,7 @@ unregistersymbol(${nmb})
 			   let vkFe=vk.firstElementChild;
 			   let vkFe_hod=vkFe.getAttribute('hod');
 			   let vkFe_bse=(nmb_el!==null)?'base'+vkFe_hod:'base_'+t[0]+(vkFe_hod==='+0'?'':vkFe_hod);
+			   let vkFe_bse2=nmb+(vkFe_hod==='+0'?'':vkFe_hod);
 			   
 				ct+=`<CheatEntry>
 				  <ID>${k+1}</ID>
@@ -1174,7 +1175,7 @@ unregistersymbol(${nmb})
 				  <ShowAsSigned>0</ShowAsSigned>
 				  <VariableType>Byte</VariableType>
 				  `;
-			  ct+=`<Address>${vkFe_bse}</Address>
+			  ct+=`<Address>${vkFe_bse2}</Address>
 				</CheatEntry>
 				`;
 		   }
