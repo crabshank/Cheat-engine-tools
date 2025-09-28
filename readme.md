@@ -394,7 +394,7 @@ local inj_script=[[
     subss  ${xmm~3},  ${xmm~4}
     mulss  ${xmm~4},  ${xmm~1} //mul by adj_x
     addss  ${xmm~4},  ${xmm~4}
-    addss  ${xmm~4},  ${xmm~3} //FINAL MULT in x~4 ! //The random number between 0 and 1, which is the x-axis, then run it though a function which will transform it from linear (y=x) to a line that pushes everything closer to the mean (y closer to 0.5 for any x). Then adjusments to shift the mean and range (from: 0.5 and 0 to 1, respectively) to what you set. I call this the "Square root distribution".
+    addss  ${xmm~4},  ${xmm~3} //FINAL MULT in x~4 ! //The random number between 0 and 1, which is the x-axis, then run it though a function which will transform it from linear (y=x) to a line that pushes everything closer to the mean (y closer to 0.5 for any x). Then adjusments to shift the mean and range (from: 0.5 and 0 to 1, respectively) to what you set. I call this the Square root distribution.
 
     ${pop_xmm}(0)
 	mulss ${x_reg},${xmm~4}
