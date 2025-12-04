@@ -99,7 +99,7 @@ local function tprint(tbl, lookup_exclude, indent,suppressNL,pth,noQM)
 					end
 				end
 			  elseif typv == 'function' then
-				print_th(formatting .. 'function () … end',pth)
+				print_th(formatting .. 'function (…) … end',pth)
 			  else
 				print_th(formatting .. tostring(v),pth)
 			  end
@@ -917,3 +917,4 @@ batchRW={
 	region=region
 
 }
+
