@@ -146,7 +146,7 @@ local function tprint_kv(k,v, lookup_exclude, indent,suppressNL)
 					print(formatting .. '[['.. v ..']]')
 				end
 			  elseif typv == 'function' then
-				print(formatting .. 'function () … end')
+				print(formatting .. 'function (…) … end')
 			  else
 				print(formatting .. tostring(v))
 			  end
@@ -915,4 +915,5 @@ batchRW={
 	rsp=rsp,
 	jump=jump,
 	region=region
+
 }
