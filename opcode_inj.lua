@@ -55,7 +55,7 @@ local function tprint(tbl, indent)
 			print(formatting .. '[['.. v ..']]')
 		end
 	  elseif typv == 'function' then
-		print(formatting .. 'function () … end')
+		print(formatting .. 'function (…) … end')
 	  else
 		print(formatting .. tostring(v))
 	  end
@@ -833,3 +833,4 @@ end
  opcode_inj['disable_nop']=disable_nop
  opcode_inj['dump']=dump_vars
  opcode_inj['nop']=nop
+
