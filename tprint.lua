@@ -299,8 +299,9 @@ local function actualPrint(v,formatting,indent,do_tprint,typv)
 			return formatting .. '[['.. v ..']]'
 		end
 	  elseif typv == 'function' then
-		return formatting .. 'function () … end'
+		return formatting .. 'function (…) … end'
 	  else
+		
 		return formatting .. tostring(v)
 	  end
 end
@@ -385,4 +386,5 @@ end
   end
   do_tprint(tbl,0,nt)
   print('\n')
+
 end
