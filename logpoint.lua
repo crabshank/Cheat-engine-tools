@@ -97,7 +97,7 @@ local function tprint(tbl, indent)
 			print(formatting .. '[['.. v ..']]')
 		end
 	  elseif typv == 'function' then
-		print(formatting .. 'function () … end')
+		print(formatting .. 'function (…) … end')
 	  else
 		print(formatting .. tostring(v))
 	  end
@@ -1224,4 +1224,5 @@ logpoint={
 	removeAttached=removeAttached,
 	stop=stop,
 	printAttached=printAttached
+
 }
