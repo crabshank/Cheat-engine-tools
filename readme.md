@@ -625,7 +625,7 @@ N.B. To use this, the log must be stopped.
 
 * **printAttached()** -> Print all attached and logged breakpoints preceded by an index.
 
-N.B. all data is displayed as arrays of bytes, unless **le**==*true* in the situation described above. I suggest pasting the data into a notepad, removing everything except the byte hex and pasting it into a hex editor/viewer.
+N.B. all data is displayed as arrays of bytes, unless **bin**==*1* or *2* in the situation described above. I suggest pasting the data into a notepad, removing everything except the byte hex and pasting it into a hex editor/viewer.
 
 ## traceCount.lua
 
