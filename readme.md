@@ -4,7 +4,7 @@ This file contains functions that expand upon existing ones and ports from other
 
 * **enumModuleSymbols()**
 
-This function returns a Lua table containing:
+This function returns a Lua table of tables containing:
 
 ```
 [ Address: decimal address of the symbol ]
