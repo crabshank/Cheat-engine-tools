@@ -11,6 +11,7 @@ This function returns a Lua table of tables containing:
 [ HexAddress: hexadecimal address of the symbol ]
 [ Name: symbol name ]
 [ ModuleName ]
+[ Size ]
 ```
 
 * **table_filter(t,f)**
