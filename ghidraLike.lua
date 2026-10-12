@@ -1869,6 +1869,10 @@ end
 print('Done!')
 end
 
+local function _endWindow()
+	gl_stop()
+end
+
 -- Public entry point. ALWAYS returns nil -- success, failure and "already
 -- running" alike -- because the work is asynchronous. Poll count() or watch
 -- for the summary lines.
@@ -3156,5 +3160,5 @@ csv = _csv,
 rtticsv = _rtticsv,
 sections = _sections,
 html = _html,
-endWindow = gl_stop
+endWindow = _endWindow
 }
