@@ -1862,10 +1862,18 @@ roots, callers = {}, {}
 pdStart, pdEnd, pdChained = {}, {}, {}
 cols = {}
 gl_freeCaches()
+
 if err then
-print('ghidraLike failed: ' .. tostring(err))
-return
+	print('ghidraLike failed: ' .. tostring(err))
+	return
 end
+
+if stat then
+	print(string.format(
+		'functions=%d  exact=%d  nested=%d  authoritative=%d  guessed-extent bytes=%d',
+		stat.nfuncs, stat.exact, stat.nested, stat.auth, stat.guessed))
+end
+
 print('Done!')
 end
 
@@ -2036,10 +2044,6 @@ end
 end
 return nil
 end
-
------------------------------------------------------------------------
--- OUTPUT
------------------------------------------------------------------------
 
 -----------------------------------------------------------------------
 -- OUTPUT
