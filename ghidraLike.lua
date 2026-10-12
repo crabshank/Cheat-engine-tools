@@ -3153,8 +3153,6 @@ end
 ghidraLike = {
 probe = _probe,
 csv = _csv,
-name = _name,
-rtti = _rtti,
 rtticsv = _rtticsv,
 sections = _sections,
 html = _html,
