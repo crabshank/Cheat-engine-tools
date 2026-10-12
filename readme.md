@@ -190,6 +190,15 @@ inside another function's `.pdata` body are still kept, but flagged
 See [PE Exception Directory](https://mzrst.com/puppy/docs/features/data-directories/exception/)
 for the 12-byte `RUNTIME_FUNCTION` layout that source S1 relies on.
 
+Suggested usage:
+```
+--UNCOMMENT EACH LINE!
+--ghidraLike.probe()
+--ghidraLike.html('C:\\Users\\User\\Documents\\classes_rtti.html')
+--ghidraLike.rtticsv('C:\\Users\\User\\Documents\\rtti.csv')
+--ghidraLike.csv('C:\\Users\\User\\Documents\\Mods\\funcs.csv')
+```
+
 ### Methods on (ghidraLike.…):
 
 * **probe()**
