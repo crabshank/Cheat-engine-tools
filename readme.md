@@ -170,6 +170,173 @@ Allows you to print whole lua tables, and variables (even of "userdata" type). C
 
 Change the "Memory Scan Options" to search over the maximum area by default.
 
+## ghidraLike.lua
+
+This file enumerates the **function start addresses** of a loaded Windows module
+(PE32 / PE32+) from inside Cheat Engine, **without disassembling anything**.
+
+Instead of decoding instructions it harvests addresses from places the compiler
+or the linker has already admitted are code — the x64 exception directory
+(`.pdata`), the CFG call-target table, the export table, TLS callbacks, CRT
+initialisers, the entry point, `E8` call byte patterns, alignment-padding
+boundaries, code pointers lying in data sections, and the slots of every RTTI
+vftable. Each harvested address is a **candidate**.
+
+**The single inclusion rule.** A candidate is kept if, and only if, it falls
+inside an *executable* section of the module being probed. Nothing is decoded
+to confirm it, and nothing is later deleted. Candidates that happen to sit
+inside another function's `.pdata` body are still kept, but flagged
+`status = 'nested'` so you can filter them out at presentation time.
+See [PE Exception Directory](https://mzrst.com/puppy/docs/features/data-directories/exception/)
+for the 12-byte `RUNTIME_FUNCTION` layout that source S1 relies on.
+
+### Methods on (ghidraLike.…):
+
+* **probe()**
+	Runs the whole scan. Takes **no arguments** — it uses Cheat Engine's `process`
+	global as the module to probe.
+	
+	Returns `nil` **always**: on success, on failure, and on "already running"
+	alike, because the work is asynchronous. Poll for the console summary rather
+	than for a return value.
+	
+	Side effects, in order:
+	
+	1. Opens a non-modal progress form (title `ghidraLike - <module>`) whose label
+	   auto-resizes; it shows `<phase>` during structural passes and
+	   `<done> / <total> <unit> (<n>%)` during byte sweeps, with thousands
+	   separators.
+	2. Prints the resolved executable ranges, the per-source harvest counts, and a
+	   final line.
+	3. Populates the internal result store that `csv()`, `rtticsv()` and `html()`
+	   read.
+	
+	**Console output** (LUA Engine):
+	
+	```
+	  exec[1 .text       140001000-140A33FFF (10.2 MB) via characteristics
+	game.exe  executable total 10.2 MB (1 section(s), source: section table)
+	S1 pdata records: 41233
+	S2/S3 sweep done  candidates so far: 58104
+	S5 exports: 0
+	S6 tls: 2
+	S7 crt: 41
+	S8 data ptrs: 3310
+	S9 rvas: 12
+	S11 cfg: 0
+	RTTI: cols=1842  vtables=2107  funcToClass=9931  hierarchies=1842
+	Done!
+	```
+	
+	Failure / early-exit lines:
+	
+	| Printed text | Cause |
+	|---|---|
+	| `ghidraLike: pass a module name (e.g. "game.exe") or open a process first` | `process` was `nil` |
+	| `ghidraLike already running` | A previous coroutine had not finished |
+	| `ghidraLike failed: <message>` | Anything raised inside the coroutine; the message is built from the **dead coroutine's** traceback, so it names the real culprit rather than the timer callback |
+	| `  WARNING: resolved by page protection - if the image is still being decrypted, re-run after the game has fully started.` | The section table was unusable, so ranges came from `enumMemoryRegions()` |
+	| `RTTI: no Complete Object Locators found (built with /GR-, stripped, or an Itanium-ABI/MinGW module).` | No COLs survived; vtable and hierarchy passes are skipped entirely |
+	
+	`exec[n]`'s trailing `via` field is one of `characteristics`, `section table`
+	or `OS page protection` — the last meaning the section headers lied or were
+	stripped.
+	
+	N.B. There is **no `S4` or `S10` print**: S4 (entry point) returns nothing to
+	count, and S10 does not exist. The `dynamic` source tag is declared and ranked
+	(HIGH) but nothing in this revision ever proposes it.
+
+	Example script:
+	
+	```lua
+	ghidraLike.probe()
+	-- wait for "Done!" in the LUA Engine, *then*:
+	ghidraLike.csv("C:\\temp\\funcs.csv")
+	```
+
+* **csv( path )**
+  
+	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), where the html file will be.
+
+	Writes the whole result set as **one row per function**, RFC-4180 escaped
+	(fields containing `"`, `,`, CR or LF are quoted, embedded quotes doubled).
+	Requires a completed `probe()`.
+	
+	Header row:
+	
+	```
+	start,end,size,directCallSites,status,confidence,sources,kind,fromPdata,class
+	```
+	
+	| Column | Content |
+	|---|---|
+	| `start` | `<module>+<HEX offset>` of the first byte. If the function *is* the image base, just the bare hex. |
+	| `end` | `<module>+<HEX offset>` of the **last** byte (inclusive), i.e. the exclusive extent end minus one. |
+	| `size` | Decimal byte count of the extent. |
+	| `directCallSites` | Decimal count of **distinct `E8` sites** targeting this address — a hotness signal, not a call count. |
+	| `status` | `authoritative` (confidence ≥ HIGH), `nested` (weak candidate inside a `.pdata` body), or `included` (everything else kept). |
+	| `confidence` | One of `SPECULATIVE`, `WEAK`, `STRONG`, `HIGH`, `AUTHORITATIVE`. |
+	| `sources` | Pipe-joined list of every source tag that proposed this address, in canonical order (see below). |
+	| `kind` | Human label; **first match wins** in the precedence order below. |
+	| `fromPdata` | The literal strings `true` / `false` — `true` means the extent came from a real `.pdata` `EndAddress` rather than being guessed. |
+	| `class` | **Demangled** RTTI class name if this address is a known vtable slot, else empty. |
+	
+	Addresses are module-relative strings; `size`, `directCallSites` and
+	`confidence` are decimal.
+	
+	Console output: `wrote <path> (<n> rows)`, or `cannot open <path>` if `io.open`
+	failed.
+
+* **rtticsv( path )**
+  
+	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), where the html file will be.
+
+	Writes the class map as **one row per vftable**, *not* one row per class.
+	A class with virtual bases, or one reached through adjustor thunks, owns
+	several COLs, so the same class name legitimately repeats across rows.
+	Deduplicate on `class` only when you want the *set* of types.
+	
+	Header row:
+	
+	```
+	vftable,col,kind,class,bases
+	```
+	
+	| Column | Content |
+	|---|---|
+	| `vftable` | `<module>+<HEX>` of the table's first slot. |
+	| `col` | `<module>+<HEX>` of the Complete Object Locator that owns it. |
+	| `kind` | The **RTTI type kind**: `class`, `struct`, `enum`, `union`, or `?`. ⚠ This is *not* the same thing as `csv()`'s `kind` column. |
+	| `class` | Demangled class name. |
+	| `bases` | Pipe-joined demangled direct-base names; empty for a root class. |
+	
+	Rows are emitted in **ascending vftable address** order (the store is keyed by
+	slot address, so without an explicit sort the order would be arbitrary).
+	
+	Console output: `wrote <path> (<n> rows)` or `cannot open <path>`.
+	
+	N.B. The invariant worth remembering: subtract one pointer size (8 on x64) from
+	a reported `vftable` address and you must land on its `col`.
+
+* **sections( module  --[[Optional]] )**
+	* **module**: Dumps the PE section table to the console. **Re-parses the headers itself**, so it does *not* require a completed `probe()` — reach for this first when a scan looks wrong, because it tells you whether the section table lies and therefore whether the OS-page-protection fallback is about to kick in.
+
+	`module` defaults to Cheat Engine's `process` global. Pass a string such as
+	`"game.exe"` or `"shader.dll"` to inspect a different module.
+
+* **html(path)**
+	Writes a **self-contained** HTML file showing the RTTI class hierarchies. Requires a completed `probe()`.
+	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), where the html file will be.
+
+* **endWindow()**
+	Tears everything down: destroys the timer and the progress form, drops the
+	coroutine, and clears the large structures (`roots`, `callers`, the `.pdata`
+	arrays, the COL table), then asks the collector to hand freed tables back.
+	It is the single exit point for both success and failure inside `probe()`.
+
+	**⚠ Calling it destroys the data that `csv()`, `rtticsv()` and `html()` read.**
+Call it *after* you have exported, not before.
+
 ## opcode_inj.lua
 
 **N.B.** When the code injection is successful: the extension will show the memory browser at the injection point; if there was no found address, then it won't. If there is a syntax error with the injection script, the extension will print it in the LUA Engine.
