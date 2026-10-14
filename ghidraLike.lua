@@ -180,14 +180,11 @@ local MEM_COMMIT = 0x1000
 -- guard/write-copy modifier bits and leaves the base protection.
 local PAGE_EXEC  = { [0x10]=true, [0x20]=true, [0x40]=true, [0x80]=true }
 
-local moduleAddress, moduleName = nil, ''
+--local moduleAddress=nil
+local moduleName = ''
 
 local function addressOffset(a)
-	if moduleAddress==a then
-		return string.format('%X',moduleAddress) 
-	else
-		return string.format('%s+%X',moduleName,a-moduleAddress)
-	end
+	return getNameFromAddress(a,true,false,true)
 end
 
 -- Test whether bit-value m is set in v. Written as divide-mod rather than
@@ -1907,7 +1904,7 @@ gl_open('ghidraLike - ' .. tostring(module0))
 gl_co = coroutine.create(function()
 local t0 = os.clock()
 local base = normAddr(getAddress(module0))
-moduleAddress=base
+--moduleAddress=base
 local modSize = normAddr(getModuleSize(module0))
 if base == nil then
 error('getAddress("' .. tostring(module0) .. '") returned no address')
