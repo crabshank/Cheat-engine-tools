@@ -223,7 +223,7 @@ Suggested usage:
 	**Console output** (LUA Engine):
 	
 	```
-	  exec[1 .text       140001000-140A33FFF (10.2 MB) via characteristics
+	exec[1 .text       140001000-140A33FFF (10.2 MB) via characteristics
 	game.exe  executable total 10.2 MB (1 section(s), source: section table)
 	S1 pdata records: 41233
 	S2/S3 sweep done  candidates so far: 58104
