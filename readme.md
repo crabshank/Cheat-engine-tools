@@ -12,6 +12,8 @@ This function returns a Lua table of tables containing:
 [ Name: symbol name ]
 [ ModuleName ]
 [ Size ]
+[ EndAddress: decimal address of the last byte of the symbol ]
+[ EndHexAddress: hexadecimal address of the last byte of the symbol ]
 ```
 
 * **table_filter(t,f)**
