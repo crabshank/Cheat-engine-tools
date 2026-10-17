@@ -10,17 +10,18 @@ function enumModuleSymbols()
 	end
 	local out={}
 	for k,v in pairs(getMainSymbolList().getSymbolList()) do
-		local md,sz=nil,nil
+		local md,sz,ed=nil,nil,nil
 		
 		for k1,v1 in pairs(m_az) do
-			if v>=v1[1] and v<=v1[2] then
+            ed=v1[2]
+			if v>=v1[1] and v<=ed then
 				md=v1[3]
 				sz=v1[4]
 			end
 		end
 
 		if md~=nil then --modules only
-			table.insert(out,{ Address=v, HexAddress=string.format('%X',v), Name=k, ModuleName=md, Size=sz})
+			table.insert(out,{ Address=v, HexAddress=string.format('%X',v), Name=k, ModuleName=md, Size=sz, EndAddress=ed, EndHexAddress=string.format('%X',ed)})
 		end
 
 	end
