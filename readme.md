@@ -369,6 +369,7 @@ Call it *after* you have exported, not before.
 [ ['lookaheads'](['offsets']/['instructions']/['bytes']/['sizes']): data ahead of the found instruction, to help with nops and overwites to help keep the execution flow the same (set by extension) ]
 [ nopped_instruction: instruction nopped by the method 'disable_nop(…)' (set by extension) ]
 [ og_instruction: the found instruction (at injection point) (set by extension) ]
+[ og_instruction_bytes: the bytes of the found instruction (at injection point) (set by extension) ]
 [ og_bytes_dec: byte decimal table of matched instruction (set by extension) ]
 [ og_hex: byte hex table of matched instruction (set by extension) ]
 [ address_dec: address of found instruction in decimal (set by extension) ]
