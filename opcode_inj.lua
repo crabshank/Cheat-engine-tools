@@ -545,7 +545,7 @@ local function do_disable()
 			${unregsy_txt}
 			define(${inj_name},${address_string})
 			${inj_name}:
-			${all_og_instructions}
+			db ${all_og_bytes}
 			]]
 
 	dedollar=string_Dollar(rst_aa,vars)
@@ -687,7 +687,8 @@ local function check_inj()
 	local clp=curr_lookahead['instructions']
 	local ogl=vars['lookaheads']['instructions']
         local ogll=#ogl
-	vars['all_og_instructions']=table.concat(ogl,'\n')
+	--vars['all_og_instructions']=table.concat(ogl,'\n')
+	vars['all_og_bytes']=table.concat(vars['lookaheads']['bytes'],' ')
         local farl1=false
 	for i=1, #clp do
 		local opc=clp[i]
