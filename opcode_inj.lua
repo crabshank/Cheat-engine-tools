@@ -363,9 +363,10 @@ local function instruction_address_spec(addr,lookahead_n,parts,module_names)
 	   end
 	end
 	
-	local lookaheads=getLookaheads(addr,lookahead_n,instruction,spaceSepBytes(bytes))
+	local ssb=spaceSepBytes(bytes)
+	local lookaheads=getLookaheads(addr,lookahead_n,instruction,ssb)
 	
-      local outp= {['og_bytes_dec']=byt,['og_hex']=hexByteTable,['address_dec']=addr, ['address_string']=a ,['lookaheads']=lookaheads,['og_instruction']=instruction}
+      local outp= {['og_bytes_dec']=byt,['og_hex']=hexByteTable,['address_dec']=addr, ['address_string']=a ,['lookaheads']=lookaheads,['og_instruction']=instruction,['og_instruction_bytes']=ssb}
 	  local ptl=#pt
 	  if parts~=nil and ptl>0 then
 		  -- Spread parts array
@@ -379,6 +380,7 @@ end
 local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
 
 	local type_aobs=type(aobs)
+	local ssb=''
 	
 	if type_aobs=='string' then
 		return instruction_address_spec(getAddress(aobs),lookahead_n,parts,module_names)
@@ -484,8 +486,9 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
 					       table.insert(hexByteTable,string.format('%02X',byt[i]))
                                            end
 					end
-
-				   local lookaheads=getLookaheads(k,lookahead_n,instruction,spaceSepBytes(bytes))
+					
+					ssb=spaceSepBytes(bytes)
+				   local lookaheads=getLookaheads(k,lookahead_n,instruction,ssb)
 
                    local fda=fnd[a]
                    if fda==nil then
@@ -506,7 +509,7 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
       table.sort( fnd_it, function(a, b) return a[3] > b[3] end ) -- Converted results array now sorted by count (descending);
       local f1=fnd_it[1]
 
-      local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['og_instruction']=f1[7]}
+      local outp= {['og_bytes_dec']=f1[9],['og_hex']=f1[8],['address_dec']=f1[1], ['address_string']=f1[4] ,['lookaheads']=f1[6],['og_instruction']=f1[7],['og_instruction_bytes']=ssb}
 	  local ptl=#f1[5]
 	  if parts~=nil and ptl>0 then
 		  -- Spread parts array
@@ -575,7 +578,7 @@ local function do_disable_nop()
 		unregistersymbol(${inj_name})
 		define(${inj_name},${address_string})
 		${inj_name}:
-		  ${nopped_instruction}
+		  db ${og_instruction_bytes}
 	]]
 	local dedollar=string_Dollar(inj_script,vars)
 	local dsb=string_variFormat(dedollar.string,dedollar.args)
@@ -834,4 +837,3 @@ end
  opcode_inj['disable_nop']=disable_nop
  opcode_inj['dump']=dump_vars
  opcode_inj['nop']=nop
-
