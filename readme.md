@@ -375,7 +375,7 @@ Call it *after* you have exported, not before.
 [ unregsy_txt: text containing code to unregister all symbols registered by the cheat table (set by extension) ]
 [ deallc_txt: text containing code to dealloc all memory allocated by the cheat table (set by extension) ]
 [ instruction_jmp: the instruction of the jmp that redirects execution flow towards the injected code (set by extension) ]
-[ all_og_instructions: all orginal instructions, pre-injection (set by extension) ]
+[ all_og_bytes: bytes of all orginal instructions, pre-injection (set by extension) ]
 [ nop_text: text containing number of nop instructions required to keep the execution flow the same after injection (set by extension) ]
 
 [ THE BELOW ARE THE SAME AS THE ARGUMENTS FOR ".inject(…)": ]
