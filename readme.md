@@ -198,7 +198,7 @@ Suggested usage:
 --ghidraLike.probe()
 --ghidraLike.html('C:\\Users\\User\\Documents\\classes_rtti.html')
 --ghidraLike.rtticsv('C:\\Users\\User\\Documents\\rtti.csv')
---ghidraLike.csv('C:\\Users\\User\\Documents\\Mods\\funcs.csv')
+--ghidraLike.csv('C:\\Users\\User\\Documents\\funcs.csv')
 ```
 
 ### Methods on (ghidraLike.…):
