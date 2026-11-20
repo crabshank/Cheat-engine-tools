@@ -11,6 +11,16 @@ local bps={}
 local xcld={['Decimal address']=true}
 local jumpRes={['sel']='',['rsp']={},['stack']={}}
 
+local function splitDisassembledString_fixDblMinus(d)
+  local extraField, instruction, bytes, address = splitDisassembledString(d)
+  if instruction and instruction:find('--', 1, true) then
+    instruction = instruction:gsub('%b[]', function(b)
+      return (b:gsub('%-%-+(%x+)', '-%1'))
+    end)
+  end
+  return extraField, instruction, bytes, address
+end
+
 local function getSymbolNameFromAddress(a, outBoth)
     local out = {getNameFromAddress(a, true, true, true, true), getNameFromAddress(a, true, true, false)} --[1]= preferred
     local su1, su2 = string.find(out[1], "[\128-\255]") -- non-ascii?
@@ -405,7 +415,7 @@ local function do_attach(s,z,onWrite,cond,col,t,alist,alc)
 							b[3].Color=colr --yellow
 							local lst=getPreviousOpcode(RIP)
 							local dst = disassemble(lst)
-							local extraField, instruction, bytes, address = splitDisassembledString(dst)
+							local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 							local bx=string.format('%X',b[1])
 							local lstx=string.format('%X',lst)
 							timer_attach.accessed[bx]=b[1]

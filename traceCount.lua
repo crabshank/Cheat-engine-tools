@@ -46,10 +46,14 @@ local findWriteAlreadyStep={}
 
 local rw_trace=0
 
-local function fixDblMinus(s)
-  return (s:gsub('%b[]', function(b)
-    return (b:gsub('%-%-+(%x+)', '-%1'))
-  end))
+local function splitDisassembledString_fixDblMinus(d)
+  local extraField, instruction, bytes, address = splitDisassembledString(d)
+  if instruction and instruction:find('--', 1, true) then
+    instruction = instruction:gsub('%b[]', function(b)
+      return (b:gsub('%-%-+(%x+)', '-%1'))
+    end)
+  end
+  return extraField, instruction, bytes, address
 end
 
 local function getSymbolNameFromAddress(a, outBoth)
@@ -1811,7 +1815,7 @@ local function getLiteCounts()
 			local cr=lir[k] --current RIP
 			local tix=lirx[k]
 			local dsti=disassemble(cr)
-			local extraField, instruction, bytes, address=splitDisassembledString(dsti)
+			local extraField, instruction, bytes, address=splitDisassembledString_fixDblMinus(dsti)
 			
 			local a = getSymbolNameFromAddress(cr,true)
 			local pa=tix
@@ -1868,8 +1872,7 @@ end --eof
 
 local function jumpMemOnly(addr)
 	local dst = disassemble(addr)
-	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	instruction=fixDblMinus(instruction)
+	local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 	local instruction_rb=string_match(instruction,'[^%s]+%s*(.*)')
 	local instruction_r=upperc(instruction_rb)
 	local m=getAccessed(instruction_rb,instruction_r)
@@ -1957,8 +1960,7 @@ local function jumpMem(addr)
 
 
 	local dst = disassemble(addr)
-	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	instruction=fixDblMinus(instruction)
+	local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 				local mn=getModuleName(addr)
 			if currModule==nil then
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
@@ -2466,7 +2468,7 @@ local function onLiteBp()
 						local RIPx=string.format("%X", RIP)
 						if liteTrace_lookup[RIPx]==nil then
 									local dss = disassemble(RIP)
-									local extraField, instruction, bytes, address = splitDisassembledString(dss)
+									local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dss)
 									local la,lb=string_find( instruction,"^%s*rep[^%s]*%s+")
 									liteTrace_lookup[RIPx]={true,instruction,la}
 						else --seen before
@@ -2635,7 +2637,7 @@ local function onBp_rw_proc(addr)
 					local hit_no=1
 					local hlk=hits_lookup[RIPx]
 					local dst = disassemble(addr)
-					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 					local la,lb=string_find( instruction,"^%s*rep[^%s]*%s+")
 					hits_lookup[RIPx]={hit_no,{ix},la}
 
@@ -2865,7 +2867,7 @@ local function onBp()
 					local hit_no=1
 					local hlk=hits_lookup[RIPx]
 					local dst = disassemble(RIP)
-					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 					if  hlk~= nil then
 						if hlk[3]==nil then
 							alreadyRun=true
@@ -3639,7 +3641,7 @@ local function onCondBp()
 	local breakHere={false,''}
 	local RIPx=string.format('%X',RIP)
 	local dst = disassemble(RIP)
-	local extraField, instruction, bytes, address = splitDisassembledString(dst)
+	local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 	
 					local cvp=#condBpVals.opc
 					if cvp>0 then
@@ -4116,7 +4118,7 @@ local function findWrite(n,aobs,m,b,f,p)
 				local isRet=isInModule(rd,dx,modulesList_findWrite)
 				local lst=getPreviousOpcode(rd)
 				local dst = disassemble(lst)
-				local extraField, instruction, bytes, address = splitDisassembledString(dst)
+				local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 				if isRet[1]==true and findWriteLookup[dx]==nil and string_find(instruction,"^%s*call%s+")~=nil then
 					table.insert(findWriteToAttach,rd)
 					findWriteLookup[dx]=#findWriteToAttach
@@ -4208,7 +4210,7 @@ local function onFindWriteBp()
 						modCurr=isInModule(RIP,RIPx,modulesList_findWrite)
 						--print(modCurr[2])
 						local ds = disassemble(RIP)
-						local extraField, instruction, bytes, address = splitDisassembledString(ds)
+						local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(ds)
 						isRet=false
 						isPatt=false
 						isCall=false

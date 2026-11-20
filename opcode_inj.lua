@@ -2,6 +2,16 @@ opcode_inj={}
 
 local script_ref,inj_name,newmem_name,newmem_size,vars,inj_script,pattern,aobs,lookahead_n,parts,module_names
 
+local function splitDisassembledString_fixDblMinus(d)
+  local extraField, instruction, bytes, address = splitDisassembledString(d)
+  if instruction and instruction:find('--', 1, true) then
+    instruction = instruction:gsub('%b[]', function(b)
+      return (b:gsub('%-%-+(%x+)', '-%1'))
+    end)
+  end
+  return extraField, instruction, bytes, address
+end
+
 local function giveModuleAndOffset(address) -- https://github.com/cheat-engine/cheat-engine/issues/205 (mgrinzPlayer)
   local modulesTable,size = enumModules(),0
   for i,v in pairs(modulesTable) do
@@ -318,7 +328,7 @@ local function getLookaheads(k,lookahead_n,instruction,bytes)
 			table.insert(lookaheads['sizes'],szk)
 
 			local dsk_off = disassemble(offset_inst)
-			local extraField_off, instruction_off, bytes_off, address_off = splitDisassembledString(dsk_off)
+			local extraField_off, instruction_off, bytes_off, address_off = splitDisassembledString_fixDblMinus(dsk_off)
 			table.insert(lookaheads['instructions'],instruction_off) -- insert next instruction
 			table.insert(lookaheads['bytes'],spaceSepBytes(bytes_off)) -- insert next instruction
 
@@ -334,7 +344,7 @@ local function instruction_address_spec(addr,lookahead_n,parts,module_names)
 	  local parts_tt_l=0
 
 	local dsk = disassemble(addr)
-	local extraField, instruction, bytes, address = splitDisassembledString(dsk)
+	local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dsk)
 	local a = checkAdressOffset_ret_string(addr,address)
 	
 	local pt={}
@@ -468,7 +478,7 @@ local function instruction_address(pattern,aobs,lookahead_n,parts,module_names)
 	    local rf=dec_res+bi[3]
             for k=rb, rf do
                 local dsk = disassemble(k)
-				local extraField, instruction, bytes, address = splitDisassembledString(dsk)
+				local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dsk)
 				local a = checkAdressOffset_ret_string(k,address)
                 if string.match(instruction,pattern)~=nil then
 					local pt={}
@@ -634,7 +644,7 @@ local function do_inject()
 	autoAssemble(enb_jmp_size_ntk)
 
         local jmp_dss=disassemble(vars.address_string)
-	local extraField_ci, instruction_ci, bytes_ci, addr_ci = splitDisassembledString(jmp_dss)
+	local extraField_ci, instruction_ci, bytes_ci, addr_ci = splitDisassembledString_fixDblMinus(jmp_dss)
         vars['instruction_jmp']=instruction_ci
         vars['instruction_jmp_bytes']=spaceSepBytes(bytes_ci)
         local ad=tonumber(addr_ci,16)

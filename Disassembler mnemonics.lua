@@ -5,6 +5,16 @@ local string=string
 local string_match=string.match
 local string_format=string.format
 
+local function splitDisassembledString_fixDblMinus(d)
+  local extraField, instruction, bytes, address = splitDisassembledString(d)
+  if instruction and instruction:find('--', 1, true) then
+    instruction = instruction:gsub('%b[]', function(b)
+      return (b:gsub('%-%-+(%x+)', '-%1'))
+    end)
+  end
+  return extraField, instruction, bytes, address
+end
+
 local function trim_str(s)
 	return string_match(s,'^()%s*$') and '' or string_match(s,'^%s*(.*%S)')
 end
@@ -258,7 +268,7 @@ function f(sender, address, LastDisassembleData, result, description)
 				txt=txt..' || Load value in brackets into first operand'
 			elseif opcd=='shufps' or opcd=='shufpd' then
 					local dst = disassemble(address)
-					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 					
 					local op1=string_match_t(instruction,'%s+([^,]+),.+')
 					local op2=string_match_t(instruction,'%s+[^,]+,([^,]+)')
@@ -339,7 +349,7 @@ function f(sender, address, LastDisassembleData, result, description)
 						
 			elseif shfs[opcd]~=nil then -- shift
 					local dst = disassemble(address)
-					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 					
 					local ops1=string_match_t(instruction,'%s+([^,]+),.+')
 					local ops2=string_match_t(instruction,'%s+[^,]+,(.+)')
@@ -366,7 +376,7 @@ function f(sender, address, LastDisassembleData, result, description)
                     end
 			elseif ops[opcd]~=nil then -- bitwise op
 					local dst = disassemble(address)
-					local extraField, instruction, bytes, address = splitDisassembledString(dst)
+					local extraField, instruction, bytes, address = splitDisassembledString_fixDblMinus(dst)
 					
 					local ops1=string_match_t(instruction,'%s+([^,]+),.+')
 					local ops2=string_match_t(instruction,'%s+[^,]+,(.+)')

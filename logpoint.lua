@@ -691,7 +691,6 @@ local function onBp(rw,noRun)
 					print(RIPx..' hit!')
 				end
 				local dst = disassemble(RIP)
-				--local extraField, instruction, bytes, address = splitDisassembledString(dst)
 					if abpx['retOfs']~=nil then
 						isRetLog=true
 					end
