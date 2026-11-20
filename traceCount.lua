@@ -46,6 +46,12 @@ local findWriteAlreadyStep={}
 
 local rw_trace=0
 
+local function fixDblMinus(s)
+  return (s:gsub('%b[]', function(b)
+    return (b:gsub('%-%-+(%x+)', '-%1'))
+  end))
+end
+
 local function getSymbolNameFromAddress(a, outBoth)
     local out = {getNameFromAddress(a, true, true, true, true), getNameFromAddress(a, true, true, false)} --[1]= preferred
     local su1, su2 = string.find(out[1], "[\128-\255]") -- non-ascii?
@@ -1863,6 +1869,7 @@ end --eof
 local function jumpMemOnly(addr)
 	local dst = disassemble(addr)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
+	instruction=fixDblMinus(instruction)
 	local instruction_rb=string_match(instruction,'[^%s]+%s*(.*)')
 	local instruction_r=upperc(instruction_rb)
 	local m=getAccessed(instruction_rb,instruction_r)
@@ -1951,7 +1958,7 @@ local function jumpMem(addr)
 
 	local dst = disassemble(addr)
 	local extraField, instruction, bytes, address = splitDisassembledString(dst)
-	
+	instruction=fixDblMinus(instruction)
 				local mn=getModuleName(addr)
 			if currModule==nil then
 				currRegsAddr=alloc('traceCount_registers',1024,mn)
@@ -2289,35 +2296,136 @@ local instruction_r=upperc(instruction_rb)
 		return
 end
 
+local trace_w_lastW, trace_w_lastH = 0, 0
+
+local function trace_labelExtent(l)
+    local w = tonumber(l.Width) or 0
+    local h = tonumber(l.Height) or 0
+
+    if w > 1 and h > 1 then
+        return w, h
+    end
+
+    local caption = ''
+    pcall(function()
+        caption = tostring(l.Caption or '')
+    end)
+
+    local n = #caption
+
+    -- Fallback only. AutoSize should normally provide the real extent.
+    -- Font size is 17 in traceCount, so use a slightly wider estimate than
+    -- ghidraLike's 8-pixel fallback.
+    if w <= 1 then
+        w = math.max(334, n * 10)
+    end
+    if h <= 1 then
+        h = 24
+    end
+
+    return w, h
+end
+
+local function trace_fit()
+    if trace_w[1] == nil or trace_w[2] == nil then
+        return
+    end
+
+    local f, l = trace_w[1], trace_w[2]
+
+    pcall(function() l.AutoSize = true end)
+    pcall(function() l.WordWrap = false end)
+
+    local lw, lh = trace_labelExtent(l)
+
+    local padX, padY = 16, 16
+    local wantW = (tonumber(l.Left) or 0) + lw + padX
+    local wantH = (tonumber(l.Top) or 0) + lh + padY
+
+    -- Round to reduce twitching when the digit count changes.
+    wantW = math.ceil(wantW / 8) * 8
+    wantH = math.ceil(wantH / 8) * 8
+
+    if wantW ~= trace_w_lastW then
+        if not pcall(function() f.ClientWidth = wantW end) then
+            pcall(function() f.Width = wantW + 16 end)
+        end
+        trace_w_lastW = wantW
+    end
+
+    if wantH ~= trace_w_lastH then
+        if not pcall(function() f.ClientHeight = wantH end) then
+            pcall(function() f.Height = wantH + 39 end)
+        end
+        trace_w_lastH = wantH
+    end
+end
+
+local function trace_setCaption(s)
+    if trace_w[2] ~= nil then
+        trace_w[2].Caption = s
+        trace_fit()
+    end
+end
+
 local function setupWindow(c) -- c is remaining steps
-	if trace_w[1]~=nil then
-	 trace_w[1].close()
-	end
+    local cap = spaceSep_int(c) .. ' ' .. s_pluralise(c, 'step') .. ' remaining'
 
-	trace_w[1] = createForm()
-	trace_w[1].Width = 334
-	trace_w[1].Height =40
-	trace_w[1].Position = 'poScreenCenter'
-	trace_w[1].Color = '0x000000'
-	trace_w[1].Caption = 'traceCount progress'
-	trace_w[1].FormStyle = 'fsMDIForm'
-	trace_w[1].DefaultMonitor = 'dmMainForm'
-	trace_w[1].BorderStyle = 'bsSingle'
+    -- Reuse an existing live window.
+    if trace_w[1] ~= nil then
+        if pcall(function() return trace_w[1].Caption end) then
+            trace_setCaption(cap)
+            trace_w[1].Show()
+            pcall(function() trace_w[1].Update() end)
+            trace_fit()
+            return
+        end
 
-	trace_w[1].onClose=function()
-		trace_w[2].destroy()
-		trace_w[2]=nil
-		trace_w[1].destroy()
-		trace_w[1]=nil
-	end
+        -- Stale handle.
+        trace_w[1], trace_w[2] = nil, nil
+        trace_w_lastW, trace_w_lastH = 0, 0
+    end
 
-	trace_w[2]=createLabel(trace_w[1])
-	trace_w[2].Left = 2
-	trace_w[2].Top = 0
-	trace_w[2].Font.size=17
-	trace_w[2].Font.Color='0xffffff'
-	trace_w[2].Color='0x000000'
-	trace_w[2].Caption=spaceSep_int(c)..' '..s_pluralise(c,'step')..' remaining'
+    trace_w[1] = createForm()
+    trace_w[1].Width = 334
+    trace_w[1].Height = 40
+    trace_w[1].Position = 'poScreenCenter'
+    trace_w[1].Color = '0x000000'
+    trace_w[1].Caption = 'traceCount progress'
+    trace_w[1].FormStyle = 'fsMDIForm'
+    trace_w[1].DefaultMonitor = 'dmMainForm'
+    trace_w[1].BorderStyle = 'bsSingle'
+
+    trace_w[1].onClose = function()
+        if trace_w[2] ~= nil then
+            trace_w[2].destroy()
+            trace_w[2] = nil
+        end
+        if trace_w[1] ~= nil then
+            trace_w[1].destroy()
+            trace_w[1] = nil
+        end
+        trace_w_lastW, trace_w_lastH = 0, 0
+    end
+
+    trace_w[2] = createLabel(trace_w[1])
+    trace_w[2].Left = 2
+    trace_w[2].Top = 0
+    trace_w[2].Font.size = 17
+    trace_w[2].Font.Color = '0xffffff'
+    trace_w[2].Color = '0x000000'
+
+    pcall(function() trace_w[2].AutoSize = true end)
+    pcall(function() trace_w[2].WordWrap = false end)
+
+    trace_setCaption(cap)
+
+    trace_w[1].Show()
+    pcall(function() trace_w[1].Update() end)
+    trace_fit()
+
+    -- Prevent re-centring every time the text width changes.
+    pcall(function() trace_w[1].Position = 'poDesigned' end)
 end
 
 local function onLiteBp()
@@ -2370,7 +2478,7 @@ local function onLiteBp()
 
 				if liteCount~=nil then
 					local ct1=liteCount-liteIx
-					trace_w[2].Caption=spaceSep_int(ct1)..' '..s_pluralise(ct1,'step')..' remaining'
+					trace_setCaption(spaceSep_int(ct1) .. ' ' .. s_pluralise(ct1, 'step') .. ' remaining')
 				end
 
 				liteIx=liteIx+1
@@ -2518,8 +2626,8 @@ local function onBp_rw_proc(addr)
 				first=false
 				--count=count-1
 				setupWindow(count)
-				trace_w[2].Caption=spaceSep_int(count)..' '..s_pluralise(count,'step')..' remaining'		
-
+				trace_setCaption(spaceSep_int(count) .. ' ' .. s_pluralise(count, 'step') .. ' remaining')
+				
 					table.insert(hits,addr)
 
 					local ix=#hits
@@ -2740,7 +2848,7 @@ local function onBp()
 			
 			if count~=nil then
 				count=count-1
-				trace_w[2].Caption=spaceSep_int(count)..' '..s_pluralise(count,'step')..' remaining'		
+				trace_setCaption(spaceSep_int(count) .. ' ' .. s_pluralise(count, 'step') .. ' remaining')
 				local cnt_done=false
 					if count<1 then
 						cnt_done=true
