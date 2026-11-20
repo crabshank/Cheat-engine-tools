@@ -690,7 +690,7 @@ local function onBp(rw,noRun)
 					abp[ix]['first']=true
 					print(RIPx..' hit!')
 				end
-				local dst = disassemble(RIP)
+				local dst = (abpx['address_bpt']>0) and disassemble(RIP) or nil
 					if abpx['retOfs']~=nil then
 						isRetLog=true
 					end
