@@ -199,6 +199,8 @@ Suggested usage:
 --ghidraLike.html('C:\\Users\\User\\Documents\\classes_rtti.html')
 --ghidraLike.rtticsv('C:\\Users\\User\\Documents\\rtti.csv')
 --ghidraLike.csv('C:\\Users\\User\\Documents\\funcs.csv')
+--ghidraLike.namecsv('C:\\Users\\User\\Documents\\funcs.csv')
+--ghidraLike.loadNames('C:\\Users\\User\\Documents\\funcs.csv')
 ```
 
 ### Methods on (ghidraLike.…):
@@ -338,6 +340,15 @@ Suggested usage:
 * **html(path)**
 	Writes a **self-contained** HTML file showing the RTTI class hierarchies. Requires a completed `probe()`.
 	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), where the html file will be.
+
+* **namecsv(path)**
+  * **path**: is a (full path to a) file name (use double backslashes instead on single ones), where a csv will be saved for an probed exe containing named addresses relative to the executable base.
+
+* **loadNames(path)**
+	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), that was saved by `.namecsv(…)`, that will be loaded and its data shown in the disassembler's comments.
+ * 
+* **nameAt(a)**
+	* **a**: is a numeric address, and if it has a name that was found when the executable was probed, it will return that name.
 
 * **endWindow()**
 	Tears everything down: destroys the timer and the progress form, drops the
