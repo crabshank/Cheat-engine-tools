@@ -346,7 +346,7 @@ Suggested usage:
 
 * **loadNames(path)**
 	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), that was saved by `.namecsv(…)`, that will be loaded and its data shown in the disassembler's comments.
- * 
+
 * **nameAt(a)**
 	* **a**: is a numeric address, and if it has a name that was found when the executable was probed, it will return that name.
 
