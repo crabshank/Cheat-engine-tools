@@ -484,10 +484,11 @@ end
 -- Deliberately NO executable-range check: a TypeDescriptor or a COL lives in
 -- .rdata, so propose() would reject it. First writer wins, so a real export
 -- name beats a generic RTTI label.
-local nmAddr, nmDesc, nmSeen = {}, {}, {}
+local nmAddr, nmDesc, nmSeen, nmHex = {}, {}, {}, {}
 local nmBase, nmModule = 0, ''
 
-local function addName(a, desc)
+local function addName(a, desc, useHex)
+  if useHex~=true then useHex=false end
   if type(a) ~= 'number' or desc == nil or desc == '' then return end
   local f = floor(a)
   if f ~= a or f <= 0 then return end
@@ -495,6 +496,7 @@ local function addName(a, desc)
   nmSeen[f] = true
   nmAddr[#nmAddr+1] = f
   nmDesc[#nmDesc+1] = desc
+  nmHex[#nmHex+1] = useHex
 end
 
 -- .?AVActionSelector@ai@match@@    -> ActionSelector@ai@match   (RTTI type)
@@ -908,7 +910,10 @@ local function srcCRT(pe)
     local lim = math.min(len, have - psz + 1)
     for k = 1, lim, psz do
       local q = ptrFromChunk(b, k, psz)
-      if q ~= nil and q ~= 0 and propose(q, SRC.CRT) then n = n + 1 end
+      if q ~= nil and q ~= 0 and propose(q, SRC.CRT) then
+		n = n + 1
+		addName(q, 'CRT_initialiser' .. n .. ' (global constructor)')
+	  end
     end
   end, 'bytes (S7 CRT initialisers)')
   return n
@@ -1152,10 +1157,12 @@ local function scanCols(pe, ranges, strict)
                   -- DATA, so it can never be recovered from the code roots.
                   -- (The previous revision did this twice; once is enough.)
                   local kd    = demangle(nm)
+				  local hx=true
+				  if kd==nil then hx=false end
                   local short = symbolShort(nm)
-                  addName(col,  short .. ' (COL)')
+                  addName(col,  short .. ' (COL)',true)
                   addName(tdVA, short .. ' (' ..
-                    (kd and (kd:sub(1,1):upper() .. kd:sub(2)) or 'Type') .. ')')
+                    (kd and (kd:sub(1,1):upper() .. kd:sub(2)) or 'Type') .. ')',hx)
                 end
               end
             end
@@ -1236,7 +1243,7 @@ local function scanVtables(pe, ranges)
         if c ~= nil then
           local vslot = a + k - 1 + psz
           vtblMap[vslot] = { colAddr = q, className = c.tdName }
-          addName(vslot, symbolShort(c.tdName) .. ' (vfTable)')
+          addName(vslot, symbolShort(c.tdName) .. ' (vfTable)',true)
           walkVtable(pe, vslot, c.tdName)
           nv = nv + 1
         end
@@ -1394,11 +1401,80 @@ local function _endWindow()
   gl_stop()
 end
 
--- ALWAYS returns nil, because the work is asynchronous. Poll count() or watch for
--- the summary lines.
+------------------------------------------------------------------ comment cache
+local NC_version = 0
+local NC_name, NC_nName = {}, 0
+local NC_cmt,  NC_nCmt  = {}, 0
+
+local function ncFlush()
+  NC_name, NC_nName = {}, 0
+  NC_cmt,  NC_nCmt  = {}, 0
+  NC_version = NC_version + 1
+end
+
+-- Markers FIRST so strip/has can close over them.
+local NO, NCL = '«', '»'
+local EO, ECL = '〈', '〉'
+
+-- ONE durable touched-set for the whole file.
+local ncTouched = _G.ghidraLikeTouched
+if type(ncTouched) ~= 'table' then
+  ncTouched = {}
+  _G.ghidraLikeTouched = ncTouched
+end
+
+local function ncStripName(s)
+  if type(s) ~= 'string' then return '' end
+  for _, pair in ipairs({ {NO, NCL}, {'⌦', '⌫'} }) do
+    local O, C = pair[1], pair[2]
+    while true do
+      local a = find(s, O, 1, true)
+      if a == nil then break end
+      local b = find(s, C, a + #O, true)
+      if b == nil then s = s:sub(1, a - 1); break end
+      s = s:sub(1, a - 1) .. s:sub(b + #C)
+    end
+  end
+  return s
+end
+
+local function ncHasName(s)
+  return type(s) == 'string' and find(s, NO, 1, true) ~= nil
+end
+
+local function ncPurge()
+  local touched = ncTouched
+  if type(touched) ~= 'table' then
+    ncTouched = {}
+    _G.ghidraLikeTouched = ncTouched
+    return 0
+  end
+  local n = 0
+  local addrs = {}
+  for a in pairs(touched) do
+    addrs[#addrs + 1] = a
+  end
+  for i = 1, #addrs do
+    local a = addrs[i]
+    local okG, cur = pcall(getComment, a)
+    if okG and type(cur) == 'string' and ncHasName(cur) then
+      local want = ncStripName(cur)
+      want = want:match('^%s*(.-)%s*$') or ''
+      if want ~= cur then
+        if pcall(setComment, a, want) then n = n + 1 end
+      end
+    end
+  end
+  for a in pairs(touched) do touched[a] = nil end
+  _G.ghidraLikeTouched = touched
+  ncTouched = touched
+  return n
+end
+
+-- ALWAYS returns nil, because the work is asynchronous.
 local function _probe()
-	ncPurge()
-	ncFlush()
+  ncPurge()
+  ncFlush()
   if gl_co ~= nil then print('ghidraLike already running'); return nil end
   local module0 = process
   if module0 == nil then
@@ -1412,7 +1488,7 @@ local function _probe()
   fStart, fEnd, fMask, fConf, fCallers, fKind = {}, {}, {}, {}, {}, {}
   confA, confB = {}, {}
   cols, hierarch, vtblMap, funcToClass = {}, {}, {}, {}
-  nmAddr, nmDesc, nmSeen = {}, {}, {}
+  nmAddr, nmDesc, nmSeen, nmHex = {}, {}, {}, {}
   nmBase, nmModule = 0, ''
   lastStat = nil
 
@@ -1424,8 +1500,6 @@ local function _probe()
       error('getAddress("' .. tostring(module0) .. '") returned no address')
     end
     moduleBase = base
-    -- Bind the registry to this module NOW, so namecsv() can rebase without
-    -- needing buildNames() at all.
     nmBase, nmModule = base, moduleName
 
     local modSize = normAddr(getModuleSize(module0))
@@ -1445,8 +1519,6 @@ local function _probe()
     local secs, how = execSections(pe, base, modSize)
     if #secs == 0 then error('no executable region in ' .. tostring(module0)) end
 
-    -- THE INCLUSION RULE LIVES HERE. These ranges, and nothing else, define what
-    -- counts as code for the rest of the run.
     curSecs = secs
     EXLO, EXHI = secs[1].lo, secs[1].hi
     local tot = 0
@@ -1532,8 +1604,6 @@ local function _probe()
     local ok, res = coroutine.resume(gl_co)
     gl_busy = false
     if not ok then
-      -- Traceback from the DEAD coroutine, so the message names the function and
-      -- line that actually failed rather than the timer callback.
       local msg = tostring(res)
       if debug and debug.traceback then
         local okTb, tb = pcall(debug.traceback, gl_co, msg)
@@ -1720,11 +1790,12 @@ local function _namecsv(path)
   local idx = {}
   for i = 1, #nmAddr do idx[i] = i end
   table.sort(idx, function(x, y) return nmAddr[x] < nmAddr[y] end)
-  fh:write('#module=' .. tostring(mn) .. '\n')
-  fh:write('offset,desc\n')
+    fh:write('#module=' .. tostring(mn) .. '\n')
+  fh:write('offset,desc,hex\n')
   for k = 1, #idx do
     local i = idx[k]
-    fh:write(string.format('%X', nmAddr[i] - base) .. ',' .. csvEsc(nmDesc[i]) .. '\n')
+    fh:write(string.format('%X', nmAddr[i] - base) .. ','
+      .. csvEsc(nmDesc[i]) .. ',' .. (nmHex[i] and '1' or '0') .. '\n')
   end
   fh:close()
   print('wrote ' .. tostring(path) .. ' (' .. #idx .. ' named addresses)')
@@ -2655,28 +2726,7 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
   print('wrote ' .. tostring(path) .. ' (' .. #classes .. ' class(es))')
 end
 
--- ============================================================================
--- NAME COMMENTING
---   Disassembler mnemonics.lua writes the explanation inside 〈…〉.
---   This block adds the name as «name», AFTER your own notes, before 〈.
---
---   Layout:  <your notes>«name»〈explanation〉<tail>
---
---   « is C2 AB and » is C2 BB. Neither byte is E2, 8C or A9, so the mnemonics
---   file's [^〈] byte class captures the whole prefix including our block.
---   ⌦ (E2 8C A6) would not survive it. Lua strings are byte sequences, not
---   character sequences, which is why every marker search below is a plain
---   find with an explicit byte skip.
---
---   The 〈〉 anchor is created when absent: if that file finds no 〈 it falls
---   back to the literal "〈" and discards the entire prefix.
---
---   Load order: mnemonics first, then this file, then loadNames(path).
--- ============================================================================
-
-local NO, NCL = '«', '»'
-local EO, ECL = '〈', '〉'
-
+------------------------------------------------------------------ NAME COMMENTING
 local ncMap, ncCount = {}, 0
 local ncLo, ncHi     = 0, -1
 local ncBase, ncMod  = 0, ''
@@ -2684,19 +2734,11 @@ local ncRows         = {}
 local ncPrev = nil
 local ncPid = getOpenedProcessID()
 
--- W: every address whose comment we have written. CE's comment store is DURABLE
--- and lives outside Lua, so clearing our tables does not remove what we wrote.
--- Kept in a global so a dofile() reload can still clean up the previous run.
-local ncTouched = _G.ghidraLikeTouched
-if type(ncTouched) ~= 'table' then ncTouched = {}; _G.ghidraLikeTouched = ncTouched end
+-- Do NOT redeclare ncTouched here. Reuse the one above.
 
--- The ORIGINAL non-ours handler, kept across reloads so re-attaching unwraps our
--- previous closure instead of chaining it.
 local ncState = _G.ghidraLikeHookState
 if type(ncState) ~= 'table' then ncState = {}; _G.ghidraLikeHookState = ncState end
 
--- Printable ASCII only: guarantees the byte-survival condition and stops a
--- name containing « or » from confusing our own parser. Capped at 96.
 local function ncSanitise(s)
   s = tostring(s or '')
   local out = {}
@@ -2710,8 +2752,6 @@ local function ncSanitise(s)
   return t
 end
 
--- Drop whole UTF-8 characters whose encoding contains E2, 8C or A9.
--- For a character occupying bytes b_1..b_k, keep it iff no b_i is in that set.
 local function ncSanitisePrefix(s)
   if type(s) ~= 'string' then return '' end
   local out, i, n = {}, 1, #s
@@ -2733,7 +2773,6 @@ local function ncSanitisePrefix(s)
   return table.concat(out)
 end
 
--- C = P · 〈 · E · 〉 · T
 local function ncSplit(c)
   if type(c) ~= 'string' then return '', nil, '' end
   local a = find(c, EO, 1, true)
@@ -2744,61 +2783,17 @@ local function ncSplit(c)
   return p, c:sub(a + #EO, b - 1), c:sub(b + #ECL)
 end
 
-local function ncStripName(s)
-  if type(s) ~= 'string' then return '' end
-  -- Remove OUR block and the mnemonics file's block, so neither accumulates.
-  for _, pair in ipairs({ {NO, NCL}, {'⌦', '⌫'} }) do
-    local O, C = pair[1], pair[2]
-    while true do
-      local a = find(s, O, 1, true)
-      if a == nil then break end
-      local b = find(s, C, a + #O, true)
-      if b == nil then s = s:sub(1, a - 1); break end
-      s = s:sub(1, a - 1) .. s:sub(b + #C)
-    end
-  end
-  return s
-end
-
-local function ncHasName(s)
-  return type(s) == 'string' and find(s, NO, 1, true) ~= nil
-end
-
--- Strip-then-append, so sigma(U·N) = U and the result is the same whether your
--- notes were typed before or after the previous name. Idempotent.
 local function ncBuild(cur, name)
   local p, e, t = ncSplit(cur)
   local U = ncStripName(p)
   U = U:match('^%s*(.-)%s*$') or ''
   U = ncSanitisePrefix(U)
-  -- CE feeds the comment back as description, so a stray copy of the name
-  -- inside the explanation would otherwise be re-appended. Self-healing.
   local body = ncStripName(e or '')
   local N = ''
   if name and name ~= '' then
     N = (U ~= '' and ' ' or '') .. NO .. name .. NCL .. ' '
   end
   return U .. N .. EO .. body .. ECL .. (t or '')
-end
-
--- Apply sigma to every comment we touched. Removes «…» and leaves your notes,
--- the 〈…〉 explanation and the tail exactly as they are. An empty result clears
--- the comment. This is the ONLY thing that can undo a durable setComment.
-local function ncPurge()
-  local n = 0
-  for a in pairs(ncTouched) do
-    local okG, cur = pcall(getComment, a)
-    if okG and type(cur) == 'string' and ncHasName(cur) then
-      local want = ncStripName(cur)
-      want = want:match('^%s*(.-)%s*$') or ''
-      if want ~= cur then
-        if pcall(setComment, a, want) then n = n + 1 end
-      end
-    end
-  end
-  ncTouched = {}
-  _G.ghidraLikeTouched = ncTouched
-  return n
 end
 
 local function ncSplitCsv(line)
@@ -2824,7 +2819,6 @@ local function ncSplitCsv(line)
   return out
 end
 
--- Accepts 20E7700, 0x20E7700, pes2021.exe+20E7700.
 local function ncOffset(s)
   s = tostring(s or ''):match('^%s*(.-)%s*$')
   local plus = find(s, '+', 1, true)
@@ -2832,23 +2826,6 @@ local function ncOffset(s)
   s = s:gsub('^0[xX]', '')
   if s == '' or not s:match('^%x+$') then return nil end
   return tonumber(s, 16)
-end
-
-
------------------------------------------------------------------- comment cache
--- Modelled on allDisassemblerNotes: key = address, validity = the disassembly
--- line, cleared on process change. A VERSION stamp is added because loading a
--- CSV changes the desired comment without changing the line.
---   NC_name  avoids recomputing the name.
---   NC_cmt   avoids getComment AND setComment on a repeat repaint.
-local NC_version = 0
-local NC_name, NC_nName = {}, 0
-local NC_cmt,  NC_nCmt  = {}, 0
-
-local function ncFlush()
-  NC_name, NC_nName = {}, 0
-  NC_cmt,  NC_nCmt  = {}, 0
-  NC_version = NC_version + 1
 end
 
 local function ncCachedName(a, inst, compute)
@@ -2863,9 +2840,6 @@ local function ncCachedName(a, inst, compute)
   return name
 end
 
--- One place decides what a process change means: purge, then unload. No silent
--- rebasing -- a CSV belongs to one module in one process, and re-installing its
--- rows at a new base is how the old names survived into the new process.
 local function ncCheckProcess()
   local pid = getOpenedProcessID()
   if pid == ncPid then return false end
@@ -2875,7 +2849,6 @@ local function ncCheckProcess()
   ncFlush()
   ncMap, ncCount, ncLo, ncHi = {}, 0, 0, -1
   ncBase, ncMod, ncRows = 0, '', {}
-  unloadNames()                    -- clears the _annotate registry + its cache
   print(string.format(
     'ghidraLike: process changed - %d comment(s) cleaned, names unloaded', removed))
   return true
@@ -2893,19 +2866,11 @@ local function ncInstall(rows, b, mn)
     end
   end
   ncLo, ncHi = lo or 0, hi or -1
-
-  -- Refresh the stamp HERE, so the first repaint after a load cannot mistake
-  -- itself for a process change. This was the second print.
   ncPid = getOpenedProcessID()
   ncState.pid = ncPid
   ncFlush()
-
-  -- Mirror into the registry _annotate reads. Without this, nmCount stayed 0
-  -- and operand names never resolved. Sharing the table costs nothing.
   nmMap, nmCount, nmLo, nmHi = ncMap, ncCount, ncLo, ncHi
   nmCache, nmRegSig, nmRegTab = {}, nil, nil
-
-  -- NO PRINT HERE. ncInstall has two callers; only ncLoad may print.
   return ncCount
 end
 
@@ -2925,7 +2890,6 @@ local function ncAddr(a)
   return nil
 end
 
--- CE colour markup, observed as "[{R}rsp{N}+{H}18{N}],{R}rbx{N}".
 local function ncMarkup(s)
   if type(s) ~= 'string' then return '' end
   return (s:gsub('{%a+}', ''))
@@ -2939,9 +2903,7 @@ local function ncPutName(line, nm)
 end
 
 local function ncHook(sender, address, LDD, result, description)
-
-  ncCheckProcess()                 -- purge BEFORE anything writes
-
+  ncCheckProcess()
   local r, d = result, description
   if ncPrev then
     local ok, rr, dd = pcall(ncPrev, sender, address, LDD, result, description)
@@ -2952,7 +2914,6 @@ local function ncHook(sender, address, LDD, result, description)
             and LDD.address or ncAddr(address)
   if a == nil then return r, d end
 
-  -- Tier 2: no getComment and no setComment on a hit.
   local ce = NC_cmt[a]
   if ce ~= nil and ce.v == NC_version and ce.line == r then
     if ce.name then r = ncPutName(r, ce.name) end
@@ -2966,8 +2927,6 @@ local function ncHook(sender, address, LDD, result, description)
     inst = ncMarkup(inst)
   end
 
-  -- Tier 1. self(a) names the ADDRESS; _annotate names what it POINTS AT.
-  -- Both are needed: a function-start row is found only by self().
   local nm = ncCachedName(a, inst, function()
     local s = ncSelf(a)
     local regsUsed = false
@@ -2989,7 +2948,7 @@ local function ncHook(sender, address, LDD, result, description)
 
   local want
   if nm == nil and not ncHasName(cur) then
-    want = cur                                    -- nothing of ours to touch
+    want = cur
   elseif nm == nil then
     local p, e, t = ncSplit(cur)
     local U = ncSanitisePrefix((ncStripName(p):match('^%s*(.-)%s*$') or ''))
@@ -2999,9 +2958,9 @@ local function ncHook(sender, address, LDD, result, description)
     want = ncBuild(cur, nm)
   end
 
-    if cur ~= want then
-		if pcall(setComment, a, want) then ncTouched[a] = true end
-    end
+  if cur ~= want then
+    if pcall(setComment, a, want) then ncTouched[a] = true end
+  end
 
   if ce == nil then NC_nCmt = NC_nCmt + 1 end
   NC_cmt[a] = { v = NC_version, line = r, name = nm }
@@ -3020,8 +2979,6 @@ local function ncAttach()
   if ok0 and cur == ncHook then return true end
 
   if ok0 and ncState.mine ~= nil and cur == ncState.mine then
-    -- Our PREVIOUS closure is still installed. Reuse the original handler
-    -- rather than chaining it, or the stale one keeps writing old names.
     ncPrev = ncState.orig
   else
     ncPrev = (ok0 and type(cur) == 'function') and cur or nil
@@ -3036,57 +2993,419 @@ local function ncAttach()
   return ok
 end
 
+
+------------------------------------------------------------------ names browser (0ms Instant Open)
+-- ORDER MATTERS. Each function is defined before anything that calls it:
+--   0. state and helper
+--   1. ncBuildIndex       (no dependencies)
+--   2. ncJumpTo           (no dependencies)
+--   3. ncShowNameList     (uses 1 and 2)
+--   4. ncAttachNameMenu   (uses 3)
+-- ncLoad comes after this block and uses 1 and 4.
+
+local ncListForm = nil
+local ncSorted = nil
+local ncHaystack = nil
+local ncIndexedRowsRef = nil
+local ncMenuItem = nil
+
+-- Cheat Engine builds differ in method casing (show/Show, invalidate/Invalidate).
+-- Try each spelling and stop at the first that works. Never raises an error.
+local function ncCall(obj, ...)
+  if obj == nil then return false end
+  for _, name in ipairs({ ... }) do
+    local ok = pcall(function() obj[name](obj) end)
+    if ok then return true end
+  end
+  return false
+end
+
+-- Sets a property, trying each spelling. Never raises an error.
+local function ncSetProp(obj, value, ...)
+  if obj == nil then return false end
+  for _, name in ipairs({ ... }) do
+    local ok = pcall(function() obj[name] = value end)
+    if ok then return true end
+  end
+  return false
+end
+
+-- 1. Builds the sorted index and search haystack once per loaded name table.
+local function ncBuildIndex()
+  if type(ncRows) ~= 'table' or #ncRows == 0 then
+    ncSorted, ncHaystack, ncIndexedRowsRef = nil, nil, nil
+    return
+  end
+  if ncIndexedRowsRef == ncRows and ncSorted ~= nil then
+    return -- already indexed for this table
+  end
+
+  local total = #ncRows
+  local sorted = {}
+  for i = 1, total do sorted[i] = i end
+  table.sort(sorted, function(a, b)
+    return (ncRows[a][1] or 0) < (ncRows[b][1] or 0)
+  end)
+
+  local haystack = {}
+  local fmt = string.format
+  local strLower = string.lower
+  for i = 1, total do
+    local row = ncRows[sorted[i]]
+    haystack[i] = strLower(fmt('%x %s', row[1] or 0, tostring(row[2] or '')))
+  end
+
+  ncSorted = sorted
+  ncHaystack = haystack
+  ncIndexedRowsRef = ncRows
+end
+
+-- 2. Moves Memory View to an address. focusMv decides whether focus moves too.
+local function ncJumpTo(addr, useHex, focusMv)
+  addr = normAddr(addr)
+  if addr == nil then return end
+  local mv = getMemoryViewForm()
+  if mv == nil then return end
+  if not mv.Visible then ncCall(mv, 'Show', 'show') end
+
+  if useHex == true then
+    local hv = mv.HexadecimalView
+    ncSetProp(hv, addr, 'address', 'Address')
+    if focusMv then ncCall(hv, 'SetFocus', 'setFocus') end
+  else
+    local dv = mv.DisassemblerView
+    ncSetProp(dv, addr, 'selectedAddress', 'SelectedAddress')
+    if focusMv then ncCall(dv, 'SetFocus', 'setFocus') end
+  end
+
+  if focusMv then ncCall(mv, 'BringToFront', 'bringToFront') end
+end
+
+-- 3. Opens the names browser window (or brings the existing one forward).
+local function ncShowNameList()
+  if type(ncRows) ~= 'table' or #ncRows == 0 then
+    print('ghidraLike: no names loaded - run loadNames(path) first')
+    return
+  end
+  local base = ncBase
+  if type(base) ~= 'number' or base == 0 then
+    print('ghidraLike: no module base - run loadNames(path) first')
+    return
+  end
+
+  if ncListForm ~= nil then
+    local still = false
+    pcall(function()
+      if ncListForm.Visible then
+        ncCall(ncListForm, 'BringToFront', 'bringToFront')
+        still = true
+      end
+    end)
+    if still then return end
+    pcall(function() ncListForm.destroy() end)
+    ncListForm = nil
+  end
+
+  ncBuildIndex()
+
+  local totalRows = #ncRows
+  local sorted = ncSorted
+  local searchHaystack = ncHaystack
+
+  -- nil means "unfiltered (1..totalRows)"
+  local filtered = nil
+  local lastFilter = ''
+
+  local f = createForm(false)
+  f.Caption = string.format('ghidraLike names (%s) - %d', tostring(ncMod or ''), totalRows)
+  f.Width, f.Height = 640, 520
+  f.Position = 'poScreenCenter'
+  f.BorderStyle = 'bsSizeable'
+
+   -- The only gap value. The bottom gap is applied from it after layout.
+  local TOP_GAP = 6
+
+  local top = createPanel(f)
+  top.Align = 'alTop'
+  top.BevelOuter = 'bvNone'
+
+  local edt = createEdit(top)
+  edt.Left = 56
+  edt.Top = TOP_GAP
+  edt.Anchors = '[akLeft,akRight,akTop]'
+
+  local lbl = createLabel(top)
+  lbl.Caption = 'Filter:'
+  lbl.Left = 8
+  lbl.AutoSize = true
+
+  local lv = createListView(f)
+  lv.Align = 'alClient'
+  lv.ViewStyle = 'vsReport'
+  lv.ReadOnly = true
+  lv.RowSelect = true
+  lv.HideSelection = false
+  pcall(function() lv.FullRowSelect = true end)
+  lv.OwnerData = true
+
+  local c1 = lv.Columns.add()
+  c1.Caption = 'Offset'
+  c1.Width = 120
+  local c2 = lv.Columns.add()
+  c2.Caption = 'Description'
+  c2.Width = 480
+
+  lv.OnData = function(sender, item)
+    local zeroIdx = item.Index
+    local idx = filtered and filtered[zeroIdx + 1] or (zeroIdx + 1)
+    local ri = sorted[idx]
+    if ri == nil then return end
+    local row = ncRows[ri]
+    if row == nil then return end
+    item.Caption = string.format('%X', row[1] or 0)
+    item.SubItems.add(tostring(row[2] or ''))
+  end
+
+  local function applyFilter(filter)
+    filter = (filter or ''):lower()
+    if filter == lastFilter then return end
+
+    if filter == '' then
+      filtered = nil
+      lv.Items.Count = totalRows
+      f.Caption = string.format('ghidraLike names (%s) - %d',
+        tostring(ncMod or ''), totalRows)
+    else
+      local source = filtered
+      local sourceLen = source and #source or totalRows
+      if lastFilter == '' or filter:sub(1, #lastFilter) ~= lastFilter then
+        source = nil
+        sourceLen = totalRows
+      end
+
+      local nextFiltered = {}
+      local n = 0
+      local strFind = string.find
+      for i = 1, sourceLen do
+        local idx = source and source[i] or i
+        if strFind(searchHaystack[idx], filter, 1, true) then
+          n = n + 1
+          nextFiltered[n] = idx
+        end
+      end
+      filtered = nextFiltered
+      lv.Items.Count = n
+      f.Caption = string.format('ghidraLike names (%s) - %d / %d',
+        tostring(ncMod or ''), n, totalRows)
+    end
+
+    lastFilter = filter
+    ncCall(lv, 'Invalidate', 'invalidate')
+  end
+
+  local function jumpSelected(focusMv)
+    local selIdx = lv.ItemIndex
+    if selIdx == nil or selIdx < 0 then return end
+    local idx = filtered and filtered[selIdx + 1] or (selIdx + 1)
+    local ri = sorted[idx]
+    if ri == nil then return end
+    local row = ncRows[ri]
+    if row == nil then return end
+    local addr = base + (row[1] or 0)
+    local useHex = (row[3] == true)
+    ncJumpTo(addr, useHex, focusMv)
+  end
+
+  lv.OnDblClick = function() jumpSelected(true) end
+  lv.OnKeyDown = function(sender, key)
+    if key == 13 then jumpSelected(true) end
+  end
+
+  pcall(function()
+    lv.OnSelectItem = function(sender, item, selected)
+      if selected then jumpSelected(false) end
+    end
+  end)
+
+  local filterTimer = createTimer(f, false)
+  filterTimer.Interval = 150
+  filterTimer.OnTimer = function(t)
+    t.Enabled = false
+    applyFilter(edt.Text or '')
+  end
+
+  edt.OnChange = function()
+    filterTimer.Enabled = false
+    filterTimer.Enabled = true
+  end
+
+  f.OnClose = function()
+    filterTimer.Enabled = false
+    ncListForm = nil
+    return caFree
+  end
+
+  lv.Items.Count = totalRows
+  ncListForm = f
+  ncCall(f, 'Show', 'show')
+  ncCall(f, 'Update', 'update')
+
+    -- Sizes exist only after layout, so size the bar now.
+  top.Height = TOP_GAP + edt.Height + TOP_GAP
+  lbl.Top = TOP_GAP + floor((edt.Height - lbl.Height) / 2)
+
+  -- Right gap is TOP_GAP, measured from the panel's right edge.
+  edt.Width = top.Width - edt.Left - TOP_GAP
+
+  ncCall(edt, 'SetFocus', 'setFocus')
+end
+
+-- 4. Adds "ghidraLike names" to the Memory View menu, after EnumeratedllsandSymbols1.
+local function ncAttachNameMenu()
+  if ncMenuItem ~= nil then return true end
+
+  local mv = getMemoryViewForm()
+  if mv == nil then
+    print('ghidraLike: open Memory View first, then run loadNames again')
+    return false
+  end
+
+  local anchor = nil
+  pcall(function() anchor = mv.EnumeratedllsandSymbols1 end)
+  if anchor == nil then
+    print('ghidraLike: anchor EnumeratedllsandSymbols1 not found')
+    return false
+  end
+
+  local parent = nil
+  pcall(function() parent = anchor.Parent end)
+  if parent == nil then
+    print('ghidraLike: anchor has no parent menu')
+    return false
+  end
+
+  local okC, mi = pcall(createMenuItem, mv)
+  if not okC or mi == nil then
+    print('ghidraLike: could not create menu item')
+    return false
+  end
+  mi.Caption = 'ghidraLike names'
+  mi.OnClick = function() ncShowNameList() end
+
+  local idx = 0
+  pcall(function() idx = anchor.MenuIndex + 1 end)
+
+  local okI = pcall(function() parent.insert(idx, mi) end)
+  if not okI then
+    okI = pcall(function() parent.add(mi) end)
+  end
+  if not okI then
+    print('ghidraLike: could not insert menu item into parent menu')
+    return false
+  end
+
+  ncMenuItem = mi
+  return true
+end
+
 local function ncLoad(path, module)
-  local fh, err = io.open(path, 'r')
+  local fh, err = io.open(path, 'rb')
   if fh == nil then
     print('loadNames: cannot open ' .. tostring(path) .. '  ' .. tostring(err))
     return 0
   end
-  local mn, rows = module, {}
-  for line in fh:lines() do
-    local mc = line:match('^#module=(.+)$')
-    if mc then
-      if mn == nil then mn = mc:match('^%s*(.-)%s*$') end
-    elseif line:sub(1, 1) ~= '#' and find(line, ',', 1, true) then
-      local f = ncSplitCsv(line)
-      local off, desc = ncOffset(f[1]), (f[2] or ''):match('^%s*(.-)%s*$')
-      if f[1] == 'offset' or desc == 'desc' then
-        -- column header
-      elseif off ~= nil and desc ~= '' then
-        rows[#rows+1] = { off, desc }
+  local content = fh:read('*a')
+  fh:close()
+
+  local mn = module
+  local rows = {}
+  local n = 0
+
+  local strFind = string.find
+  local strSub = string.sub
+  local strMatch = string.match
+  local byte = string.byte
+  local char1 = string.char(1)
+
+  for line in content:gmatch('[^\r\n]+') do
+    local firstByte = byte(line, 1)
+    if firstByte == 35 then -- '#'
+      if mn == nil then
+        local mc = strMatch(line, '^#module=(.+)$')
+        if mc then mn = strMatch(mc, '^%s*(.-)%s*$') end
+      end
+    else
+      local c1 = strFind(line, ',', 1, true)
+      if c1 ~= nil then
+        local f1, f2, f3
+        -- Fast path: no quotes on the line (99.9% of symbol rows)
+        if strFind(line, '"', 1, true) == nil then
+          local c2 = strFind(line, ',', c1 + 1, true)
+          f1 = strSub(line, 1, c1 - 1)
+          if c2 ~= nil then
+            f2 = strSub(line, c1 + 1, c2 - 1)
+            f3 = strSub(line, c2 + 1)
+          else
+            f2 = strSub(line, c1 + 1)
+          end
+        else
+          local f = ncSplitCsv(line)
+          f1, f2, f3 = f[1], f[2], f[3]
+        end
+
+        if f1 ~= 'offset' and f2 ~= 'desc' then
+          local off = ncOffset(f1)
+          if off ~= nil and f2 ~= nil and f2 ~= '' then
+            -- Only trim if leading/trailing whitespace exists
+            local bFirst, bLast = byte(f2, 1), byte(f2, -1)
+            local desc = (bFirst == 32 or bFirst == 9 or bLast == 32 or bLast == 9)
+              and strMatch(f2, '^%s*(.-)%s*$') or f2
+
+            if desc ~= '' then
+              local useHex = false
+              if f3 ~= nil and f3 ~= '' then
+                local hx = strMatch(f3, '^%s*(.-)%s*$')
+                if hx == '1' or hx == char1 or hx == 'true' or hx == 'TRUE' then
+                  useHex = true
+                end
+              end
+              n = n + 1
+              rows[n] = { off, desc, useHex }
+            end
+          end
+        end
       end
     end
   end
-  fh:close()
+  content = nil -- Free raw file buffer immediately before indexing
 
   if mn == nil or mn == '' then mn = ncMod end
   if mn == nil or mn == '' then mn = moduleName end
   if mn == nil or mn == '' then mn = process end
   if mn == nil then print('loadNames: no module name'); return 0 end
-  if #rows == 0 then print('loadNames: no data rows in ' .. tostring(path)); return 0 end
+  if n == 0 then print('loadNames: no data rows in ' .. tostring(path)); return 0 end
 
-  ncCheckProcess()                 -- clean the old process before installing
+  ncCheckProcess()
 
   local ok, b = pcall(getAddress, mn)
   if not ok or type(b) ~= 'number' then
     print('loadNames: cannot resolve module ' .. tostring(mn)); return 0
   end
   ncInstall(rows, b, mn)
+  ncBuildIndex()
   ncAttach()
-  -- THE ONLY PRINT SITE.
+  ncAttachNameMenu()
   print(string.format('loadNames: %d names, %s base %X, range %X-%X',
     ncCount, tostring(mn), b, ncLo, ncHi))
   return ncCount
 end
 
-
--- Reloaded after the process changed? The previous run's comments are still in
--- CE and its ncTouched survived in the global, so clean them now.
 if ncState.pid ~= nil and ncState.pid ~= ncPid then
   ncPurge()
   ncFlush()
 end
 ncState.pid = ncPid
+
 
 -- ============================================================================
 -- PUBLIC API
