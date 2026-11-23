@@ -525,13 +525,25 @@ function tprint(tbl, max_depth, pth)
     -- on the way out, so a table reached by two paths is shown in both places.
         -- No depth parameter and no depth test. `seen` only stops a table being
     -- descended into while it is already an ancestor of itself; it is cleared
-    -- on the way out, so a table reached by two paths is shown in both places.
+        -- `indent` is the number of path components after the root, so it is also
+    -- the depth. `seen` only stops a table being descended into while it is
+    -- already an ancestor of itself; it is cleared on the way out, so a table
+    -- reached by two paths is shown in both places.
     local function dump(v, indent, label)
         local pad    = string.rep('\t', indent)
         local prefix = label and (pad .. label .. ': ') or pad
 
         if type(v) ~= 'table' then
             line(prefix .. scalar(v))
+            return
+        end
+
+        -- Only tables reach here, so the marker is unambiguous. The node itself
+        -- is still printed: at max_depth 1 you must still see a.b. Returning
+        -- before seen/printed are touched means the same table reached later at
+        -- a shallower depth will still be expanded.
+        if depthLimit > 0 and indent >= depthLimit then
+            line(prefix .. '<depth limit>')
             return
         end
 
