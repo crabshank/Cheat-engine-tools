@@ -136,7 +136,6 @@ end
 
 function full_internal(rootObj, maxDepth)
     opts = opts or {}
-    local streaming   = true
     local methodsOnce = false
     local resolveMeta = true
     local loadstr     = loadstring or load
@@ -395,17 +394,10 @@ function full_internal(rootObj, maxDepth)
         end
         local path = table.concat(pathArr, '')
 
-        if streaming then
-            onRow(pi.type, path, pi.val, pi.depth)
-            emitted = emitted + 1
-            plt[i] = nil                 -- release the queue as we drain it
-        else
             local ptj = { type = pi.type, path = path, depth = pi.depth }
             if pi.val ~= nil then ptj.value = pi.val end
             pltFinal[#pltFinal + 1] = ptj
-        end
     end
 
-    if streaming then return emitted end
     return pltFinal
 end
