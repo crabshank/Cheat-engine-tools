@@ -19,7 +19,7 @@
 --   report states how many actually resolve rather than assuming they do.
 --   Non-function entries (math.pi, math.huge, …) are reported as constants.
 --   Extend the mapping with:
---       tprintConfig.libraries.number = { 'math', 'bit' }
+--       tprintConfig_libs.number = { 'math', 'bit' }
 --
 -- SAFETY
 --   The old file crashed because it invoked CE metamethods while walking:
@@ -42,10 +42,24 @@
 -- NO depth limit. A genuinely enormous structure raises a Lua stack overflow,
 -- which is reported rather than hidden. The only cap is a BREADTH cap on the
 -- per-byte string listing, and the omitted count is always stated.
+--
+-- MEMORY
+--   * Userdata are streamed: full_internal(obj, onRow) hands each row over as it
+--     is produced and tprint prints it at once, so nothing is accumulated. (A
+--     full_internal that predates streaming still works; it returns a list.)
+--   * Strings: the per-byte listing is capped at tprintConfig_maxBytes (default
+--     4096; math.huge restores the unbounded listing). It was documented above
+--     but had stopped being enforced.
+--   * tprintConfig_collect (default true) runs a full collectgarbage() at the end.
+--   * tprintConfig_expandOnce (default false): a table reachable by several paths
+--     is expanded only the first time; later sightings print <already shown>.
+--   * tprintConfig_methodsOnce (default false): userdata only. Methods are listed
+--     once per metatable instead of once per object (see full_internal).
+--   * The CONSOLE keeps every line it is given. For a big dump pass a file path.
 
 local realprint = print          -- captured once: a reassigned global print cannot recurse
 
-tprintConfig_libs= {
+local tprintConfig_libs= {
     table  = { 'table'  },
     string = { 'string' },
     number = { 'math'   },
@@ -69,20 +83,30 @@ local function s_pluralise(c,t)
 	end
 end
 
+-- One gsub with a lookup table: the result is built in a C buffer, not as a Lua
+-- table holding one string per input byte.
+local escMap = {}
+for c = 0, 31 do escMap[string.char(c)] = string.format('\\%03d', c) end
+escMap['\127'] = '\\127'
+escMap['"']  = '\\"'
+escMap['\\'] = '\\\\'
+escMap['\n'] = '\\n'
+escMap['\r'] = '\\r'
+escMap['\t'] = '\\t'
+
 local function escString(s)
-    local out = {'"'}
-    for i = 1, #s do
-        local c = s:byte(i)
-        if     c == 34 then out[#out+1] = '\\"'
-        elseif c == 92 then out[#out+1] = '\\\\'
-        elseif c == 10 then out[#out+1] = '\\n'
-        elseif c == 13 then out[#out+1] = '\\r'
-        elseif c == 9  then out[#out+1] = '\\t'
-        elseif c < 32 or c == 127 then out[#out+1] = string.format('\\%03d', c)
-        else out[#out+1] = string.char(c) end
+    return '"' .. s:gsub('[\0-\31"\\\127]', escMap) .. '"'
+end
+
+-- Newline count without gsub's full-length copy of the string.
+local function countNL(s)
+    local n, p = 0, 1
+    while true do
+        local q = string.find(s, '\n', p, true)
+        if not q then return n end
+        n = n + 1
+        p = q + 1
     end
-    out[#out+1] = '"'
-    return table.concat(out)
 end
 
 -- Enough '=' that the payload cannot close the bracket early.
@@ -97,14 +121,9 @@ local function renderString(s)
         -- Long brackets read far better for multiline text, but only when the
         -- payload has no other control bytes. CR is excluded because Lua
         -- normalises line endings inside long strings.
-        local clean = true
-        for i = 1, #s do
-            local c = s:byte(i)
-            if (c < 32 or c == 127) and c ~= 10 and c ~= 9 then
-                clean = false break
-            end
+        if not string.find(s, '[\0-\8\11-\31\127]') then
+            return longBracket(s)
         end
-        if clean then return longBracket(s) end
     end
     return escString(s)
 end
@@ -246,8 +265,7 @@ local function rawWrite(s)
         return false
     end
     dumpBytes = dumpBytes + #s
-    local _, nl = s:gsub('\n', '')                    -- C-speed newline count
-    dumpLines = dumpLines + nl
+    dumpLines = dumpLines + countNL(s)
     if dumpLines > 0 and dumpLines % 1000 == 0 then
         local fok, fres, ferr = pcall(dumpFile.flush, dumpFile)
         if not fok or fres == nil then
@@ -273,22 +291,12 @@ local function fileWriteTrim(s)
     return ok
 end
 
--- f == true  -> file if one is open, else console
--- f ~= true  -> console
--- Mimics print(): arguments tab-separated, no arguments = blank line.
-local function printDump(f, ...)
-    local n = select('#', ...)
-    local parts = {}
-    for i = 1, n do
-        local a = (select(i, ...))
-        parts[i] = (type(a) == 'string') and a or scalar(a)
-    end
-    local line = table.concat(parts, '\t')
-
-    if f == true and dumpFile ~= nil then
-        fileWriteTrim(line .. '\n')
+-- Every caller passes exactly one string, so there is no argument list to build.
+local function emitLine(toFile, s)
+    if toFile and dumpFile ~= nil then
+        fileWriteTrim(s .. '\n')
     else
-        realprint(line)
+        realprint(s)
     end
 end
 
@@ -332,11 +340,10 @@ local function orderedKeys(t)
     end
     pcall(table.sort, nums)        -- a NaN key would otherwise raise
     pcall(table.sort, strs)
-    local out = {}
-    for i = 1, #nums   do out[#out+1] = nums[i]   end
-    for i = 1, #strs   do out[#out+1] = strs[i]   end
-    for i = 1, #others do out[#out+1] = others[i] end
-    return out
+    local nn, ns = #nums, #strs
+    table.move(strs,   1, ns,       nn + 1,      nums)
+    table.move(others, 1, #others,  nn + ns + 1, nums)
+    return nums
 end
 
 ---------------------------------------------------------------- printer
@@ -361,9 +368,11 @@ function tprint(tbl, pth)
     end
     local toFile = (dumpFile ~= nil)
 
-    local seen = {}
+    local seen    = {}
+    local printed = {}
+    local expandOnce = false
 
-    local function line(s) printDump(toFile, s) end
+    local function line(s) emitLine(toFile, s) end
 
     ---------------------------------------------------------- metatable report
 
@@ -518,6 +527,10 @@ function tprint(tbl, pth)
             line(prefix .. '<cycle>')
             return
         end
+        if expandOnce and printed[v] then
+            line(prefix .. '<already shown>')
+            return
+        end
         seen[v] = true
 
         local keys = orderedKeys(v)
@@ -526,6 +539,7 @@ function tprint(tbl, pth)
             seen[v] = nil
             return
         end
+        if expandOnce then printed[v] = true end
 
         if label then line(prefix) end
 
@@ -555,27 +569,26 @@ function tprint(tbl, pth)
             return
         end
 
-        local okf, rows = pcall(full_internal, obj)
-        if not okf then
-            line('tprint: full_internal raised: ' .. tostring(rows))
-            return
-        end
-        if type(rows) ~= 'table' then
-            line('tprint: full_internal returned no rows')
-            return
+        local n = 0
+        local function onRow(rtype, rpath, rvalue)
+            n = n + 1
+            local l = string.format('%-9s %s', tostring(rtype or '?'), tostring(rpath or '?'))
+            if rvalue ~= nil then
+                l = l .. ' = ' .. scalar(rvalue)
+            end
+            line(l)
         end
 
-        local n = 0
-        for i = 1, #rows do
-            local r = rows[i]
-            if type(r) == 'table' then
-                n = n + 1
-                local l = string.format('%-9s %s',
-                    tostring(r.type or '?'), tostring(r.path or '?'))
-                if r.value ~= nil then
-                    l = l .. ' = ' .. scalar(r.value)
-                end
-                line(l)
+        local opts = { methodsOnce = true }
+        local okf, res = pcall(full_internal, obj, onRow, opts)
+        if not okf then
+            line('tprint: full_internal raised: ' .. tostring(res))
+        elseif type(res) == 'table' then
+            -- A full_internal that predates streaming ignored onRow and returned
+            -- the whole list. Still handled, at the old memory cost.
+            for i = 1, #res do
+                local r = res[i]
+                if type(r) == 'table' then onRow(r.type, r.path, r.value) end
             end
         end
         line(string.format('(%s)', s_pluralise(n,'row')))
@@ -589,8 +602,7 @@ function tprint(tbl, pth)
         line('length: ' .. n .. ' byte(s)')
         line('value: ' .. renderString(s))
 
-        local _, nl = s:gsub('\n', '')
-        line('lines: ' .. tostring(nl + 1))
+        line('lines: ' .. tostring(countNL(s) + 1))
 
         local valid, cps, bad, coarse = utf8Stats(s)
         if valid then
@@ -615,8 +627,9 @@ function tprint(tbl, pth)
         end
 
         if n > 0 then
-            local cap = 0
-            local shown = n
+            local cap = math.huge
+            local shown = (n > cap) and math.floor(cap) or n
+            if shown < 1 then shown = 1 end
             line('bytes hex: ' .. byteHex(s, 1, shown))
             line('bytes dec: ' .. byteDec(s, 1, shown))
             line('per-byte:')
@@ -626,7 +639,8 @@ function tprint(tbl, pth)
                 line(string.format('\t[%d] %02X  %3d  %s', i, c, c, pr))
             end
             if shown < n then
-                line('\t… ' .. (n - shown).. ')')
+                line('\t… (' .. (n - shown) .. ' more byte(s) omitted; limit is math.huge = '
+                     .. tostring(math.huge) .. ')')
             end
         end
 
@@ -802,6 +816,8 @@ function tprint(tbl, pth)
     local dropped = closeDump()
 
     if not toFile then realprint('') end
+
+    collectgarbage()
 
     if dumpFailed then
         realprint('tprint: INCOMPLETE — ' .. dumpFailed
