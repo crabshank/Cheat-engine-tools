@@ -46,9 +46,11 @@ end
 local tm=table_map({{6,9},{60,90}},mapf) -- contains map
 ```
 
-* **full_internal(v)**
+* **full_internal(v, maxDepth --[[Optional]] )**
 
 This probes a Cheat Engine internal object to it's full depth (e.g. **v**=GetMemoryViewForm()), and returns a table which can be filtered.
+
+* **maxDepth**:  if <=0 or nil full depth, else e.g. if 1 will probe until a.b but not a.b.c
 
 This function returns a Lua table containing:
 
