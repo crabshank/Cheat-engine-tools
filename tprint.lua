@@ -348,7 +348,16 @@ end
 
 ---------------------------------------------------------------- printer
 
-function tprint(tbl, pth)
+function tprint(tbl, max_depth, pth)
+    -- Depth limit for the TABLE WALK. nil / non-number / <= 0 / NaN / inf all
+    -- mean unlimited. Otherwise it counts path components after the root:
+    -- 1 shows a.b, 2 shows a.b.c, and so on.
+    local md = tonumber(max_depth)
+    local depthLimit = 0
+    if md ~= nil and md == md and md > 0 and md ~= math.huge then
+        depthLimit = math.floor(md)
+    end
+
     if dumpFile ~= nil then
         realprint('tprint: a dump is already open; ignoring the new path')
         pth = nil
@@ -512,6 +521,9 @@ function tprint(tbl, pth)
     ---------------------------------------------------------- table walk
 
     -- No depth parameter and no depth test. `seen` only stops a table being
+    -- descended into while it is already an ancestor of itself; it is cleared
+    -- on the way out, so a table reached by two paths is shown in both places.
+        -- No depth parameter and no depth test. `seen` only stops a table being
     -- descended into while it is already an ancestor of itself; it is cleared
     -- on the way out, so a table reached by two paths is shown in both places.
     local function dump(v, indent, label)
