@@ -73,7 +73,7 @@ local function filt (v,k,t)
 end
 
 local tf=table_filter(m,filt) -- contains all entries that satisfy the condition(s)
-tprint(tf)
+tprint(tf,[[<file path (optional)>]])
 ```
 
 Script to break on file creation code:
@@ -166,7 +166,11 @@ Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; 
 
 ## tprint.lua
 
-Allows you to print whole lua tables, and variables (even of "userdata" type). Credit to ripter.
+	Allows you to print whole lua tables, and variables (even of "userdata" type, if `extended_functions.lua` is also present in the autorun folder). Credit to ripter.
+
+	* **sections( tbl, pth  --[[Optional]] )**
+	* **tbl**:  the variable to print
+	* **pth**:  the path to a file in which to dump the data instead of printing to the console
 
 ## maxScan.lua
 
