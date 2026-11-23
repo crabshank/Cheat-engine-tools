@@ -346,6 +346,28 @@ local function orderedKeys(t)
     return nums
 end
 
+-- Depth of a full_internal path, in components AFTER the root.
+-- The root itself is depth 0. Dots and brackets inside () or [] are NOT
+-- separators, so ["a.b"] and getComponent(0) each count as one component.
+local function pathDepth(p)
+    if type(p) ~= 'string' then return 0 end
+    local seg, nest = 0, 0
+    for i = 1, #p do
+        local c = p:sub(i, i)
+        if c == '(' then
+            nest = nest + 1
+        elseif c == '[' then
+            if nest == 0 then seg = seg + 1 end
+            nest = nest + 1
+        elseif c == ')' or c == ']' then
+            if nest > 0 then nest = nest - 1 end
+        elseif c == '.' and nest == 0 then
+            seg = seg + 1
+        end
+    end
+    return seg
+end
+
 ---------------------------------------------------------------- printer
 
 function tprint(tbl, max_depth, pth)
@@ -583,7 +605,7 @@ function tprint(tbl, max_depth, pth)
 
     ---------------------------------------------------------- userdata
 
-    local function dumpUserdata(obj)
+        local function dumpUserdata(obj)
         line('type: userdata')
         line('identity: ' .. safeIdentity(obj))
         emitMetatable(obj, 0)
@@ -593,29 +615,43 @@ function tprint(tbl, max_depth, pth)
             return
         end
 
-        local n = 0
-        local function onRow(rtype, rpath, rvalue)
-            n = n + 1
-            local l = string.format('%-9s %s', tostring(rtype or '?'), tostring(rpath or '?'))
-            if rvalue ~= nil then
-                l = l .. ' = ' .. scalar(rvalue)
+        local shown, hidden = 0, 0
+
+        -- ONE emitter, so the depth rule cannot drift between the streaming
+        -- path and the list fallback.
+         local function emitRow(rtype, rpath, rvalue, rdepth)
+            local d = rdepth
+            if d == nil then d = pathDepth(rpath) end   -- older full_internal
+            if depthLimit > 0 and d > depthLimit then
+                hidden = hidden + 1
+                return
             end
+            shown = shown + 1
+            local l = string.format('%-9s %s',
+                tostring(rtype or '?'), tostring(rpath or '?'))
+            if rvalue ~= nil then l = l .. ' = ' .. scalar(rvalue) end
             line(l)
         end
 
-        local opts = { methodsOnce = true }
-        local okf, res = pcall(full_internal, obj, onRow, opts)
+        
+        local okf, res = pcall(full_internal, obj, depthLimit)
         if not okf then
             line('tprint: full_internal raised: ' .. tostring(res))
         elseif type(res) == 'table' then
-            -- A full_internal that predates streaming ignored onRow and returned
-            -- the whole list. Still handled, at the old memory cost.
+            -- A full_internal that predates streaming ignored onRow.
             for i = 1, #res do
                 local r = res[i]
-                if type(r) == 'table' then onRow(r.type, r.path, r.value) end
+                if type(r) == 'table' then emitRow(r.type, r.path, r.value, r.depth) end
+                res[i] = nil
             end
         end
-        line(string.format('(%s)', s_pluralise(n,'row')))
+
+        if hidden > 0 then
+            line('(' .. s_pluralise(shown, 'row') .. ', '
+                 .. hidden .. ' hidden by max_depth=' .. depthLimit .. ')')
+        else
+            line('(' .. s_pluralise(shown, 'row') .. ')')
+        end
     end
 
     ---------------------------------------------------------- string
