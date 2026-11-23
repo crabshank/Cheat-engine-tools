@@ -680,11 +680,14 @@ function tprint(tbl, max_depth, pth)
     -- Depth limit for the TABLE WALK. nil / non-number / <= 0 / NaN / inf all
     -- mean unlimited. Otherwise it counts path components after the root:
     -- 1 shows a.b, 2 shows a.b.c, and so on.
-	
-	if type(max_depth)=='string' and type(pth)=='number' then
+	local td,tp=type(max_depth),type(pth)
+	if td=='string' and tp=='number' then --(v,path,1)
 		local a=max_depth
 		max_depth=pth
 		pth=a
+	elseif td=='string' and pth==nil then --(v,path)
+		pth=max_depth
+		max_depth=nil
 	end
 	
     if dumpFile ~= nil then
