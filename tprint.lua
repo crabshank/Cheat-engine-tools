@@ -676,11 +676,17 @@ end
 
 ---------------------------------------------------------------- printer
 
-function tprint(tbl, pth, max_depth)
+function tprint(tbl, max_depth, pth)
     -- Depth limit for the TABLE WALK. nil / non-number / <= 0 / NaN / inf all
     -- mean unlimited. Otherwise it counts path components after the root:
     -- 1 shows a.b, 2 shows a.b.c, and so on.
-
+	
+	if type(max_depth)=='string' and type(pth)=='number' then
+		local a=max_depth
+		max_depth=pth
+		pth=a
+	end
+	
     if dumpFile ~= nil then
         realprint('tprint: a dump is already open; ignoring the new path')
         pth = nil
@@ -699,8 +705,6 @@ function tprint(tbl, pth, max_depth)
         end
     end
     local toFile = (dumpFile ~= nil)
-	
-	if toFile==
 	
 	local md = max_depth
     local depthLimit = 0
