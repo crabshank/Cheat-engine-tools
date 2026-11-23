@@ -1,6 +1,6 @@
 -- CONSTANTS AND LEXICAL SHORTHANDS
 local floor = math.floor
-local find, byte, char, len = string.find, string.byte, string.char, string.len
+local find, byte, char = string.find, string.byte, string.char
 -- Lua 5.1 keeps unpack in the global table; 5.2+ moved it into "table".
 local unpack = table.unpack or unpack
 -- Lua 5.1's string loader is loadstring; 5.2+ unified it into load.
@@ -1397,6 +1397,8 @@ end
 -- ALWAYS returns nil, because the work is asynchronous. Poll count() or watch for
 -- the summary lines.
 local function _probe()
+	ncPurge()
+	ncFlush()
   if gl_co ~= nil then print('ghidraLike already running'); return nil end
   local module0 = process
   if module0 == nil then
@@ -1737,67 +1739,10 @@ local nmLo, nmHi = 0, -1
 local nmCache = {}                 -- addr -> desc | false, register-free only
 local nmRegSig, nmRegTab = nil, nil
 
--- Minimal RFC-4180 reader: quoted fields, doubled quotes.
-local function nmSplitCsv(line)
-  local out, i, n = {}, 1, #line
-  while i <= n do
-    if line:sub(i,i) == '"' then
-      local buf = {}; i = i + 1
-      while i <= n do
-        local d = line:sub(i,i)
-        if d == '"' then
-          if line:sub(i+1,i+1) == '"' then buf[#buf+1] = '"'; i = i + 2
-          else i = i + 1; break end
-        else buf[#buf+1] = d; i = i + 1 end
-      end
-      out[#out+1] = table.concat(buf)
-      if line:sub(i,i) == ',' then i = i + 1 end
-    else
-      local j = line:find(',', i, true)
-      if j == nil then out[#out+1] = line:sub(i); i = n + 1
-      else out[#out+1] = line:sub(i, j-1); i = j + 1 end
-    end
-  end
-  return out
-end
-
 local function unloadNames()
   nmMap, nmCount, nmCache = {}, 0, {}
   nmLo, nmHi, nmRegSig, nmRegTab = 0, -1, nil, nil
 end
-
-local function _loadNames(path, module)
-  local fh = io.open(path, 'r')
-  if fh == nil then print('loadNames: cannot open ' .. tostring(path)); return 0 end
-  local mn, rows = module, {}
-  for line in fh:lines() do
-    local mc = line:match('^#module=(.+)$')
-    if mc then
-      if mn == nil then mn = mc:match('^%s*(.-)%s*$') end
-    elseif line:sub(1,1) ~= '#' and line:find(',', 1, true) then
-      local f = nmSplitCsv(line)
-      local off, desc = tonumber(f[1], 16), f[2]
-      if off and desc and desc ~= '' and desc ~= 'desc' and f[1] ~= 'offset' then
-        rows[#rows+1] = { off, desc }
-      end
-    end
-  end
-  fh:close()
-  mn = mn or moduleName or process
-  if mn == nil then print('loadNames: no module name'); return 0 end
-  if #rows == 0 then print('loadNames: no data rows in ' .. tostring(path)); return 0 end
-  local ok, b = pcall(getAddress, mn)
-  if not ok or type(b) ~= 'number' then
-    print('loadNames: cannot resolve module ' .. tostring(mn)); return 0
-  end
-  return nmInstall(rows, b, mn)
-end
-
-local function _nameAt(a)
-  if type(a) ~= 'number' or a < nmLo or a > nmHi then return nil end
-  return nmMap[a]
-end
-
 
 ------------------------------------------------------------------ registers
 -- CE supplies RAX..R15 and EAX..EIP, but not AX/AL/AH/SIL/R8B. Derive those
@@ -2736,7 +2681,7 @@ local ncMap, ncCount = {}, 0
 local ncLo, ncHi     = 0, -1
 local ncBase, ncMod  = 0, ''
 local ncRows         = {}
-local ncPrev, ncInstalled = nil, false
+local ncPrev = nil
 local ncPid = getOpenedProcessID()
 
 -- W: every address whose comment we have written. CE's comment store is DURABLE
@@ -2801,13 +2746,18 @@ end
 
 local function ncStripName(s)
   if type(s) ~= 'string' then return '' end
-  while true do
-    local a = find(s, NO, 1, true)
-    if a == nil then return s end
-    local b = find(s, NCL, a + #NO, true)
-    if b == nil then return s:sub(1, a - 1) end
-    s = s:sub(1, a - 1) .. s:sub(b + #NCL)
+  -- Remove OUR block and the mnemonics file's block, so neither accumulates.
+  for _, pair in ipairs({ {NO, NCL}, {'⌦', '⌫'} }) do
+    local O, C = pair[1], pair[2]
+    while true do
+      local a = find(s, O, 1, true)
+      if a == nil then break end
+      local b = find(s, C, a + #O, true)
+      if b == nil then s = s:sub(1, a - 1); break end
+      s = s:sub(1, a - 1) .. s:sub(b + #C)
+    end
   end
+  return s
 end
 
 local function ncHasName(s)
@@ -2826,7 +2776,7 @@ local function ncBuild(cur, name)
   local body = ncStripName(e or '')
   local N = ''
   if name and name ~= '' then
-    N = (U ~= '' and ' ' or '') .. NO .. name .. NCL
+    N = (U ~= '' and ' ' or '') .. NO .. name .. NCL .. ' '
   end
   return U .. N .. EO .. body .. ECL .. (t or '')
 end
@@ -2989,6 +2939,7 @@ local function ncPutName(line, nm)
 end
 
 local function ncHook(sender, address, LDD, result, description)
+
   ncCheckProcess()                 -- purge BEFORE anything writes
 
   local r, d = result, description
@@ -3077,7 +3028,6 @@ local function ncAttach()
     ncState.orig = ncPrev
   end
   ncState.mine = ncHook
-  ncInstalled = true
 
   local ok = pcall(function() v.OnPostDisassemble = ncHook end)
   for _, m in ipairs({ 'repaint', 'Repaint', 'invalidate', 'Invalidate' }) do
