@@ -73,178 +73,253 @@ local function deepcopy(orig)
 	return copy
 end
 
-function full_internal(v)
+function full_internal(rootObj)
+    local plt = {}
+    local pltFinal = {}
+    local visited = {}          -- keyed by the OBJECT, not by tostring(obj)
 
-	local proc=function(k,v,p,vna)
-			local n2
-			fp=function() return p[k] end
-			fpb, fpr=pcall(fp)
-			if fpr==nil then
-				n2='(…):'..k..'(…)'
+    -- path2 is an array of immutable strings: a shallow copy is sufficient.
+    local function copyPath(t)
+        local o = {}
+        for i = 1, #t do o[i] = t[i] end
+        return o
+    end
+
+    -- Identity by object. CE userdata frequently override __tostring to return
+    -- a class name or caption, so tostring() keys collide and silently prune
+    -- the graph. Tables and userdata are both valid table keys.
+    local function markVisited(obj)
+        local ty = type(obj)
+        if ty ~= 'userdata' and ty ~= 'table' then return false end
+        if visited[obj] then return true end
+        visited[obj] = true
+        return false
+    end
+
+    -- Root name. Guarded: many CE userdata raise on an unknown property read.
+    -- The identifier pattern also prevents `load` from executing arbitrary
+    -- text, and the identity test stops a Name like "print" being accepted.
+    local vn, vna = '…', '(…)'
+    local okN, nm = pcall(function() return rootObj.Name end)
+    if okN and type(nm) == 'string' and nm:match('^[%a_][%w_]*$') then
+        local f = load('return ' .. nm)
+        if f then
+            local okR, r = pcall(f)
+            if okR and r == rootObj then
+                vn, vna = nm, nm
+            end
+        end
+    end
+
+    local function proc(k, p)
+        local ks = tostring(k)
+        local ok, v = pcall(function() return p[k] end)
+        if not ok or v == nil then
+            return '(…):' .. ks .. '(…)'
+        end
+        return vna .. '.' .. ks .. '(…)'
+    end
+
+    markVisited(rootObj)
+
+    -- One enqueue path, so the depth cap, the row cap and the visited test
+    -- are applied uniformly rather than being repeated at each call site.
+    local function enqueue(p2, name, val, kind, depth, recurse)
+        local np2 = copyPath(p2)
+        np2[#np2 + 1] = name
+        local isObj = (type(val) == 'userdata' or type(val) == 'table')
+        local nextData = nil
+        if recurse and isObj and not markVisited(val) then
+            nextData = val
+        end
+        plt[#plt + 1] = {
+            path2 = np2,
+            data  = nextData,
+            val   = isObj and tostring(val) or val,
+            type  = kind,
+            depth = depth
+        }
+    end
+
+    local v = rootObj
+    local p2 = {}
+    local currentDepth = 0
+    local w = 0
+
+    while true do
+        if w > 0 then
+            local cr = plt[w]
+            if cr == nil then break end
+            v = cr.data
+            p2 = cr.path2               -- shared, never mutated; enqueue copies
+            currentDepth = cr.depth
+        end
+
+        local canRecurse = (type(v) == 'userdata' or type(v) == 'table')
+
+        if canRecurse then
+            -- Children already emitted for THIS node, so the component walk
+            -- and the indexed walk cannot produce the same row twice.
+            local seenChild = {}
+            local function noteChild(o)
+                local ty = type(o)
+                if ty == 'userdata' or ty == 'table' then seenChild[o] = true end
+            end
+
+            -- 1. Metatable methods and fields. CE/LCL metatables commonly
+            --    place methods in __index, so walk both, deduplicated.
+            local cb, mt = pcall(getmetatable, v)
+            if cb and type(mt) == 'table' then
+                local sources = { mt }
+                local okIx, ix = pcall(function() return mt.__index end)
+                if okIx and type(ix) == 'table' then sources[2] = ix end
+                local seenKey = {}
+                for si = 1, #sources do
+                    for k0, v0 in pairs(sources[si]) do
+                        if type(k0) == 'string' and k0:sub(1, 2) ~= '__'
+                           and not seenKey[k0] then
+                            seenKey[k0] = true
+                                local n = (w > 0) and k0 or proc(k0, v)
+                                local np2 = copyPath(p2)
+                                np2[#np2 + 1] = n
+                                plt[#plt + 1] = {
+                                    path2 = np2,
+                                    data  = nil,    -- never recurse into raw C functions
+                                    val   = v0,
+                                    type  = 'Method',
+                                    depth = currentDepth + 1
+                                }
+                        end
+                    end
+                end
+            end
+
+            -- 2. Lua table keys.
+            if type(v) == 'table' then
+                for k, val in pairs(v) do
+                    local keyStr = tostring(k)
+                    local nm2 = (w > 0) and keyStr or (vna .. '.' .. keyStr)
+                    local isObj = (type(val) == 'userdata' or type(val) == 'table')
+                    noteChild(val)
+                    enqueue(p2, nm2, val, isObj and 'Object' or 'Property',
+                            currentDepth + 1, true)
+                end
+            end
+
+            -- 3. Userdata inspection.
+            if type(v) == 'userdata' then
+                -- 3a. Child components.
+                local okCount, plc = pcall(function() return v.getComponentCount() end)
+                if okCount and type(plc) == 'number' then
+                    for i = 0, plc - 1 do
+                        local okComp, pli = pcall(function() return v.getComponent(i) end)
+                        if okComp and pli ~= nil then
+                            local okName, pli_nm = pcall(function() return pli.Name end)
+                            local nm2src
+                            if okName and type(pli_nm) == 'string'
+                               and trim_str(pli_nm) ~= '' then
+                                nm2src = trim_str(pli_nm)
+                            else
+                                nm2src = string.format('getComponent(%d)', i)
+                            end
+                            local nm2 = (w > 0) and nm2src or (vna .. '.' .. nm2src)
+                            noteChild(pli)
+                            enqueue(p2, nm2, pli, 'Component', currentDepth + 1, true)
+                        end
+                    end
+                end
+
+                -- 3b. Published properties. Every member access is guarded:
+                --     getPropertyList may be absent, and its result may not
+                --     have .Count, integer indexing, or .destroy().
+                local okPL, propertyList = pcall(getPropertyList, v)
+                if okPL and propertyList ~= nil then
+                    local okC, propCount = pcall(function() return propertyList.Count end)
+                    if okC and type(propCount) == 'number' then
+                        for i = 0, propCount - 1 do
+                            local okI, pli = pcall(function() return propertyList[i] end)
+                            if okI and type(pli) == 'string'
+                               and pli ~= 'Parent' and pli ~= 'Owner' then
+                                local okV, val = pcall(function() return v[pli] end)
+                                if not okV then val = nil end
+                                local nm2 = (w > 0) and pli or (vna .. '.' .. pli)
+                                local isObj = (type(val) == 'userdata' or type(val) == 'table')
+                                noteChild(val)
+                                enqueue(p2, nm2, val, isObj and 'Object' or 'Property',
+                                        currentDepth + 1, true)
+                            end
+                        end
+                    end
+                    -- Reached even when the loop above raised or was skipped.
+                    pcall(function() propertyList.destroy() end)
+                end
+
+                -- 3c. Indexed collections. Skips anything 3a/3b already
+                --     emitted, which is where the duplicate rows came from.
+                local okVc, vc = pcall(function() return v.Count or v.count end)
+                if okVc and type(vc) == 'number' then
+                    for i = 0, vc - 1 do
+                        local okItem, itemVal = pcall(function() return v[i] end)
+                        if okItem and itemVal ~= nil and not seenChild[itemVal] then
+                            noteChild(itemVal)
+                            local idx = string.format('[%d]', i)
+                            -- At root level the object prefix must be kept,
+                            -- otherwise the whole path is just "[0]".
+                            local nm2 = (w > 0) and idx or (vna .. idx)
+                            local isObj = (type(itemVal) == 'userdata' or type(itemVal) == 'table')
+                            enqueue(p2, nm2, itemVal, isObj and 'Object' or 'Value',
+                                    currentDepth + 1, true)
+                        end
+                    end
+                end
+            end
+        end
+
+        w = w + 1
+    end
+
+    -- Path rendering. A positive identifier test, not a "contains a special
+    -- character" test: the old class missed '(' ')' '[' ']' '-', so
+    -- getComponent(0) became .getComponent(0), which is a call, not a field.
+    local function luaStr(s)
+        s = s:gsub('\\', '\\\\'):gsub('"', '\\"')
+             :gsub('\n', '\\n'):gsub('\r', '\\r'):gsub('\t', '\\t')
+        return '"' .. s .. '"'
+    end
+
+    for i = 1, #plt do
+        local pi = plt[i]
+        local pathArr = pi.path2
+
+		for y = 2, #pathArr do
+			local py = pathArr[y]
+
+			if py:match('^%[%d+%]$') then
+				-- pre-formatted array index: [0]
+				pathArr[y] = py
+
+			elseif py:match('^[%a_][%w_]*%b()%[%d+%]$') then
+				-- call followed by index: getPropertyList(x)[0]
+				pathArr[y] = '.' .. py
+
+			elseif py:match('^[%a_][%w_]*%b()$') then
+				-- call expression: getComponent(0)
+				pathArr[y] = '.' .. py
+
+			elseif py:match('^[%a_][%w_]*$') then
+				-- ordinary field name
+				pathArr[y] = '.' .. py
+
 			else
-				 n2=vna..'.'..k..'(…)'
-			end
-			return n2
-	end
-	local plt={}
-	local pltFinal={}
-	local out={}
-	local mt, cb,cr,gmtb,plw,vc,tyv,ptyp,getCond
-	local vn=v.Name
-	local vna=vn
-	local act_vn_Name=true
-	local vnf=load("return ".. vn)
-	local vnb,vnr=pcall(vnf)
-	if vnr==nil then
-		vn='…'
-	   vna='(…)'
-	   act_vn_Name=false;
-	end
-	local w=0
-	local p2={}
-
-		while true do --FULL DEPTH LOOP!
-		if w>0 then
-			plw=function() return plt[w] end
-			cb,cr =pcall(plw)
-
-			if cr==nil then
-				break
-			else
-				v=cr['data']
-                ptyp=cr['type']
-				p2=deepcopy(cr['path2'])
-			end
-
-		end
-		getCond=false
-		if ptyp=='Component' or ptyp==nil then
-			getCond=true
-		end
-        tyv=type(v)
-		if tyv~='function' then
-			gmtb=function() return getmetatable(v) end
-			cb,mt =pcall(gmtb)
-
-			if type(mt)=='table' then
-				local n
-				for k0, v0 in pairs(mt) do
-					if string.sub(k0,1,2)~="__" then
-						if w>0 then 
-							n=k0
-						else
-							n=proc(k0,v0,v,vna)
-						end
-						local np2=deepcopy(p2)
-						table.insert(np2,n)
-						table.insert(plt,{path2=np2, data=v0,  val=v0, type='Method'})
-					end
-				end
+				-- genuine string key
+				pathArr[y] = '[' .. luaStr(py) .. ']'
 			end
 		end
 
-		local getComponents=function(v)
-						local plc=v.getComponentCount()
-					for i=0, plc-1 do
-							local pli=v.getComponent(i)
-							local typ=type(pli)
-							local pli_nm=pli.Name
-							local nm=''
-														local nm2=''
-							if typ=='string' and trim_str(pli)~='' then
-								nm=pli
-																nm2=vna..'.'..pli
-							elseif type(pli_nm)=='string' and trim_str(pli_nm)~='' then
-								 nm=pli.Name
-																 nm2=vna..'.'..pli_nm
-							else
-								nm=string.format('getComponent(%d)',i)
-																nm2=nm
-							end
-						if w>0 then nm2=nm end
-						local np2=deepcopy(p2)
-						table.insert(np2,nm2)
-						table.insert(plt,{path2=np2, data=pli,  val=nil, type='Component'})
-					end
-			end
-		        if getCond==true then getComponents(v) end
+        local ptj = { type = pi.type, path = table.concat(pathArr, '') }
+        if pi.val ~= nil then ptj.value = pi.val end
+        pltFinal[#pltFinal + 1] = ptj
+    end
 
-			local getProperties=function(v)
-				  local propertyList=getPropertyList(v)
-				local plc=propertyList.Count
-						for i=0, plc-1 do
-							local pli=propertyList[i]
-							local val=getProperty(v,pli)
-							if type(val)=='userdata' then
-								val=nil
-							end
-							local typ=type(pli)
-							  local pli_nm=pli.Name
-							local nm=''
-														local nm2=''
-							if typ=='string' and trim_str(pli)~='' then
-								nm=pli
-																nm2=vna..'.'..pli
-							elseif type(pli_nm)=='string' and trim_str(pli_nm)~='' then
-								nm=pli_nm
-																nm2=vna..'.'..pli_nm
-							else
-								nm=string.format('getPropertyList(%s)[%d]',vn,i)
-																nm2=nm
-														end
-
-							local np2=deepcopy(p2)
-							if w>0 then nm2=nm end
-							table.insert(np2,nm2)
-							table.insert(plt,{path2=np2, data=pli,val=val, type='Property'})
-						end
-				propertyList.destroy()
-		end
-                  if getCond==true then getProperties(v) end
-		w=w+1
-	end
-
-	for i=1, #plt do
-			local pi=plt[i]
-			--local d=pi['data']
-			local vp=pi['val']
-			local p2=pi['path2']
-
-			for y=2,#p2 do
-				local py=p2[y]
-				local sf1, sf2=string.find(py,'[%s%.\'\"]+')
-				if sf1==nil then
-					p2[y]="."..py
-				else
-					local sf3, sf4=string.find(py,'"')
-					local smk='"'
-					if sf3~=nil then
-						smk="'"
-						py=string.gsub(py, "'", "\\'")
-					else
-						py=string.gsub(py, '"', '\\"')
-					end
-					p2[y]='['..smk..py..smk..']'
-				end
-			end
-                        local pj=table.concat(p2,'')
-						local ptj={type=pi['type'], path=table.concat(p2,'')}
-                        if vp~=nil then ptj.value=vp end
-						table.insert(pltFinal,ptj)
-		end
-
-				vc=nil
-				if type(v.Count)=='number' then
-					vc=v.Count
-				elseif type(v.count)=='number' then
-					vc=v.count
-				end
-
-				if vc~=nil then
-				   for i=0, vc-1 do
-					   table.insert(pltFinal,{value=vp[i], type='Value', path=i})
-				   end
-				end
-
-				return pltFinal
+    return pltFinal
 end
