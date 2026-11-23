@@ -7,8 +7,6 @@
 --   tprint(string)                   -- internals + string library via __index
 --   tprint(number)                   -- internals + math library via __index
 --   tprint(table)                    -- internals + table library via __index, then keys
---   printDump(false, 'text')         -- always console
---   printDump(true,  'text')         -- file if one is open, else console
 --
 -- LIBRARY LISTING (first argument only, for number / string / table)
 --   Obtained ONLY through a metatable: a fresh proxy is built as
@@ -53,8 +51,7 @@ tprintConfig_libs= {
     number = { 'math'   },
 }
 
--- Dump state. File-level so printDump also works outside tprint; with no file
--- open it simply falls back to the console.
+-- Dump state
 local dumpFile   = nil
 local dumpLines  = 0
 local dumpBytes  = 0
@@ -279,7 +276,7 @@ end
 -- f == true  -> file if one is open, else console
 -- f ~= true  -> console
 -- Mimics print(): arguments tab-separated, no arguments = blank line.
-function printDump(f, ...)
+local function printDump(f, ...)
     local n = select('#', ...)
     local parts = {}
     for i = 1, n do
