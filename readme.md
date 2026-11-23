@@ -73,7 +73,7 @@ local function filt (v,k,t)
 end
 
 local tf=table_filter(m,filt) -- contains all entries that satisfy the condition(s)
-tprint(tf,[[<file path (optional)>]])
+tprint(tf,<0 (optional, full depth)>,[[<file path (optional)>]])
 ```
 
 Script to break on file creation code:
@@ -168,8 +168,9 @@ Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; 
 
 Allows you to print whole lua tables, and variables (even of "userdata" type, if `extended_functions.lua` is also present in the autorun folder). Credit to ripter.
 
-* **tprint( tbl, pth  --[[Optional]] )**
+* **tprint( tbl,  max_depth --[[Optional]], pth  --[[Optional]] )**
 	* **tbl**:  the variable to print
+    * **max_depth**:  if <=0 or nil full depth, else e.g. if 1 will print a.b but not a.b.c
 	* **pth**:  the path to a file in which to dump the data instead of printing to the console
 
 ## maxScan.lua
