@@ -355,6 +355,7 @@ Suggested usage:
 
 * **loadNames(path)**
 	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), that was saved by `.namecsv(…)`, that will be loaded and its data shown in the disassembler's comments.
+   After this is finished, a button will appear below "Memory Viewer > View > Enumerate DLL's and Symbols", called "ghidraLike names" and clicking it will bring up a searchable and clickable list of the offsets. 
 
 * **nameAt(a)**
 	* **a**: is a numeric address, and if it has a name that was found when the executable was probed, it will return that name.
