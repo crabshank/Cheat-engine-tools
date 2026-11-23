@@ -371,7 +371,6 @@ function tprint(tbl, pth)
             return
         end
         if type(mt) ~= 'table' then
-            -- __metatable shield: getmetatable returned a decoy value.
             line(pad .. 'metatable: <shielded by __metatable = ' .. scalar(mt) .. '>')
             return
         end
@@ -381,35 +380,43 @@ function tprint(tbl, pth)
             line(pad .. '\t(empty)')
             return
         end
+
+        -- `raw` is what the metatable stores. When that is a descriptor rather
+        -- than a value, read the property through the object so __index can
+        -- resolve it. Guarded, and the result is never tostring()ed if it is
+        -- userdata -- safeIdentity/scalar handle that.
+        local function render(k, raw)
+            local val = raw
+            if type(k) == 'string' and k:sub(1, 2) ~= '__'
+               and type(raw) ~= 'string' and type(raw) ~= 'number'
+               and type(raw) ~= 'boolean' then
+                local okp, got = pcall(function() return v[k] end)
+                if okp and got ~= nil then val = got end
+            end
+            if type(val) == 'table' or type(val) == 'userdata' then
+                return safeIdentity(val)
+            end
+            return scalar(val)
+        end
+
         local ix = nil
         for i = 1, #ks do
             local k = ks[i]
-            local okv, val = pcall(rawget, mt, k)
+            local okv, raw = pcall(rawget, mt, k)
             if okv then
-                local rendered
-                if type(val) == 'table' or type(val) == 'userdata' then
-                    rendered = safeIdentity(val)
-                else
-                    rendered = scalar(val)
-                end
-                line(pad .. '\t' .. keyLabel(k) .. ': ' .. rendered)
-                if k == '__index' and type(val) == 'table' then ix = val end
+                line(pad .. '\t' .. keyLabel(k) .. ': ' .. render(k, raw))
+                if k == '__index' and type(raw) == 'table' then ix = raw end
             end
         end
+
         if ix ~= nil and ix ~= mt then
             local iks = orderedKeys(ix)
             line(pad .. '\t__index keys (' .. #iks .. ' entries):')
             for i = 1, #iks do
                 local k = iks[i]
-                local okv, val = pcall(rawget, ix, k)
+                local okv, raw = pcall(rawget, ix, k)
                 if okv then
-                    local rendered
-                    if type(val) == 'table' or type(val) == 'userdata' then
-                        rendered = safeIdentity(val)
-                    else
-                        rendered = scalar(val)
-                    end
-                    line(pad .. '\t\t' .. keyLabel(k) .. ': ' .. rendered)
+                    line(pad .. '\t\t' .. keyLabel(k) .. ': ' .. render(k, raw))
                 end
             end
         end
