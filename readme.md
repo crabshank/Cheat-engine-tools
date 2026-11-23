@@ -166,9 +166,9 @@ Webpage that allows you to load output from traceCount.lua (`printHits(1,…)`; 
 
 ## tprint.lua
 
-	Allows you to print whole lua tables, and variables (even of "userdata" type, if `extended_functions.lua` is also present in the autorun folder). Credit to ripter.
+Allows you to print whole lua tables, and variables (even of "userdata" type, if `extended_functions.lua` is also present in the autorun folder). Credit to ripter.
 
-	* **sections( tbl, pth  --[[Optional]] )**
+* **tprint( tbl, pth  --[[Optional]] )**
 	* **tbl**:  the variable to print
 	* **pth**:  the path to a file in which to dump the data instead of printing to the console
 
