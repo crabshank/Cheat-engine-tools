@@ -3,7 +3,7 @@
 -- USAGE
 --   tprint(tbl)                      -- console
 --   tprint(tbl, [[C:\dump.txt]])     -- file, then a completion line on the console
---   tprint(userdata)                 -- expanded via full_internal, one line per row
+--   tprint(userdata)                 -- expanded via do_full_internal, one line per row
 --   tprint(string)                   -- internals + string library via __index
 --   tprint(number)                   -- internals + math library via __index
 --   tprint(table)                    -- internals + table library via __index, then keys
@@ -44,9 +44,9 @@
 -- per-byte string listing, and the omitted count is always stated.
 --
 -- MEMORY
---   * Userdata are streamed: full_internal(obj, onRow) hands each row over as it
+--   * Userdata are streamed: do_full_internal(obj, onRow) hands each row over as it
 --     is produced and tprint prints it at once, so nothing is accumulated. (A
---     full_internal that predates streaming still works; it returns a list.)
+--     do_full_internal that predates streaming still works; it returns a list.)
 --   * Strings: the per-byte listing is capped at tprintConfig_maxBytes (default
 --     4096; math.huge restores the unbounded listing). It was documented above
 --     but had stopped being enforced.
@@ -54,7 +54,7 @@
 --   * tprintConfig_expandOnce (default false): a table reachable by several paths
 --     is expanded only the first time; later sightings print <already shown>.
 --   * tprintConfig_methodsOnce (default false): userdata only. Methods are listed
---     once per metatable instead of once per object (see full_internal).
+--     once per metatable instead of once per object (see do_full_internal).
 --   * The CONSOLE keeps every line it is given. For a big dump pass a file path.
 
 local realprint = print          -- captured once: a reassigned global print cannot recurse
@@ -93,7 +93,7 @@ local function luaStr(s)
 	return '"' .. s .. '"'
 end
 
--- full_internal(rootObj [, onRow] [, opts])
+-- do_full_internal(rootObj [, onRow] [, opts])
 --
 -- onRow(kind, path, value, depth)
 --   Optional. When present, rows are handed over one at a time and NOT
@@ -113,7 +113,7 @@ end
 --
 -- Needs trim_str from the surrounding file.
 
-local function full_internal(rootObj, onRow, opts)
+local function do_full_internal(rootObj, onRow, opts)
     opts = opts or {}
     local streaming   = type(onRow) == 'function'
     local methodsOnce = opts.methodsOnce == true
@@ -652,7 +652,7 @@ local function orderedKeys(t)
     return nums
 end
 
--- Depth of a full_internal path, in components AFTER the root.
+-- Depth of a do_full_internal path, in components AFTER the root.
 -- The root itself is depth 0. Dots and brackets inside () or [] are NOT
 -- separators, so ["a.b"] and getComponent(0) each count as one component.
 local function pathDepth(p)
@@ -916,8 +916,8 @@ function tprint(tbl, max_depth, pth)
         line('identity: ' .. safeIdentity(obj))
         emitMetatable(obj, 0)
 
-        if type(full_internal) ~= 'function' then
-            line('tprint: full_internal is not loaded; cannot expand userdata')
+        if type(do_full_internal) ~= 'function' then
+            line('tprint: do_full_internal is not loaded; cannot expand userdata')
             return
         end
 
@@ -927,7 +927,7 @@ function tprint(tbl, max_depth, pth)
         -- path and the list fallback.
          local function emitRow(rtype, rpath, rvalue, rdepth)
             local d = rdepth
-            if d == nil then d = pathDepth(rpath) end   -- older full_internal
+            if d == nil then d = pathDepth(rpath) end   -- older do_full_internal
             if depthLimit > 0 and d > depthLimit then
                 hidden = hidden + 1
                 return
@@ -940,11 +940,11 @@ function tprint(tbl, max_depth, pth)
         end
 
         local opts = { methodsOnce = false, maxDepth = depthLimit }
-        local okf, res = pcall(full_internal, obj, emitRow, opts)
+        local okf, res = pcall(do_full_internal, obj, emitRow, opts)
         if not okf then
-            line('tprint: full_internal raised: ' .. tostring(res))
+            line('tprint: do_full_internal raised: ' .. tostring(res))
         elseif type(res) == 'table' then
-            -- A full_internal that predates streaming ignored onRow.
+            -- A do_full_internal that predates streaming ignored onRow.
             for i = 1, #res do
                 local r = res[i]
                 if type(r) == 'table' then emitRow(r.type, r.path, r.value) end
