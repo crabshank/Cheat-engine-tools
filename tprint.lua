@@ -63,6 +63,15 @@ local wsTail     = ''            -- held-back trailing whitespace, never written
 
 ---------------------------------------------------------------- strings
 
+local function s_pluralise(c,t)
+	local d=tostring(c)..' '
+	if c~=1 then
+		return d..t..'s'
+	else
+		return d..t
+	end
+end
+
 local function escString(s)
     local out = {'"'}
     for i = 1, #s do
@@ -572,7 +581,7 @@ function tprint(tbl, pth)
                 line(l)
             end
         end
-        line(string.format('(%d row(s))', n))
+        line(string.format('(%s)', s_pluralise(n,'row')))
     end
 
     ---------------------------------------------------------- string
@@ -799,11 +808,11 @@ function tprint(tbl, pth)
 
     if dumpFailed then
         realprint('tprint: INCOMPLETE — ' .. dumpFailed
-                  .. ' (' .. dumpLines .. ' line(s) written to ' .. tostring(pth) .. ')')
+                  .. ' (' .. s_pluralise(dumpLines,'line')..' written to ' .. tostring(pth)..')')
     elseif toFile then
         local lns = dumpLines + (dumpBytes > 0 and 1 or 0)
         realprint(string.format(
-            'tprint: finished — %d line(s), %d byte(s) → %s (trimmed %d trailing byte(s))',
-            lns, dumpBytes, tostring(pth), dropped))
+            'tprint: finished — %s, %s → %s',
+            s_pluralise(lns,'line'), s_pluralise(dumpBytes,'byte'), tostring(pth)))
     end
 end

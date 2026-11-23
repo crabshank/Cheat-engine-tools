@@ -178,17 +178,34 @@ function full_internal(rootObj)
                     for k0, v0 in pairs(sources[si]) do
                         if type(k0) == 'string' and k0:sub(1, 2) ~= '__'
                            and not seenKey[k0] then
-                            seenKey[k0] = true
-                                local n = (w > 0) and k0 or proc(k0, v)
-                                local np2 = copyPath(p2)
-                                np2[#np2 + 1] = n
-                                plt[#plt + 1] = {
-                                    path2 = np2,
-                                    data  = nil,    -- never recurse into raw C functions
-                                    val   = v0,
-                                    type  = 'Method',
-                                    depth = currentDepth + 1
-                                }
+                                                        seenKey[k0] = true
+                            local n = (w > 0) and k0 or proc(k0, v)
+                            local np2 = copyPath(p2)
+                            np2[#np2 + 1] = n
+
+                            -- ClassName / Caption / AnchorSideLeft etc. sit in
+                            -- the metatable as descriptor tables. v[k0] runs
+                            -- __index and yields the actual value. Only tried
+                            -- for non-scalars, and never for '__' keys.
+                            local shown, kind = v0, 'Method'
+                            local tv0 = type(v0)
+                            if (tv0 == 'table' or tv0 == 'userdata' or tv0 == 'function') then
+                                local okp, got = pcall(function() return v[k0] end)
+                                if okp and got ~= nil then
+                                    shown = got
+                                    -- Now the label can be a finding rather
+                                    -- than a blanket assumption.
+                                    kind = (type(got) == 'function') and 'Method' or 'Property'
+                                end
+                            end
+
+                            plt[#plt + 1] = {
+                                path2 = np2,
+                                data  = nil,    -- still never recurse from here
+                                val   = shown,
+                                type  = kind,
+                                depth = currentDepth + 1
+                            }
                         end
                     end
                 end
