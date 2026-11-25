@@ -175,7 +175,7 @@ Allows you to print whole lua tables, and variables (even of "userdata" type, if
     * **max_depth**:  if <=0 or nil full depth, else e.g. if 1 will print a.b but not a.b.c
 	* **pth**:  the path to a file in which to dump the data instead of printing to the console
    OR
-* **tprint( tbl, pth  --[[Optional, string]], max_depth --[[Optional, number or nil/undefined]] )**
+* **tprint( tbl, pth  --[[(string)]], max_depth --[[Optional, number or nil/undefined]] )**
 
 ## maxScan.lua
 
