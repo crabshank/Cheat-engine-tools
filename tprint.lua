@@ -344,7 +344,7 @@ local function do_full_internal(rootObj, onRow, opts)
                         return v.getComponentCount()
                     end
                 )
-                if okCount and type(plc) == "number" and plc > 0 and plc < 100000 then
+                if okCount and type(plc) == "number" and plc > 0 then
                     for i = 0, plc - 1 do
                         local okComp, pli =
                             pcall(
@@ -376,7 +376,7 @@ local function do_full_internal(rootObj, onRow, opts)
                         end
                     )
                 end
-                if okCtrlCnt and type(ctrlCount) == "number" and ctrlCount > 0 and ctrlCount < 100000 then
+                if okCtrlCnt and type(ctrlCount) == "number" and ctrlCount > 0 then
                     for i = 0, ctrlCount - 1 do
                         local okCtrl, ctrl =
                             pcall(
@@ -403,7 +403,7 @@ local function do_full_internal(rootObj, onRow, opts)
                             return propertyList.Count
                         end
                     )
-                    if okC and type(propCount) == "number" and propCount > 0 and propCount < 100000 then
+                    if okC and type(propCount) == "number" and propCount > 0 then
                         for i = 0, propCount - 1 do
                             local okI, pli =
                                 pcall(
@@ -487,7 +487,7 @@ local function do_full_internal(rootObj, onRow, opts)
                         return v.Count or v.count
                     end
                 )
-                if okVc and type(vc) == "number" and vc > 0 and vc < 10000 then
+                if okVc and type(vc) == "number" and vc > 0 then
                     for i = 0, vc - 1 do
                         local okItem, itemVal =
                             pcall(
