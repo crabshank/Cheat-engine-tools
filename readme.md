@@ -57,7 +57,7 @@ This function returns a Lua table containing:
 ```
 [ value: value of property or a table containing "__get/set" functions ]
 [ path: path to data ]
-[ type: "Value ([0/1/2/…])/Property/Component/Method (Function)" ]
+[ type: "Value ([0/1/2/…])/Property/Component/Control/Method (Function)" ]
 ```
 
 Example script:
