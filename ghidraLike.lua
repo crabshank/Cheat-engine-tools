@@ -1,27 +1,29 @@
--- CONSTANTS AND LEXICAL SHORTHANDS
+-- ghidraLike.lua
+-- FIX: "too many local variables" is Lua's 200-local limit for ONE function.
+-- The main chunk is a function, so every file-scope `local` counts. The
+-- compiler names the declaration that crosses the limit (ncSetProp), not the
+-- cause. Sections whose helpers are used only within the section are now
+-- wrapped in do...end, with forward declarations for the names other sections
+-- need. Identifiers and behaviour are unchanged.
+
+------------------------------------------------------------------ constants
 local floor = math.floor
 local find, byte, char = string.find, string.byte, string.char
--- Lua 5.1 keeps unpack in the global table; 5.2+ moved it into "table".
 local unpack = table.unpack or unpack
--- Lua 5.1's string loader is loadstring; 5.2+ unified it into load.
 local loadstr = loadstring or load
 
 local PADDING = { [0xCC]=true, [0x90]=true }
 
--- Multi-byte NOP "cores", longest first. The set is prefix-free, so the first
--- match wins unambiguously. Leading 0x66 prefixes are stripped in padItemLen.
 local NOPCORE = {
-  {0x2E,0x0F,0x1F,0x84,0x00,0x00,0x00,0x00,0x00},   -- cs nopw [rax+rax*1+0]
-  {0x0F,0x1F,0x84,0x00,0x00,0x00,0x00,0x00},        -- 8 bytes
-  {0x0F,0x1F,0x80,0x00,0x00,0x00,0x00},             -- 7 bytes
-  {0x0F,0x1F,0x44,0x00,0x00},                       -- 5 bytes
-  {0x0F,0x1F,0x40,0x00},                            -- 4 bytes
-  {0x0F,0x1F,0x00}                                 -- 3 bytes
+  {0x2E,0x0F,0x1F,0x84,0x00,0x00,0x00,0x00,0x00},
+  {0x0F,0x1F,0x84,0x00,0x00,0x00,0x00,0x00},
+  {0x0F,0x1F,0x80,0x00,0x00,0x00,0x00},
+  {0x0F,0x1F,0x44,0x00,0x00},
+  {0x0F,0x1F,0x40,0x00},
+  {0x0F,0x1F,0x00}
 }
 
 local CHUNK         = 262144
--- Look-ahead carried past a window so a structure straddling the boundary can
--- still be read whole. The largest read-ahead structure is the 24-byte COL.
 local OVERLAP       = 32
 local RTTI_NAME_MAX = 2048
 local VTABLE_SLOTS  = 4096
@@ -32,8 +34,6 @@ local SRC = {
   RVA='rva', CFG='cfg', DYN='dynamic', JUMP='jump', FRAG='fragment'
 }
 
--- Canonical order: display order AND bit position. Nothing persists the mask,
--- so changing this order is harmless.
 local TAGORDER = { 'pdata','cfg','export','tls','crt','entry','vtable','dynamic',
                    'call','rva','pad','ptr','xdata','fragment','jump' }
 
@@ -45,9 +45,7 @@ local CONF = {
   [SRC.JUMP]=0
 }
 
--- Indexed as CONFNAME[tier + 1]: Lua arrays are 1-based, the lowest tier is 0.
 local CONFNAME = { 'SPECULATIVE','WEAK','STRONG','HIGH','AUTHORITATIVE' }
-
 local CONFSHIFT = 1048576          -- 2^20, above the 2^15 ceiling of the mask
 
 local TAGBIT = {}
@@ -61,13 +59,10 @@ local SCN = {
   MEM_READ=0x40000000, MEM_EXEC=0x20000000, MEM_WRITE=0x80000000
 }
 
--- TLS is 9, not 4. Index 4 is the certificate directory; confusing the two is
--- the classic PE-parsing slip.
 local DD = { EXPORT=0, IMPORT=1, RESOURCE=2, EXCEPTION=3, CERT=4,
              RELOC=5, DEBUG=6, TLS=9, LOADCFG=10 }
 
 local MEM_COMMIT = 0x1000
--- Guard variants (0x100, 0x200, ...) are stripped by Protect % 256.
 local PAGE_EXEC  = { [0x10]=true, [0x20]=true, [0x40]=true, [0x80]=true }
 
 local moduleName = ''
@@ -77,7 +72,6 @@ local function addressOffset(a)
   return getNameFromAddress(a, true, false, true)
 end
 
--- Bit test written as divide-mod for portability. Non-numbers are "not set".
 local function hasBit(v, m)
   if type(v) ~= 'number' then return false end
   return floor(v / m) % 2 == 1
@@ -88,13 +82,11 @@ local function hasAll(v, ms)
   return true
 end
 
--- # is meaningless for hash tables, and most tables here are keyed by address.
 local function cnt(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
 
--- Gatekeeper for address keys. Rejects non-numbers, fractions, NaN and infinity.
 local function normAddr(a)
   if type(a) ~= 'number' then return nil end
-  if a ~= a then return nil end                       -- NaN
+  if a ~= a then return nil end
   if a == math.huge or a == -math.huge then return nil end
   local f = floor(a)
   if f ~= a then return nil end
@@ -103,174 +95,163 @@ end
 
 
 ------------------------------------------------------------------ progress window
--- [1] = the form, [2] = the label. Only these two indices are ever used.
-local gl_w = { nil, nil }
-local gl_lastW, gl_lastH = 0, 0
+local gl_open, gl_phase, gl_progress, gl_close, gl_yield
+do
+  local gl_w = { nil, nil }
+  local gl_lastW, gl_lastH = 0, 0
 
-local function spaceSep_int(b)
-  if type(b) ~= 'number' then return '0' end
-  b = floor(b)
-  local g = ''
-  if b < 0 then g = '-'; b = -b end
-  local n = string.format('%d', b)
-  local l = #n
-  local c = l
-  if l <= 3 then return g .. n end
-  local out = {}
-  while c > 0 do
-    local a = math.max(1, c - 2)
-    table.insert(out, 1, n:sub(a, c))
-    c = c - 3
-  end
-  return g .. table.concat(out, ' ')
-end
-
--- No memo caches remain; this just asks the collector for the chunk tables back.
-local function gl_freeCaches()
-  collectgarbage('collect')
-end
-
-local function gl_labelExtent(l)
-  local w = tonumber(l.Width) or 0
-  local h = tonumber(l.Height) or 0
-  if w > 1 and h > 1 then return w, h end
-  local caption = ''
-  pcall(function() caption = tostring(l.Caption or '') end)
-  local n = #caption
-  -- Rough fallback: about 8 pixels per character at the font size used here.
-  if w <= 1 then w = math.max(520, n * 8) end
-  if h <= 1 then h = 20 end
-  return w, h
-end
-
-local function gl_fit()
-  if gl_w[1] == nil or gl_w[2] == nil then return end
-  local f, l = gl_w[1], gl_w[2]
-  -- WordWrap must be false, or the label width depends on the form width and
-  -- the sizing becomes circular.
-  pcall(function() l.AutoSize = true end)
-  pcall(function() l.WordWrap = false end)
-  local lw, lh = gl_labelExtent(l)
-  local padX, padY = 16, 16
-  local wantW = (tonumber(l.Left) or 0) + lw + padX
-  local wantH = (tonumber(l.Top) or 0) + lh + padY
-  -- Round up to 8-pixel steps so the window does not twitch by one pixel.
-  wantW = math.ceil(wantW / 8) * 8
-  wantH = math.ceil(wantH / 8) * 8
-  if wantW ~= gl_lastW then
-    if not pcall(function() f.ClientWidth = wantW end) then
-      pcall(function() f.Width = wantW + 16 end)
+  local function spaceSep_int(b)
+    if type(b) ~= 'number' then return '0' end
+    b = floor(b)
+    local g = ''
+    if b < 0 then g = '-'; b = -b end
+    local n = string.format('%d', b)
+    local l = #n
+    local c = l
+    if l <= 3 then return g .. n end
+    local out = {}
+    while c > 0 do
+      local a = math.max(1, c - 2)
+      table.insert(out, 1, n:sub(a, c))
+      c = c - 3
     end
-    gl_lastW = wantW
+    return g .. table.concat(out, ' ')
   end
-  if wantH ~= gl_lastH then
-    if not pcall(function() f.ClientHeight = wantH end) then
-      pcall(function() f.Height = wantH + 39 end)
-    end
-    gl_lastH = wantH
-  end
-end
 
-local function gl_open(title)
-  if gl_w[1] ~= nil then
-    if pcall(function() return gl_w[1].Caption end) then
-      gl_w[1].Caption = title
-      gl_w[1].Show()
-      gl_w[2].Caption = '…'
-      gl_lastW, gl_lastH = 0, 0
-      pcall(function() gl_w[1].Update() end)
-      gl_fit()
-      pcall(function() gl_w[1].Position = 'poDesigned' end)
-      return
+  local function gl_labelExtent(l)
+    local w = tonumber(l.Width) or 0
+    local h = tonumber(l.Height) or 0
+    if w > 1 and h > 1 then return w, h end
+    local caption = ''
+    pcall(function() caption = tostring(l.Caption or '') end)
+    local n = #caption
+    if w <= 1 then w = math.max(520, n * 8) end
+    if h <= 1 then h = 20 end
+    return w, h
+  end
+
+  local function gl_fit()
+    if gl_w[1] == nil or gl_w[2] == nil then return end
+    local f, l = gl_w[1], gl_w[2]
+    pcall(function() l.AutoSize = true end)
+    pcall(function() l.WordWrap = false end)
+    local lw, lh = gl_labelExtent(l)
+    local padX, padY = 16, 16
+    local wantW = (tonumber(l.Left) or 0) + lw + padX
+    local wantH = (tonumber(l.Top) or 0) + lh + padY
+    wantW = math.ceil(wantW / 8) * 8
+    wantH = math.ceil(wantH / 8) * 8
+    if wantW ~= gl_lastW then
+      if not pcall(function() f.ClientWidth = wantW end) then
+        pcall(function() f.Width = wantW + 16 end)
+      end
+      gl_lastW = wantW
     end
-    pcall(function() gl_w[1].destroy() end)
+    if wantH ~= gl_lastH then
+      if not pcall(function() f.ClientHeight = wantH end) then
+        pcall(function() f.Height = wantH + 39 end)
+      end
+      gl_lastH = wantH
+    end
+  end
+
+  function gl_open(title)
+    if gl_w[1] ~= nil then
+      if pcall(function() return gl_w[1].Caption end) then
+        gl_w[1].Caption = title
+        gl_w[1].Show()
+        gl_w[2].Caption = '…'
+        gl_lastW, gl_lastH = 0, 0
+        pcall(function() gl_w[1].Update() end)
+        gl_fit()
+        pcall(function() gl_w[1].Position = 'poDesigned' end)
+        return
+      end
+      pcall(function() gl_w[1].destroy() end)
+      gl_w[1], gl_w[2] = nil, nil
+    end
+    local f = createForm(getMainForm())
+    f.Width, f.Height = 520, 10
+    f.Position, f.BorderStyle = 'poScreenCenter', 'bsSingle'
+    f.Caption, f.Color, f.FreeOnClose = title, 0, false
+    local l = createLabel(f)
+    l.Left, l.Top, l.AutoSize, l.Color = 8, 8, true, 0
+    pcall(function() l.WordWrap = false end)
+    l.Font.Color, l.Font.Size = 0xFFFFFF, 12
+    l.Caption = '…'
+    gl_w[1], gl_w[2] = f, l
+    gl_lastW, gl_lastH = 0, 0
+    f.Show()
+    pcall(function() f.Update() end)
+    gl_fit()
+    pcall(function() f.Position = 'poDesigned' end)
+  end
+
+  function gl_phase(p)
+    if gl_w[2] == nil then return end
+    gl_w[2].Caption = p
+    gl_fit()
+  end
+
+  function gl_progress(done, total, unit)
+    if gl_w[2] == nil then return end
+    unit = unit or 'items'
+    if total == nil or total <= 0 then
+      gl_w[2].Caption = spaceSep_int(done) .. ' ' .. unit
+    else
+      if done > total then done = total end
+      gl_w[2].Caption = string.format('%s / %s %s (%d%%)',
+        spaceSep_int(done), spaceSep_int(total), unit, floor(done / total * 100))
+    end
+    gl_fit()
+  end
+
+  function gl_close()
+    local f = gl_w[1]
     gl_w[1], gl_w[2] = nil, nil
+    gl_lastW, gl_lastH = 0, 0
+    if f ~= nil then pcall(function() f.destroy() end) end
   end
-  local f = createForm(getMainForm())
-  f.Width, f.Height = 520, 10
-  f.Position, f.BorderStyle = 'poScreenCenter', 'bsSingle'
-  f.Caption, f.Color, f.FreeOnClose = title, 0, false
-  local l = createLabel(f)
-  l.Left, l.Top, l.AutoSize, l.Color = 8, 8, true, 0
-  pcall(function() l.WordWrap = false end)
-  l.Font.Color, l.Font.Size = 0xFFFFFF, 12
-  l.Caption = '…'
-  gl_w[1], gl_w[2] = f, l
-  gl_lastW, gl_lastH = 0, 0
-  f.Show()
-  pcall(function() f.Update() end)
-  gl_fit()
-  pcall(function() f.Position = 'poDesigned' end)
-end
 
-local function gl_phase(p)
-  if gl_w[2] == nil then return end
-  gl_w[2].Caption = p
-  gl_fit()
-end
-
-local function gl_progress(done, total, unit)
-  if gl_w[2] == nil then return end
-  unit = unit or 'items'
-  if total == nil or total <= 0 then
-    gl_w[2].Caption = spaceSep_int(done) .. ' ' .. unit
-  else
-    if done > total then done = total end
-    gl_w[2].Caption = string.format('%s / %s %s (%d%%)',
-      spaceSep_int(done), spaceSep_int(total), unit, floor(done / total * 100))
+  function gl_yield()
+    coroutine.yield()
   end
-  gl_fit()
-end
-
-local function gl_close()
-  local f = gl_w[1]
-  gl_w[1], gl_w[2] = nil, nil
-  gl_lastW, gl_lastH = 0, 0
-  if f ~= nil then pcall(function() f.destroy() end) end
-end
-
-local function gl_yield()
-  coroutine.yield()
 end
 
 
 ------------------------------------------------------------------ byte readers
--- v = 256*v + next_byte, most significant byte first. With n <= 8 and user-mode
--- addresses below 2^48 every intermediate stays exact.
--- readBytes can return a SHORT table at the edge of a mapping, so "#b < n" is a
--- real condition. Every reader returns nil rather than a partial value.
-local V256 = 256
+local rd16, rd32, rd64, ptrFromChunk
+do
+  local V256 = 256
 
-local function rd(n, a)
-  local b = readBytes(a, n, true)
-  if b == nil or #b < n then return nil end
-  local v = 0
-  for i = n, 1, -1 do
-    local x = b[i]
-    if x == nil then return nil end
-    v = V256 * v + x
+  local function rd(n, a)
+    local b = readBytes(a, n, true)
+    if b == nil or #b < n then return nil end
+    local v = 0
+    for i = n, 1, -1 do
+      local x = b[i]
+      if x == nil then return nil end
+      v = V256 * v + x
+    end
+    return v
   end
-  return v
+
+  rd16 = function(a) return rd(2, a) end
+  rd32 = function(a) return rd(4, a) end
+  rd64 = function(a) return rd(8, a) end
+
+  function ptrFromChunk(b, i, psz)
+    if b == nil or i < 1 or i + psz - 1 > #b then return nil end
+    local v = 0
+    for k = i + psz - 1, i, -1 do
+      local x = b[k]
+      if x == nil then return nil end
+      v = V256 * v + x
+    end
+    return v
+  end
 end
 
-local rd16 = function(a) return rd(2, a) end
-local rd32 = function(a) return rd(4, a) end
-local rd64 = function(a) return rd(8, a) end
-
--- Same assembly from a table already in hand. i is 1-based; psz is 4 or 8.
--- Bounds- and hole-checked, so a caller may pass a window with no look-ahead.
-local function ptrFromChunk(b, i, psz)
-  if b == nil or i < 1 or i + psz - 1 > #b then return nil end
-  local v = 0
-  for k = i + psz - 1, i, -1 do
-    local x = b[k]
-    if x == nil then return nil end
-    v = V256 * v + x
-  end
-  return v
-end
-
--- PE section names are space-PADDED, not NUL-terminated: 0x00 and 0x20 both end.
 local function trimName(rb)
   local s = {}
   for j = 1, 8 do
@@ -283,165 +264,159 @@ end
 
 
 ------------------------------------------------------------------ PE helpers
--- The 16 data directories sit at opt+0x60 (PE32) or opt+0x70 (PE32+), because
--- PE32+ widens ImageBase from 4 to 8 bytes. SizeOfImage lands at +56 in BOTH
--- formats, which is a coincidence rather than a rule.
-local function peInfo(base)
-  base = normAddr(base)
-  if base == nil then return nil end
-
-  local e_lfanew = rd32(base + 0x3C)
-  if e_lfanew == nil or e_lfanew < 0x40 or e_lfanew > 0x100000 then return nil end
-  local nt = base + e_lfanew
-  if rd32(nt) ~= 0x00004550 then return nil end          -- "PE\0\0"
-
-  local nSec, sizeOpt = rd16(nt + 6), rd16(nt + 20)
-  if nSec == nil or sizeOpt == nil then return nil end
-  if nSec > 96 then return nil end
-
-  local opt = nt + 24
-  local magic = rd16(opt)
-  local is64 = (magic == 0x20B)
-  if (not is64) and magic ~= 0x10B then return nil end
-  if sizeOpt < (is64 and 0xF0 or 0xE0) then return nil end
-
-  local entryRva = rd32(opt + 16)
-  if entryRva == nil then return nil end
-
-  local ddOff = opt + (is64 and 0x70 or 0x60)
-  local out = {
-    is64 = is64, base = base,
-    entry = base + entryRva,
-    size = rd32(opt + 56) or 0,
-    imageBase = is64 and rd64(opt + 24) or rd32(opt + 28),
-    secs = {}, dd = {}
-  }
-
-  for i = 0, 15 do
-    out.dd[i] = { rva = rd32(ddOff + i * 8), size = rd32(ddOff + i * 8 + 4) }
-  end
-
-  local tbl = opt + sizeOpt
-  for i = 0, nSec - 1 do
-    local s = tbl + i * 40
-    local rb = readBytes(s, 8, true)
-    if rb then
-      local va = rd32(s + 12)
-      if va ~= nil then
-        out.secs[#out.secs+1] = {
-          name = trimName(rb), rva = va, va = base + va,
-          vsz = rd32(s + 8), rawsz = rd32(s + 16),
-          rawptr = rd32(s + 20), chr = rd32(s + 36)
-        }
-      end
+local peInfo, secSize, execSections, secSpans, dataRanges
+do
+  local function ddAddr(pe, idx)
+    local d = pe.dd[idx]
+    if d == nil or d.rva == nil or d.rva == 0 or d.size == nil or d.size == 0 then
+      return nil, nil
     end
+    return pe.base + d.rva, d.size
   end
-  return out
-end
 
-local function ddAddr(pe, idx)
-  local d = pe.dd[idx]
-  if d == nil or d.rva == nil or d.rva == 0 or d.size == nil or d.size == 0 then
-    return nil, nil
-  end
-  return pe.base + d.rva, d.size
-end
+  function peInfo(base)
+    base = normAddr(base)
+    if base == nil then return nil end
 
--- VirtualSize == 0 means "use SizeOfRawData". A corrupt 0xFFFFFFFF would wrap a
--- Lua 5.3 integer into nonsense, so one section is capped at 512 MB.
-local function secSize(s)
-  local sz = 0
-  if s.vsz and s.vsz > 0 then sz = s.vsz
-  elseif s.rawsz and s.rawsz > 0 then sz = s.rawsz end
-  if sz > 0x20000000 then sz = 0x20000000 end
-  return sz
-end
+    local e_lfanew = rd32(base + 0x3C)
+    if e_lfanew == nil or e_lfanew < 0x40 or e_lfanew > 0x100000 then return nil end
+    local nt = base + e_lfanew
+    if rd32(nt) ~= 0x00004550 then return nil end
 
--- Executable ranges, in order of trustworthiness: characteristics, then OS page
--- protection, then nothing (which the caller turns into a hard error).
--- Never assumes the section is called ".text".
-local function execSections(pe, base, modSize)
-  local out = {}
-  for i = 1, #pe.secs do
-    local s = pe.secs[i]
-    local sz = secSize(s)
-    if sz > 0 and hasBit(s.chr or 0, SCN.MEM_EXEC) then
-      out[#out+1] = { lo = s.va, hi = s.va + sz - 1, name = s.name, how = 'characteristics' }
+    local nSec, sizeOpt = rd16(nt + 6), rd16(nt + 20)
+    if nSec == nil or sizeOpt == nil then return nil end
+    if nSec > 96 then return nil end
+
+    local opt = nt + 24
+    local magic = rd16(opt)
+    local is64 = (magic == 0x20B)
+    if (not is64) and magic ~= 0x10B then return nil end
+    if sizeOpt < (is64 and 0xF0 or 0xE0) then return nil end
+
+    local entryRva = rd32(opt + 16)
+    if entryRva == nil then return nil end
+
+    local ddOff = opt + (is64 and 0x70 or 0x60)
+    local out = {
+      is64 = is64, base = base,
+      entry = base + entryRva,
+      size = rd32(opt + 56) or 0,
+      imageBase = is64 and rd64(opt + 24) or rd32(opt + 28),
+      secs = {}, dd = {}
+    }
+
+    for i = 0, 15 do
+      out.dd[i] = { rva = rd32(ddOff + i * 8), size = rd32(ddOff + i * 8 + 4) }
     end
-  end
-  if #out > 0 then return out, 'section table' end
 
-  local lim = modSize
-  if type(lim) ~= 'number' or lim <= 0 then lim = pe.size end
-  if type(lim) ~= 'number' or lim <= 0 then lim = 0x40000000 end
-
-  local rt
-  if pcall(function() rt = enumMemoryRegions() end) and type(rt) == 'table' then
-    for _, v in pairs(rt) do
-      if type(v) == 'table' and type(v.BaseAddress) == 'number'
-         and type(v.RegionSize) == 'number' and type(v.State) == 'number'
-         and type(v.Protect) == 'number'
-         and v.State == MEM_COMMIT and PAGE_EXEC[v.Protect % 256]
-         and v.BaseAddress >= base and v.BaseAddress < base + lim then
-        out[#out+1] = { lo = v.BaseAddress,
-                        hi = math.min(v.BaseAddress + v.RegionSize - 1, base + lim - 1),
-                        name = '(unnamed)', how = 'OS page protection' }
-      end
-    end
-  end
-  return out, #out > 0 and 'OS' or 'NONE'
-end
-
--- Every section whose name STARTS WITH one of pats, in PE order. MSVC emits
--- several .CRT$X* sections, so matching only the first hit would lose data.
--- plain = true, so the dots are literal.
-local function secSpans(pe, pats)
-  local spans = {}
-  if pe == nil or pe.secs == nil then return spans end
-  for i = 1, #pe.secs do
-    local s = pe.secs[i]
-    if s.name then
-      for j = 1, #pats do
-        if s.name:find(pats[j], 1, true) == 1 then
-          local sz = secSize(s)
-          if sz > 0 then spans[#spans+1] = { lo = s.va, hi = s.va + sz - 1, name = s.name } end
-          break
+    local tbl = opt + sizeOpt
+    for i = 0, nSec - 1 do
+      local s = tbl + i * 40
+      local rb = readBytes(s, 8, true)
+      if rb then
+        local va = rd32(s + 12)
+        if va ~= nil then
+          out.secs[#out.secs+1] = {
+            name = trimName(rb), rva = va, va = base + va,
+            vsz = rd32(s + 8), rawsz = rd32(s + 16),
+            rawptr = rd32(s + 20), chr = rd32(s + 36)
+          }
         end
       end
     end
+    return out
   end
-  return spans
-end
 
-local function spansToRanges(sp)
-  local r = {}
-  for i = 1, #sp do r[#r+1] = { sp[i].lo, sp[i].hi } end
-  return r
-end
-
--- Readable, initialised, NON-executable data: the hunting ground for pointers.
-local function dataRanges(pe)
-  local ranges = {}
-  for _, pat in ipairs({ '.rdata', '.data', '.didat', '.idata' }) do
-    local sp = secSpans(pe, { pat })
-    for i = 1, #sp do ranges[#ranges+1] = { sp[i].lo, sp[i].hi } end
+  function secSize(s)
+    local sz = 0
+    if s.vsz and s.vsz > 0 then sz = s.vsz
+    elseif s.rawsz and s.rawsz > 0 then sz = s.rawsz end
+    if sz > 0x20000000 then sz = 0x20000000 end
+    return sz
   end
-  if #ranges == 0 then
+
+  function execSections(pe, base, modSize)
+    local out = {}
     for i = 1, #pe.secs do
       local s = pe.secs[i]
-      if hasAll(s.chr or 0, { SCN.INITDATA, SCN.MEM_READ })
-         and not hasBit(s.chr or 0, SCN.MEM_EXEC) then
-        ranges[#ranges+1] = { s.va, s.va + secSize(s) - 1 }
+      local sz = secSize(s)
+      if sz > 0 and hasBit(s.chr or 0, SCN.MEM_EXEC) then
+        out[#out+1] = { lo = s.va, hi = s.va + sz - 1, name = s.name, how = 'characteristics' }
       end
     end
+    if #out > 0 then return out, 'section table' end
+
+    local lim = modSize
+    if type(lim) ~= 'number' or lim <= 0 then lim = pe.size end
+    if type(lim) ~= 'number' or lim <= 0 then lim = 0x40000000 end
+
+    local rt
+    if pcall(function() rt = enumMemoryRegions() end) and type(rt) == 'table' then
+      for _, v in pairs(rt) do
+        if type(v) == 'table' and type(v.BaseAddress) == 'number'
+           and type(v.RegionSize) == 'number' and type(v.State) == 'number'
+           and type(v.Protect) == 'number'
+           and v.State == MEM_COMMIT and PAGE_EXEC[v.Protect % 256]
+           and v.BaseAddress >= base and v.BaseAddress < base + lim then
+          out[#out+1] = { lo = v.BaseAddress,
+                          hi = math.min(v.BaseAddress + v.RegionSize - 1, base + lim - 1),
+                          name = '(unnamed)', how = 'OS page protection' }
+        end
+      end
+    end
+    return out, #out > 0 and 'OS' or 'NONE'
   end
-  return ranges
+
+  function secSpans(pe, pats)
+    local spans = {}
+    if pe == nil or pe.secs == nil then return spans end
+    for i = 1, #pe.secs do
+      local s = pe.secs[i]
+      if s.name then
+        for j = 1, #pats do
+          if s.name:find(pats[j], 1, true) == 1 then
+            local sz = secSize(s)
+            if sz > 0 then spans[#spans+1] = { lo = s.va, hi = s.va + sz - 1, name = s.name } end
+            break
+          end
+        end
+      end
+    end
+    return spans
+  end
+
+  local function spansToRanges(sp)
+    local r = {}
+    for i = 1, #sp do r[#r+1] = { sp[i].lo, sp[i].hi } end
+    return r
+  end
+
+  function dataRanges(pe)
+    local ranges = {}
+    for _, pat in ipairs({ '.rdata', '.data', '.didat', '.idata' }) do
+      local sp = secSpans(pe, { pat })
+      for i = 1, #sp do ranges[#ranges+1] = { sp[i].lo, sp[i].hi } end
+    end
+    if #ranges == 0 then
+      for i = 1, #pe.secs do
+        local s = pe.secs[i]
+        if hasAll(s.chr or 0, { SCN.INITDATA, SCN.MEM_READ })
+           and not hasBit(s.chr or 0, SCN.MEM_EXEC) then
+          ranges[#ranges+1] = { s.va, s.va + secSize(s) - 1 }
+        end
+      end
+    end
+    return ranges
+  end
+
+  -- exposed for the RTTI range builder below
+  _G.__glSpansToRanges = spansToRanges
 end
+local spansToRanges = _G.__glSpansToRanges
+_G.__glSpansToRanges = nil
 
 
 ------------------------------------------------------------------ small helpers
--- Decreasing read sizes: a 256-byte read near the end of a mapping fails, but
--- 64 and then 16 still get the string. Any byte outside 0x20..0x7E ends it.
 local function readCString(addr, maxLen)
   addr = normAddr(addr)
   if addr == nil then return nil end
@@ -464,8 +439,6 @@ local function readCString(addr, maxLen)
   return table.concat(s)
 end
 
--- ".?AVFoo@@" -> "class", "Foo". Only a TRAILING "@@" is the terminator; inside
--- a template name "@@" legitimately closes a nested argument.
 local function demangle(m)
   if m == nil then return nil, nil end
   local k, name = m:match('^%.%?A([VUWT])(.+)$')
@@ -476,19 +449,11 @@ end
 
 
 ------------------------------------------------------------------ NAME REGISTRY
--- ONE registry, declared HERE, above every scanner, and NEVER redeclared.
--- Declaring it again further down would either make addName a nil global inside
--- scanCols (aborting the scan) or create a second set of tables that namecsv
--- cannot see. That was the previous revision's central defect.
---
--- Deliberately NO executable-range check: a TypeDescriptor or a COL lives in
--- .rdata, so propose() would reject it. First writer wins, so a real export
--- name beats a generic RTTI label.
 local nmAddr, nmDesc, nmSeen, nmHex = {}, {}, {}, {}
 local nmBase, nmModule = 0, ''
 
 local function addName(a, desc, useHex)
-  if useHex~=true then useHex=false end
+  if useHex ~= true then useHex = false end
   if type(a) ~= 'number' or desc == nil or desc == '' then return end
   local f = floor(a)
   if f ~= a or f <= 0 then return end
@@ -499,10 +464,6 @@ local function addName(a, desc, useHex)
   nmHex[#nmHex+1] = useHex
 end
 
--- .?AVActionSelector@ai@match@@    -> ActionSelector@ai@match   (RTTI type)
--- ?ActionSelector@ai@match@@QAEXXZ -> ActionSelector@ai@match   (export)
--- An RTTI type ends at its TRAILING '@@'; a function's qualified name ends at
--- the FIRST '@@'. Templates keep their interior '@@' for that reason.
 local function symbolShort(s)
   if s == nil then return nil end
   if s:sub(1,3) == '.?A' then
@@ -516,10 +477,6 @@ end
 
 
 ------------------------------------------------------------------ padding
--- Length of ONE padding item at b[i], or 0. Handles a bare int3/nop, any number
--- of leading 0x66 prefixes followed by 0x90, and the multi-byte NOP cores.
--- The np > 8 cap exists because an unbounded 0x66 sled is compression or malice,
--- not alignment padding.
 local function padItemLen(b, i, limit)
   if i > limit then return 0 end
   local v = b[i]
@@ -543,9 +500,6 @@ local function padItemLen(b, i, limit)
   return 0
 end
 
--- Byte table -> Lua string, so string.find hops between interesting bytes at C
--- speed. Lua-level work then scales with CANDIDATES, not with section size.
--- 4096 per call keeps the C-stack demand of string.char modest.
 local function chunkString(b, n)
   local parts, np = {}, 0
   for i = 1, n, 4096 do
@@ -559,10 +513,9 @@ end
 
 
 ------------------------------------------------------------------ proposal store
--- roots[address] = confidence * CONFSHIFT + sourceMask
 local roots, callers = {}, {}
 local curSecs = {}
-local EXLO, EXHI = 0, -1           -- empty bounding box until a probe sets it
+local EXLO, EXHI = 0, -1
 
 local function inExec(a)
   for i = 1, #curSecs do
@@ -586,7 +539,6 @@ local function propose(a, tag)
   end
   local conf = floor(v / CONFSHIFT)
   local mask = v - conf * CONFSHIFT
-  -- Adding is safe precisely because we have just tested the bit is 0.
   if floor(mask / bit) % 2 == 0 then mask = mask + bit end
   if cf > conf then conf = cf end
   roots[a] = conf * CONFSHIFT + mask
@@ -595,11 +547,6 @@ end
 
 
 ------------------------------------------------------------------ chunk walker
--- fn(b, len, have, a) per CHUNK-sized window:
---   a = absolute window start, b = byte table (may exceed len thanks to OVERLAP)
---   len = whole slots in the window, have = #b including look-ahead
--- Windows start psz-aligned, aligned UP. An unreadable window is SKIPPED, not
--- fatal. gl_yield() per window is the cooperative multitasking seam.
 local function eachChunk(ranges, psz, fn, label)
   local total = 0
   for r = 1, #ranges do total = total + (ranges[r][2] - ranges[r][1] + 1) end
@@ -623,16 +570,13 @@ end
 
 
 ------------------------------------------------------------------ S1: .pdata
--- RUNTIME_FUNCTION is 12 bytes: BeginAddress, EndAddress, UnwindData.
--- EndAddress is the first byte AFTER the function, so extents here are EXACT.
--- Only non-leaf functions have an entry, so .pdata is exact but not complete.
--- Sortedness is CHECKED, not trusted, because a packer can rewrite the table.
 local pdStart, pdEnd, pdChained = {}, {}, {}
 
 local function srcPdata(pe, chainCheck)
   pdStart, pdEnd, pdChained = {}, {}, {}
-  local addr, size = ddAddr(pe, DD.EXCEPTION)
-  if addr == nil or not pe.is64 then return 0 end
+  local addr, size = pe.dd[DD.EXCEPTION].rva, pe.dd[DD.EXCEPTION].size
+  if addr == nil or addr == 0 or size == nil or size == 0 or not pe.is64 then return 0 end
+  addr = pe.base + addr
 
   local n = floor(size / 12)
   if n > 5000000 then n = 5000000 end
@@ -651,12 +595,8 @@ local function srcPdata(pe, chainCheck)
       local o = r * 12
       local bg = b[o+1] + 256 * b[o+2] + 65536 * b[o+3] + 16777216 * b[o+4]
       local en = b[o+5] + 256 * b[o+6] + 65536 * b[o+7] + 16777216 * b[o+8]
-      -- bg == 0 or en <= bg is the zero padding that terminates the table.
       if bg ~= 0 and en > bg then
         local lo = base + bg
-        -- A cold fragment rather than an entry: UnwindData odd =>
-        -- RUNTIME_FUNCTION_INDIRECT; or UNW_FLAG_CHAININFO, which is flag 4 in
-        -- bits 3..5 of UNWIND_INFO's first byte => 4 << 3 = 32 = 0x20.
         local chained = false
         if chainCheck then
           local u = b[o+9] + 256 * b[o+10] + 65536 * b[o+11] + 16777216 * b[o+12]
@@ -683,7 +623,6 @@ local function srcPdata(pe, chainCheck)
     gl_progress(i, n, 'pdata records'); gl_yield()
   end
 
-  -- Repair by sorting INDEX arrays, so pdStart/pdEnd stay in step.
   if not sorted then
     local idx = {}
     for k = 1, count do idx[k] = k end
@@ -697,12 +636,7 @@ end
 
 
 ------------------------------------------------------------------ S2/S3: sweep
--- Deliberately NOT instruction-aligned, because aligning requires decoding.
--- Some E8 hits are therefore immediates or table bytes; their targets still
--- satisfy the inclusion rule, which is the rule in force.
 local function sweepChunk(a, len, have, b, s, withJumps)
-  -- E8 rel32: opcode at a+i-1, instruction is 5 bytes, so the displacement base
-  -- (the next instruction) is a+i+4.
   local pos = 1
   while true do
     local i = find(s, '\232', pos, true)
@@ -714,10 +648,9 @@ local function sweepChunk(a, len, have, b, s, withJumps)
       local t = a + i + 4 + rel
       if propose(t, SRC.CALL) then callers[t] = (callers[t] or 0) + 1 end
     end
-    pos = i + 1                     -- advance by ONE: overlapping matches are real
+    pos = i + 1
   end
 
-  -- E9 rel32 (opt-in): tail calls and incremental-link thunks.
   if withJumps then
     pos = 1
     while true do
@@ -733,10 +666,6 @@ local function sweepChunk(a, len, have, b, s, withJumps)
     end
   end
 
-  -- Padding boundaries. Acceptance is asymmetric, and this is the subtlest rule
-  -- in the file: a run of >= 2 pad bytes counts ANYWHERE; a LONE pad byte counts
-  -- only when the following address is 16-aligned. Without that proviso a single
-  -- 0x90 immediate or ModRM byte would drown the result set in noise.
   local padUntil = 0
 
   local function handle(i)
@@ -752,8 +681,6 @@ local function sweepChunk(a, len, have, b, s, withJumps)
     return true
   end
 
-  -- Back off over leading 0x66 prefixes so a prefixed NOP is measured from its
-  -- true start. Bounded at 8, matching padItemLen's own limit.
   local function hit(i)
     if i <= padUntil then return end
     local s0, n = i, 0
@@ -778,7 +705,6 @@ local function sweepChunk(a, len, have, b, s, withJumps)
     local i = find(s, '\15\31', pos, true)
     if i == nil or i > len then break end
     local s0 = i
-    -- 0x2E is PART OF the NOP core, not a stray: step back onto it.
     if s0 > 1 and b[s0 - 1] == 0x2E then s0 = s0 - 1 end
     hit(s0)
     pos = math.max(i + 1, padUntil + 1)
@@ -811,14 +737,10 @@ end
 ------------------------------------------------------------------ S4..S7, S11
 local function srcEntry(pe) propose(pe.entry, SRC.ENTRY) end
 
--- AddressOfFunctions is indexed by ORDINAL and has NumberOfFunctions entries.
--- Ordinal-only exports exist exactly when that exceeds NumberOfNames, so walk
--- the function array rather than the smaller name-indexed one.
--- A 0 entry is a gap; an entry pointing INTO the export directory is a forwarder
--- STRING, not code, and must be skipped.
 local function srcExports(pe)
-  local addr, size = ddAddr(pe, DD.EXPORT)
-  if addr == nil then return 0 end
+  local d = pe.dd[DD.EXPORT]
+  if d.rva == nil or d.rva == 0 or d.size == nil or d.size == 0 then return 0 end
+  local addr, size = pe.base + d.rva, d.size
 
   local nFuncs = rd32(addr + 20)
   local atRva  = rd32(addr + 28)
@@ -846,10 +768,6 @@ local function srcExports(pe)
     gl_progress(i, nFuncs, 'exports'); gl_yield()
   end
 
-  -- Named exports. CORRECTED: the strides are i*4 and i*2. The previous
-  -- revision used the undefined globals i4 and i2, which raised
-  -- "attempt to perform arithmetic on a nil value" on any module with a single
-  -- named export -- and many game EXEs export NvOptimusEnablement.
   local nNames = rd32(addr + 24)
   local aNames = rd32(addr + 32)
   local aOrds  = rd32(addr + 36)
@@ -873,13 +791,10 @@ local function srcExports(pe)
   return n
 end
 
--- IMAGE_TLS_DIRECTORY64: Start +0x00, End +0x08, Index +0x10, CallBacks +0x18
--- IMAGE_TLS_DIRECTORY32: Start +0x00, End +0x04, Index +0x08, CallBacks +0x0C
--- AddressOfCallBacks is a VA, not an RVA, and the array is NUL-terminated.
--- TLS callbacks run BEFORE the entry point, so no call instruction names them.
 local function srcTLS(pe)
-  local addr, size = ddAddr(pe, DD.TLS)
-  if addr == nil then return 0 end
+  local d = pe.dd[DD.TLS]
+  if d.rva == nil or d.rva == 0 or d.size == nil or d.size == 0 then return 0 end
+  local addr, size = pe.base + d.rva, d.size
   local psz   = pe.is64 and 8 or 4
   local cbOff = pe.is64 and 0x18 or 0x0C
   if size < cbOff + psz then return 0 end
@@ -898,8 +813,6 @@ local function srcTLS(pe)
   return n
 end
 
--- MSVC merges .CRT into .rdata by default, so this usually finds nothing and the
--- initialisers come from S8 instead. Kept for custom link layouts.
 local function srcCRT(pe)
   local spans = secSpans(pe, { '.CRT', '.00CRT', 'CRT' })
   if #spans == 0 then spans = secSpans(pe, { '.init' }) end
@@ -911,25 +824,18 @@ local function srcCRT(pe)
     for k = 1, lim, psz do
       local q = ptrFromChunk(b, k, psz)
       if q ~= nil and q ~= 0 and propose(q, SRC.CRT) then
-		n = n + 1
-		addName(q, 'CRT_initialiser' .. n .. ' (global constructor)')
-	  end
+        n = n + 1
+        addName(q, 'CRT_initialiser' .. n .. ' (global constructor)')
+      end
     end
   end, 'bytes (S7 CRT initialisers)')
   return n
 end
 
--- Control Flow Guard publishes every legitimate indirect call target.
---   IMAGE_LOAD_CONFIG_DIRECTORY      x86     x64
---     GuardCFFunctionTable (VA)     +0x50   +0x80
---     GuardCFFunctionCount          +0x54   +0x88
---     GuardFlags                    +0x58   +0x90
--- Entries are (4 + n) bytes, n = (GuardFlags >> 28) & 0xF, so the stride is NOT
--- fixed. Read the structure's own Size field first and refuse to parse a
--- structure that predates these fields.
 local function srcCFG(pe)
-  local addr = ddAddr(pe, DD.LOADCFG)
-  if addr == nil then return 0 end
+  local d = pe.dd[DD.LOADCFG]
+  if d.rva == nil or d.rva == 0 then return 0 end
+  local addr = pe.base + d.rva
   local oTbl, oCnt, oFlg
   if pe.is64 then oTbl, oCnt, oFlg = 0x80, 0x88, 0x90
   else            oTbl, oCnt, oFlg = 0x50, 0x54, 0x58 end
@@ -943,7 +849,7 @@ local function srcCFG(pe)
   if tbl == nil or count == nil or flags == nil or tbl == 0 or count == 0 then return 0 end
   if count > 4000000 then return 0 end
 
-  local stride = 4 + (floor(flags / 268435456) % 16)      -- 268435456 = 2^28
+  local stride = 4 + (floor(flags / 268435456) % 16)
   local per = math.max(1, floor(CHUNK / stride))
   local n, i = 0, 0
   while i < count do
@@ -962,15 +868,6 @@ end
 
 
 ------------------------------------------------------------------ S8: pointers
--- PRE-FILTER: before assembling a qword, check that the two middle bytes of the
--- UPPER dword match the module's address window. A typical x64 image lives
--- inside one 4 GB window, so this rejects almost every slot after two lookups.
---
--- CORRECTED: the qword is now assembled with ptrFromChunk, which is bounds- and
--- hole-checked. The previous inline expression was missing the '+' between the
--- low and high dword groups, so Lua parsed "(A)(B)" as calling a number.
--- ptrFromChunk costs one Lua call per SURVIVING candidate, which the pre-filter
--- makes rare; correctness is worth more than that call.
 local function scanPtrs(pe, ranges)
   local is64 = pe.is64
   local psz = is64 and 8 or 4
@@ -980,8 +877,6 @@ local function scanPtrs(pe, ranges)
     local ulo, uhi = floor(EXLO / 4294967296), floor(EXHI / 4294967296)
     if ulo == uhi then fast = true; U4 = ulo % 256; U5 = floor(ulo / 256) % 256 end
   end
-  -- PE32 pre-filter: the TOP BYTE of a dword must lie in the module's 16 MB
-  -- bucket range. Coarser, but the same idea.
   local tbLo, tbHi = floor(EXLO / 16777216), floor(EXHI / 16777216)
 
   eachChunk(ranges, psz, function(b, len, have, a)
@@ -1010,10 +905,6 @@ local function scanPtrs(pe, ranges)
   return n
 end
 
--- OPT-IN. Every dword in (0, SizeOfImage) landing in code qualifies, so
--- switch-case labels, EH tables and plain integers all flood in. Tagged
--- separately (RVA / XDATA) so it can be filtered out again. x64 only: on PE32 an
--- RVA is indistinguishable from a small integer.
 local function scanRvas(pe, ranges, tag, label)
   if not pe.is64 then return 0 end
   local limit = pe.size
@@ -1037,75 +928,49 @@ end
 
 
 ------------------------------------------------------------------ RTTI
--- MSVC / clang-cl ABI only; MinGW's Itanium RTTI has a different layout and
--- simply produces no COLs.
---   x64: signature 1, every reference is a 32-bit RVA, COL is 24 bytes ending
---        with pSelf (the COL's own RVA), name at TD+0x10.
---   x86: signature 0, references are absolute pointers, COL is 20 bytes, name at
---        TD+0x08.
---   COL = { signature +0x00, offset +0x04, cdOffset +0x08,
---           pTypeDescriptor +0x0C, pClassHierarchyDescriptor +0x10,
---           [x64: pSelf +0x14] }
---   CHD = { signature +0x00, attributes +0x04, numBaseClasses +0x08,
---           pBaseClassArray +0x0C }
---   BCD = { pTypeDescriptor +0x00, numContainedBases +0x04, PMD +0x08,
---           attributes +0x14 }
--- A vftable is PRECEDED by a pointer to its COL, at vftable - psz. That single
--- relationship turns "a class name" into "the addresses of its virtual methods".
 local cols, hierarch, vtblMap, funcToClass = {}, {}, {}, {}
+local bcdTypeName
+do
+  local function ptrRef(pe, v)
+    if v == nil then return nil end
+    if pe.is64 then return pe.base + v end
+    return v
+  end
 
-local function ptrRef(pe, v)
-  if v == nil then return nil end
-  if pe.is64 then return pe.base + v end
-  return v
-end
+  local function asSigned32(v)
+    if v >= 0x80000000 then return v - 0x100000000 end
+    return v
+  end
 
--- Rather than trusting one offset, PROBE the plausible 4-byte-aligned positions
--- 0x00..0x14 and accept the first resolving to an MSVC type-name string. +0x00 is
--- tried first because that IS the Microsoft field; a wrong guess loses one base
--- class rather than the whole hierarchy.
-local function bcdTypeName(pe, bcdVA, nameOff)
-  bcdVA = normAddr(bcdVA)
-  if bcdVA == nil then return nil end
-  for off = 0, 0x14, 4 do
-    local v = rd32(bcdVA + off)
-    if v ~= nil and v ~= 0 then
-      local td = ptrRef(pe, v)
-      if td ~= nil then
-        local nm = readCString(td + nameOff, RTTI_NAME_MAX)
-        if nm ~= nil and nm:match('^%.%?A[VUWT]') then return nm end
+  function bcdTypeName(pe, bcdVA, nameOff)
+    bcdVA = normAddr(bcdVA)
+    if bcdVA == nil then return nil end
+    for off = 0, 0x14, 4 do
+      local v = rd32(bcdVA + off)
+      if v ~= nil and v ~= 0 then
+        local td = ptrRef(pe, v)
+        if td ~= nil then
+          local nm = readCString(td + nameOff, RTTI_NAME_MAX)
+          if nm ~= nil and nm:match('^%.%?A[VUWT]') then return nm end
+        end
       end
     end
+    return nil
   end
-  return nil
-end
 
-local function asSigned32(v)
-  if v >= 0x80000000 then return v - 0x100000000 end
-  return v
+  _G.__glPtrRef = ptrRef
+  _G.__glSigned32 = asSigned32
 end
+local ptrRef, asSigned32 = _G.__glPtrRef, _G.__glSigned32
+_G.__glPtrRef, _G.__glSigned32 = nil, nil
 
--- PASS 1: find every Complete Object Locator from bytes ALREADY in memory.
--- All structural tests run on the chunk table; CE is called once per SURVIVING
--- candidate -- roughly one call per class instead of one per slot.
---   strict -- x64 only, requires pSelf == the COL's own RVA. Essentially
---             self-addressing proof; eliminates almost every accidental match.
---   loose  -- drops pSelf. Retried only if strict found NOTHING.
--- Candidate tests, in order of increasing cost:
---   1. first byte == signature, next three == 0
---   2. top byte of pTypeDescriptor in range
---   3. offset-to-top and CD offset within +/-1 MB
---   4. td/chd inside the image (x64) or the module (x86)
---   5. strict: pSelf == own RVA
---   6. the name at TD+nameOff matches '^%.%?A[VUWT]'   (the CE call)
+
 local function scanCols(pe, ranges, strict)
   local base, size, is64 = pe.base, pe.size, pe.is64
   local nameOff = is64 and 0x10 or 0x08
   local sig = is64 and 1 or 0
   local need = (is64 and strict) and 24 or 20
 
-  -- x64: pTypeDescriptor is an RVA, so accept top bytes of RVAs in [0, size).
-  -- x86: it is an absolute pointer, so accept top bytes of [base, base+size).
   local tLo, tHi
   if size <= 0 then
     tLo, tHi = 1, 0
@@ -1119,11 +984,10 @@ local function scanCols(pe, ranges, strict)
 
   local found = 0
   eachChunk(ranges, 4, function(b, len, have, a)
-    -- A COL at b[k] needs k + need - 1 <= have, i.e. k <= have - (need - 1).
     local lim = math.min(len, have - (need - 1))
     for k = 1, lim, 4 do
       if b[k] == sig and b[k+1] == 0 and b[k+2] == 0 and b[k+3] == 0 then
-        local tb = b[k+15]                       -- top byte of pTypeDescriptor
+        local tb = b[k+15]
         if tb >= tLo and tb <= tHi then
           local off = b[k+4] + 256 * b[k+5] + 65536 * b[k+6] + 16777216 * b[k+7]
           local cd  = b[k+8] + 256 * b[k+9] + 65536 * b[k+10] + 16777216 * b[k+11]
@@ -1152,17 +1016,12 @@ local function scanCols(pe, ranges, strict)
                 if cols[col] == nil then
                   cols[col] = { tdAddr = tdVA, tdName = nm, chdAddr = chdVA }
                   found = found + 1
-                  -- Retain the COL and its TypeDescriptor NOW: cols[] is
-                  -- released at the end of probe(), and a TypeDescriptor is
-                  -- DATA, so it can never be recovered from the code roots.
-                  -- (The previous revision did this twice; once is enough.)
-                  local kd    = demangle(nm)
-				  local hx=true
-				  if kd==nil then hx=false end
+                  local kd = demangle(nm)
+                  local hx = (kd ~= nil)
                   local short = symbolShort(nm)
-                  addName(col,  short .. ' (COL)',true)
+                  addName(col, short .. ' (COL)', true)
                   addName(tdVA, short .. ' (' ..
-                    (kd and (kd:sub(1,1):upper() .. kd:sub(2)) or 'Type') .. ')',hx)
+                    (kd and (kd:sub(1,1):upper() .. kd:sub(2)) or 'Type') .. ')', hx)
                 end
               end
             end
@@ -1174,12 +1033,6 @@ local function scanCols(pe, ranges, strict)
   return found
 end
 
--- Walk one vftable: every CONSECUTIVE code pointer is a virtual method. Reads 16
--- slots at a time, falling back to one slot at a mapping edge. Stops at the first
--- slot that is not in-module code -- both the natural end and the safety net
--- against a data array that merely looks like a vftable.
--- vtable slots are ROOTS, not just names: discovering a class is useless unless
--- its methods enter the function list.
 local function walkVtable(pe, vslot, nm)
   local psz = pe.is64 and 8 or 4
   local nmShort = symbolShort(nm)
@@ -1193,8 +1046,6 @@ local function walkVtable(pe, vslot, nm)
     for i = 0, got - 1 do
       local fa = ptrFromChunk(b, i * psz + 1, psz)
       if fa == nil or fa < EXLO or fa > EXHI or not inExec(fa) then return c end
-      -- First class to claim a method keeps it. Two vftables can share a slot
-      -- value (a common tail, or a thunk); the first winner is as good as any.
       if funcToClass[fa] == nil then funcToClass[fa] = nm end
       addName(fa, nmShort .. ' (vtable method)')
       propose(fa, SRC.VTBL)
@@ -1206,11 +1057,6 @@ local function walkVtable(pe, vslot, nm)
   return c
 end
 
--- PASS 2: a slot whose VALUE is a known COL address is the slot at vftable - psz,
--- so the vftable begins one pointer later:
---     vslot = a + k - 1 + psz   ==>   mem[vftable - psz] = col
--- On x64, subtract 8 from a reported vftable address and you must land on its COL.
--- CORRECTED: same missing-'+' defect as scanPtrs; now uses ptrFromChunk.
 local function scanVtables(pe, ranges)
   local is64 = pe.is64
   local psz = is64 and 8 or 4
@@ -1238,12 +1084,11 @@ local function scanVtables(pe, ranges)
         end
       end
       if q ~= nil then
-        -- The hash lookup is the whole test: is this value a COL we found?
         local c = cols[q]
         if c ~= nil then
           local vslot = a + k - 1 + psz
           vtblMap[vslot] = { colAddr = q, className = c.tdName }
-          addName(vslot, symbolShort(c.tdName) .. ' (vfTable)',true)
+          addName(vslot, symbolShort(c.tdName) .. ' (vfTable)', true)
           walkVtable(pe, vslot, c.tdName)
           nv = nv + 1
         end
@@ -1253,9 +1098,6 @@ local function scanVtables(pe, ranges)
   return nv
 end
 
--- class -> { bases = {...}, attrs = ... }. One read fetches the WHOLE base-class
--- array. Keyed by the MANGLED name, since that is what cols[] holds -- which is
--- why base() does not compose directly with classOf().
 local function buildHierarchy(pe)
   local nameOff = pe.is64 and 0x10 or 0x08
   for _, col in pairs(cols) do
@@ -1284,23 +1126,9 @@ end
 
 
 ------------------------------------------------------------------ RESULTS
--- SIX PARALLEL NUMBER ARRAYS, ~100 bytes per function, rather than one ~650-byte
--- table per function. Index i means the same function in all six.
---   fStart[i]    absolute address
---   fEnd[i]      first byte AFTER it (exclusive)
---   fMask[i]     packed source-bit mask
---   fConf[i]     confidence tier 0..4
---   fCallers[i]  number of distinct E8 sites targeting it
---   fKind[i]     0 = guessed extent, 1 = exact .pdata, 2 = nested
 local fStart, fEnd, fMask, fConf, fCallers, fKind = {}, {}, {}, {}, {}, {}
 local confA, confB = {}, {}
 
--- EXTENT POLICY, in order of preference:
---   1. exact   : start is a .pdata BeginAddress -> use EndAddress
---   2. clipped : start lies inside a .pdata body -> min(next candidate, body end)
---   3. guessed : otherwise -> next candidate, or the section end
--- The merge is a single linear walk with one cursor that only ever advances, so
--- the cost is O(n log n) for the sort and O(n + m) after it. Nothing is decoded.
 local function analyze(secs, nroot)
   gl_phase('Sorting candidates')
   local cand, n = {}, 0
@@ -1320,8 +1148,6 @@ local function analyze(secs, nroot)
     local conf = floor(v / CONFSHIFT)
     local mask = v - conf * CONFSHIFT
 
-    -- On exit, pdStart[p] is the first record beginning at or after st, so
-    -- "pdStart[p] < st" is exactly the test for "st is inside a body".
     while p <= np and pdEnd[p] <= st do p = p + 1 end
 
     local secHi = st
@@ -1339,7 +1165,6 @@ local function analyze(secs, nroot)
     elseif p <= np and pdStart[p] < st then
       en = math.min(limit, pdEnd[p])
       if conf >= 3 then
-        -- Strong enough to be its own function (a thunk, an outlined hot path).
         kv = 0
       else
         kv = 2
@@ -1350,8 +1175,6 @@ local function analyze(secs, nroot)
       en, kv = limit, 0
     end
 
-    -- Deliberately conservative: case 2 with conf >= 3 counts as guessed even
-    -- though its bound is real, so "guessed-extent bytes" never understates.
     if kv == 0 then guessed = guessed + (en - st) end
     if conf >= 3 and kv ~= 2 then nAuth = nAuth + 1 end
 
@@ -1367,60 +1190,23 @@ local function analyze(secs, nroot)
 end
 
 
------------------------------------------------------------------- DRIVER
-local gl_co, gl_tmr, gl_busy = nil, nil, false
-local lastStat = nil
-
--- Single exit point for success and failure. Clears every large structure,
--- including on the error path. Deliberately does NOT clear nmAddr/nmDesc/nmSeen,
--- vtblMap, funcToClass or hierarch: those are the durable outputs.
-local function gl_stop(err, stat)
-  if gl_tmr then pcall(function() gl_tmr.destroy() end); gl_tmr = nil end
-  gl_co = nil
-  gl_close()
-  roots, callers = {}, {}
-  pdStart, pdEnd, pdChained = {}, {}, {}
-  cols = {}
-  gl_freeCaches()
-  if err then
-    print('ghidraLike failed: ' .. tostring(err))
-    return
-  end
-  if stat then
-    lastStat = stat
-    print(string.format(
-      'functions=%d  exact=%d  nested=%d  authoritative=%d  guessed-extent bytes=%d',
-      stat.nfuncs, stat.exact, stat.nested, stat.auth, stat.guessed))
-    print(string.format('names retained: %d',
-      #nmAddr))
-  end
-  print('Done!')
-end
-
-local function _endWindow()
-  gl_stop()
-end
-
 ------------------------------------------------------------------ comment cache
-local NC_version = 0
-local NC_name, NC_nName = {}, 0
-local NC_cmt,  NC_nCmt  = {}, 0
+-- ONE table instead of five separate locals.
+local NC = { version = 0, name = {}, nName = 0, cmt = {}, nCmt = 0 }
 
-local function ncFlush()
-  NC_name, NC_nName = {}, 0
-  NC_cmt,  NC_nCmt  = {}, 0
-  NC_version = NC_version + 1
-end
-
--- Markers FIRST so strip/has can close over them.
 local NO, NCL = '«', '»'
 local EO, ECL = '〈', '〉'
 
--- ONE durable touched-set for the whole file.
 local ncTouched = _G.ghidraLikeTouched
 if type(ncTouched) ~= 'table' then
   ncTouched = {}
   _G.ghidraLikeTouched = ncTouched
+end
+
+local function ncFlush()
+  NC.name, NC.nName = {}, 0
+  NC.cmt,  NC.nCmt  = {}, 0
+  NC.version = NC.version + 1
 end
 
 local function ncStripName(s)
@@ -1451,9 +1237,7 @@ local function ncPurge()
   end
   local n = 0
   local addrs = {}
-  for a in pairs(touched) do
-    addrs[#addrs + 1] = a
-  end
+  for a in pairs(touched) do addrs[#addrs + 1] = a end
   for i = 1, #addrs do
     local a = addrs[i]
     local okG, cur = pcall(getComment, a)
@@ -1471,7 +1255,37 @@ local function ncPurge()
   return n
 end
 
--- ALWAYS returns nil, because the work is asynchronous.
+
+------------------------------------------------------------------ DRIVER
+local gl_co, gl_tmr, gl_busy = nil, nil, false
+local lastStat = nil
+
+local function gl_stop(err, stat)
+  if gl_tmr then pcall(function() gl_tmr.destroy() end); gl_tmr = nil end
+  gl_co = nil
+  gl_close()
+  roots, callers = {}, {}
+  pdStart, pdEnd, pdChained = {}, {}, {}
+  cols = {}
+  collectgarbage('collect')
+  if err then
+    print('ghidraLike failed: ' .. tostring(err))
+    return
+  end
+  if stat then
+    lastStat = stat
+    print(string.format(
+      'functions=%d  exact=%d  nested=%d  authoritative=%d  guessed-extent bytes=%d',
+      stat.nfuncs, stat.exact, stat.nested, stat.auth, stat.guessed))
+    print(string.format('names retained: %d', #nmAddr))
+  end
+  print('Done!')
+end
+
+local function _endWindow()
+  gl_stop()
+end
+
 local function _probe()
   ncPurge()
   ncFlush()
@@ -1619,161 +1433,122 @@ end
 
 
 ------------------------------------------------------------------ OUTPUT
-local function hasTag(mask, tag) return floor(mask / TAGBIT[tag]) % 2 == 1 end
+local csvEsc
+do
+  local function hasTag(mask, tag) return floor(mask / TAGBIT[tag]) % 2 == 1 end
 
-local function tagsOf(mask)
-  local t = {}
-  for i = 1, #TAGORDER do
-    if hasTag(mask, TAGORDER[i]) then t[#t+1] = TAGORDER[i] end
-  end
-  return t
-end
-
--- 'nested' is a FLAG, not a rejection: the rule is that nothing is deleted.
-local function statusOf(kv, conf)
-  if kv == 2 then return 'nested' end
-  if conf >= 3 then return 'authoritative' end
-  return 'included'
-end
-
--- FIRST MATCH WINS. A virtual method that is also in .pdata reports as "vtable
--- method"; check srcs for 'pdata' if you want the stronger claim.
-local function kindOf(mask, nCallers, cls)
-  if hasTag(mask, SRC.VTBL) then
-    if cls then
-      local _, name = demangle(cls)
-      return 'vtable method [' .. (name or cls) .. ']'
+  local function tagsOf(mask)
+    local t = {}
+    for i = 1, #TAGORDER do
+      if hasTag(mask, TAGORDER[i]) then t[#t+1] = TAGORDER[i] end
     end
-    return 'vtable method'
-  elseif hasTag(mask, SRC.PDATA) then return 'function (compiler-recorded)'
-  elseif hasTag(mask, SRC.CFG)   then return 'CFG call target'
-  elseif hasTag(mask, SRC.EXP)   then return 'export'
-  elseif hasTag(mask, SRC.TLS)   then return 'TLS callback'
-  elseif hasTag(mask, SRC.CRT)   then return 'global constructor'
-  elseif hasTag(mask, SRC.ENTRY) then return 'entry point'
-  elseif hasTag(mask, SRC.DYN)   then return 'observed indirect target'
-  elseif hasTag(mask, SRC.FRAG)  then return 'function fragment (chained unwind)'
-  elseif hasTag(mask, SRC.CALL)  then return 'called function'
-  elseif hasTag(mask, SRC.XDATA) then return 'exception/unwind target'
-  elseif hasTag(mask, SRC.PTR) or hasTag(mask, SRC.RVA) then
-    return 'pointer-referenced (callback / thread entry / indirect)'
-  elseif hasTag(mask, SRC.PAD)   then return 'isolated (after padding)'
-  elseif hasTag(mask, SRC.JUMP)  then return 'jump target (tail call / thunk)'
+    return t
   end
-  return 'unknown'
-end
 
--- One throwaway table per displayed row. The DURABLE store stays the flat arrays.
--- Note ['end']: "end" is a Lua keyword, so bracket syntax is the only access.
-local function recAt(i)
-  local st, conf, mask, kv = fStart[i], fConf[i], fMask[i], fKind[i]
-  local ed = fEnd[i] - 1
-  local sr, er = addressOffset(st), addressOffset(ed)
-  return {
-    start = st, ['end'] = ed, size = fEnd[i] - st,
-    srcs = tagsOf(mask), conf = conf, status = statusOf(kv, conf),
-    callers = fCallers[i], fromPdata = (kv == 1), nested = (kv == 2),
-    class = funcToClass[st], kind = kindOf(mask, fCallers[i], funcToClass[st]),
-    startRel = sr, endRel = er
-  }
-end
-
--- RFC-4180 escaping.
-local function csvEsc(s)
-  s = tostring(s or '')
-  if s:find('[",\r\n]') then s = '"' .. s:gsub('"', '""') .. '"' end
-  return s
-end
-
-local function _csv(path)
-  local fh = io.open(path, 'w')
-  if fh == nil then print('cannot open ' .. tostring(path)); return end
-  fh:write('start,end,size,directCallSites,status,confidence,sources,kind,fromPdata,class\n')
-  for i = 1, #fStart do
-    local f = recAt(i)
-    local _, cn = demangle(f.class)
-    fh:write(table.concat({
-      f.startRel, f.endRel,
-      tostring(f.size), tostring(f.callers), csvEsc(f.status), CONFNAME[f.conf+1],
-      csvEsc(table.concat(f.srcs, '|')), csvEsc(f.kind),
-      tostring(f.fromPdata), csvEsc(cn or ''),
-    }, ',') .. '\n')
+  local function statusOf(kv, conf)
+    if kv == 2 then return 'nested' end
+    if conf >= 3 then return 'authoritative' end
+    return 'included'
   end
-  fh:close(); print('wrote ' .. path .. ' (' .. #fStart .. ' rows)')
-end
 
-local function sortedKeys(t)
-  local ks = {}
-  for k in pairs(t) do ks[#ks+1] = k end
-  table.sort(ks)
-  return ks
-end
-
--- ONE ROW PER VFTABLE, not per class. A class with virtual bases, or one reached
--- through adjustor thunks, owns several COLs, so a name legitimately repeats.
--- "kind" here is the RTTI type kind, NOT the "kind" column of csv().
-local function _rtticsv(path)
-  local fh = io.open(path, 'w')
-  if fh == nil then print('cannot open ' .. tostring(path)); return end
-  fh:write('vftable,col,kind,class,bases\n')
-  local ks = sortedKeys(vtblMap)
-  for n = 1, #ks do
-    local v = vtblMap[ks[n]]
-    local label, name = demangle(v.className)
-    local h = hierarch[v.className]
-    local names = {}
-    if h then
-      for bi = 1, #h.bases do
-        local _, bn = demangle(h.bases[bi])
-        names[#names+1] = bn or h.bases[bi]
+  local function kindOf(mask, nCallers, cls)
+    if hasTag(mask, SRC.VTBL) then
+      if cls then
+        local _, name = demangle(cls)
+        return 'vtable method [' .. (name or cls) .. ']'
       end
+      return 'vtable method'
+    elseif hasTag(mask, SRC.PDATA) then return 'function (compiler-recorded)'
+    elseif hasTag(mask, SRC.CFG)   then return 'CFG call target'
+    elseif hasTag(mask, SRC.EXP)   then return 'export'
+    elseif hasTag(mask, SRC.TLS)   then return 'TLS callback'
+    elseif hasTag(mask, SRC.CRT)   then return 'global constructor'
+    elseif hasTag(mask, SRC.ENTRY) then return 'entry point'
+    elseif hasTag(mask, SRC.DYN)   then return 'observed indirect target'
+    elseif hasTag(mask, SRC.FRAG)  then return 'function fragment (chained unwind)'
+    elseif hasTag(mask, SRC.CALL)  then return 'called function'
+    elseif hasTag(mask, SRC.XDATA) then return 'exception/unwind target'
+    elseif hasTag(mask, SRC.PTR) or hasTag(mask, SRC.RVA) then
+      return 'pointer-referenced (callback / thread entry / indirect)'
+    elseif hasTag(mask, SRC.PAD)   then return 'isolated (after padding)'
+    elseif hasTag(mask, SRC.JUMP)  then return 'jump target (tail call / thunk)'
     end
-    fh:write(table.concat({
-      addressOffset(ks[n]), addressOffset(v.colAddr),
-      csvEsc(label or '?'), csvEsc(name or v.className),
-      csvEsc(table.concat(names, '|')),
-    }, ',') .. '\n')
+    return 'unknown'
   end
-  fh:close(); print('wrote ' .. path .. ' (' .. #ks .. ' rows)')
+
+  local function recAt(i)
+    local st, conf, mask, kv = fStart[i], fConf[i], fMask[i], fKind[i]
+    local ed = fEnd[i] - 1
+    local sr, er = addressOffset(st), addressOffset(ed)
+    return {
+      start = st, ['end'] = ed, size = fEnd[i] - st,
+      srcs = tagsOf(mask), conf = conf, status = statusOf(kv, conf),
+      callers = fCallers[i], fromPdata = (kv == 1), nested = (kv == 2),
+      class = funcToClass[st], kind = kindOf(mask, fCallers[i], funcToClass[st]),
+      startRel = sr, endRel = er
+    }
+  end
+
+  function csvEsc(s)
+    s = tostring(s or '')
+    if s:find('[",\r\n]') then s = '"' .. s:gsub('"', '""') .. '"' end
+    return s
+  end
+
+  local function sortedKeys(t)
+    local ks = {}
+    for k in pairs(t) do ks[#ks+1] = k end
+    table.sort(ks)
+    return ks
+  end
+
+  _G.__glCsv = function(path)
+    local fh = io.open(path, 'w')
+    if fh == nil then print('cannot open ' .. tostring(path)); return end
+    fh:write('start,end,size,directCallSites,status,confidence,sources,kind,fromPdata,class\n')
+    for i = 1, #fStart do
+      local f = recAt(i)
+      local _, cn = demangle(f.class)
+      fh:write(table.concat({
+        f.startRel, f.endRel,
+        tostring(f.size), tostring(f.callers), csvEsc(f.status), CONFNAME[f.conf+1],
+        csvEsc(table.concat(f.srcs, '|')), csvEsc(f.kind),
+        tostring(f.fromPdata), csvEsc(cn or ''),
+      }, ',') .. '\n')
+    end
+    fh:close(); print('wrote ' .. path .. ' (' .. #fStart .. ' rows)')
+  end
+
+  _G.__glRttiCsv = function(path)
+    local fh = io.open(path, 'w')
+    if fh == nil then print('cannot open ' .. tostring(path)); return end
+    fh:write('vftable,col,kind,class,bases\n')
+    local ks = sortedKeys(vtblMap)
+    for n = 1, #ks do
+      local v = vtblMap[ks[n]]
+      local label, name = demangle(v.className)
+      local h = hierarch[v.className]
+      local names = {}
+      if h then
+        for bi = 1, #h.bases do
+          local _, bn = demangle(h.bases[bi])
+          names[#names+1] = bn or h.bases[bi]
+        end
+      end
+      fh:write(table.concat({
+        addressOffset(ks[n]), addressOffset(v.colAddr),
+        csvEsc(label or '?'), csvEsc(name or v.className),
+        csvEsc(table.concat(names, '|')),
+      }, ',') .. '\n')
+    end
+    fh:close(); print('wrote ' .. path .. ' (' .. #ks .. ' rows)')
+  end
 end
+local _csv, _rtticsv = _G.__glCsv, _G.__glRttiCsv
+_G.__glCsv, _G.__glRttiCsv = nil, nil
 
 
 ------------------------------------------------------------------ NAMES
--- ADDITIVE and idempotent. It does NOT clear the registry: the scan already
--- filled it with real export names, TypeDescriptors and COLs, and addName is
--- first-writer-wins, so those survive and these generic labels only fill gaps.
--- Calling it is optional -- namecsv() works straight after probe().
---[[local function buildNames()
-  local ok, b = pcall(getAddress, moduleName)
-  if not ok or type(b) ~= 'number' then
-    print('buildNames: cannot resolve module ' .. tostring(moduleName)); return 0
-  end
-  nmBase, nmModule = b, moduleName
-
-  for vslot, v in pairs(vtblMap) do
-    local short = symbolShort(v.className)
-    addName(v.colAddr, short .. ' (COL)')
-    addName(vslot,     short .. ' (vfTable)')
-  end
-  for fa, mn in pairs(funcToClass) do
-    addName(fa, symbolShort(mn) .. ' (vtable method)')
-  end
-  for i = 1, #fStart do
-    local m, a = fMask[i], fStart[i]
-    if     hasTag(m, SRC.EXP)   then
-      addName(a, 'export' .. string.format('%X', a - b) .. ' (export)')
-    elseif hasTag(m, SRC.TLS)   then addName(a, 'TlsCallback (TLS callback)')
-    elseif hasTag(m, SRC.CRT)   then addName(a, 'CRT_initialiser (global constructor)')
-    elseif hasTag(m, SRC.ENTRY) then addName(a, 'EntryPoint (entry point)')
-    end
-  end
-  print(string.format('buildNames: %d named addresses total, %s base %X',
-    #nmAddr, tostring(nmModule), b))
-  return #nmAddr
-end]]
-
--- ONE ROW PER NAMED ADDRESS. offset is hex, relative to the module base.
--- The '#module=' line lets loadNames rebase without being told the name.
 local function _namecsv(path)
   if #nmAddr == 0 then
     print('namecsv: nothing retained - run probe() first'); return
@@ -1790,7 +1565,7 @@ local function _namecsv(path)
   local idx = {}
   for i = 1, #nmAddr do idx[i] = i end
   table.sort(idx, function(x, y) return nmAddr[x] < nmAddr[y] end)
-    fh:write('#module=' .. tostring(mn) .. '\n')
+  fh:write('#module=' .. tostring(mn) .. '\n')
   fh:write('offset,desc,hex\n')
   for k = 1, #idx do
     local i = idx[k]
@@ -1803,26 +1578,49 @@ end
 
 
 ------------------------------------------------------------------ lookup
--- THE single runtime lookup table. loadNames / useNames write it; nameAt and
--- annotate read it. Declared exactly once.
 local nmMap, nmCount = {}, 0
 local nmLo, nmHi = 0, -1
-local nmCache = {}                 -- addr -> desc | false, register-free only
+local nmCache = {}
 local nmRegSig, nmRegTab = nil, nil
+local nmRegs
+
+do
+  local function nmSplitCsv(line)
+    local out, i, n = {}, 1, #line
+    while i <= n do
+      if line:sub(i,i) == '"' then
+        local buf = {}; i = i + 1
+        while i <= n do
+          local d = line:sub(i,i)
+          if d == '"' then
+            if line:sub(i+1,i+1) == '"' then buf[#buf+1] = '"'; i = i + 2
+            else i = i + 1; break end
+          else buf[#buf+1] = d; i = i + 1 end
+        end
+        out[#out+1] = table.concat(buf)
+        if line:sub(i,i) == ',' then i = i + 1 end
+      else
+        local j = line:find(',', i, true)
+        if j == nil then out[#out+1] = line:sub(i); i = n + 1
+        else out[#out+1] = line:sub(i, j-1); i = j + 1 end
+      end
+    end
+    return out
+  end
+  _G.__glSplitCsv = nmSplitCsv
+end
 
 local function unloadNames()
   nmMap, nmCount, nmCache = {}, 0, {}
   nmLo, nmHi, nmRegSig, nmRegTab = 0, -1, nil, nil
 end
 
+
 ------------------------------------------------------------------ registers
--- CE supplies RAX..R15 and EAX..EIP, but not AX/AL/AH/SIL/R8B. Derive those
--- arithmetically, so the file still needs no bit operators:
---     alias = floor(family / 2^shift) mod 2^(bytes*8)
-local NRFAM = {'RAX','RBX','RCX','RDX','RSI','RDI','RBP','RSP','RIP',
-               'R8','R9','R10','R11','R12','R13','R14','R15'}
-local NRALIAS = {}
 do
+  local NRFAM = {'RAX','RBX','RCX','RDX','RSI','RDI','RBP','RSP','RIP',
+                 'R8','R9','R10','R11','R12','R13','R14','R15'}
+  local NRALIAS = {}
   local e = {RAX='EAX',RBX='EBX',RCX='ECX',RDX='EDX',RSI='ESI',RDI='EDI',
              RBP='EBP',RSP='ESP',RIP='EIP'}
   local w = {RAX='AX',RBX='BX',RCX='CX',RDX='DX',RSI='SI',RDI='DI',
@@ -1844,98 +1642,96 @@ do
       NRALIAS['R'..num..'B'] = {f,1,0}
     end
   end
-end
 
-local function nmRegs()
-  local ok, brk = pcall(debug_isBroken)
-  if not ok or brk ~= true then return nil end
-  local sig = tostring(RIP) .. ':' .. tostring(RSP) .. ':' .. tostring(RAX)
-  if nmRegSig == sig and nmRegTab then return nmRegTab end
-  local R = {}
-  for i = 1, #NRFAM do
-    local f = NRFAM[i]
-    local v = _G[f]
-    if type(v) == 'number' then R[f] = v end
-  end
-  for a, d in pairs(NRALIAS) do
-    if R[a] == nil then
-      local v = R[d[1]]
-      if type(v) == 'number' then
-        R[a] = floor(v / (2 ^ d[3])) % (2 ^ (d[2] * 8))
+  function nmRegs()
+    local ok, brk = pcall(debug_isBroken)
+    if not ok or brk ~= true then return nil end
+    local sig = tostring(RIP) .. ':' .. tostring(RSP) .. ':' .. tostring(RAX)
+    if nmRegSig == sig and nmRegTab then return nmRegTab end
+    local R = {}
+    for i = 1, #NRFAM do
+      local f = NRFAM[i]
+      local v = _G[f]
+      if type(v) == 'number' then R[f] = v end
+    end
+    for a, d in pairs(NRALIAS) do
+      if R[a] == nil then
+        local v = R[d[1]]
+        if type(v) == 'number' then
+          R[a] = floor(v / (2 ^ d[3])) % (2 ^ (d[2] * 8))
+        end
       end
     end
+    nmRegSig, nmRegTab = sig, R
+    return R
   end
-  nmRegSig, nmRegTab = sig, R
-  return R
-end
 
--- Tokenise rather than blank-and-refill. A word is tested against the register
--- table FIRST, so AF00C is hex but RAX is not. Registers become DECIMAL literals;
--- bare hex runs get an 0x prefix. Returns (sawRegister, expr|nil).
-local function nmExpr(text, R)
-  local parts, pos, n = {}, 1, #text
-  local sawReg = false
-  while pos <= n do
-    local c = text:sub(pos,pos)
-    if c:match('[%a_]') then
-      local w  = text:match('^[%a_][%w_%.]*', pos)
-      local up = w:upper()
-      if NRALIAS[up] then
-        sawReg = true
-        local v = R and R[up]
-        if v == nil then return true, nil end
-        parts[#parts+1] = string.format('%.0f', v)
-      elseif w:match('^%x+$') then
-        parts[#parts+1] = '0x' .. w
+  local function nmExpr(text, R)
+    local parts, pos, n = {}, 1, #text
+    local sawReg = false
+    while pos <= n do
+      local c = text:sub(pos,pos)
+      if c:match('[%a_]') then
+        local wd = text:match('^[%a_][%w_%.]*', pos)
+        local up = wd:upper()
+        if NRALIAS[up] then
+          sawReg = true
+          local v = R and R[up]
+          if v == nil then return true, nil end
+          parts[#parts+1] = string.format('%.0f', v)
+        elseif wd:match('^%x+$') then
+          parts[#parts+1] = '0x' .. wd
+        else
+          return sawReg, nil
+        end
+        pos = pos + #wd
+      elseif c:match('%x') then
+        local wd = text:match('^%x+', pos)
+        parts[#parts+1] = '0x' .. wd
+        pos = pos + #wd
+      elseif c:match('[%+%-%*%(%)%s]') then
+        parts[#parts+1] = c
+        pos = pos + 1
       else
-        return sawReg, nil            -- unknown symbol: refuse to guess
+        return sawReg, nil
       end
-      pos = pos + #w
-    elseif c:match('%x') then
-      local w = text:match('^%x+', pos)
-      parts[#parts+1] = '0x' .. w
-      pos = pos + #w
-    elseif c:match('[%+%-%*%(%)%s]') then
-      parts[#parts+1] = c
-      pos = pos + 1
-    else
-      return sawReg, nil
     end
+    return sawReg, table.concat(parts)
   end
-  return sawReg, table.concat(parts)
-end
 
--- getAddress may not accept "module.section+OFF"; split and retry.
-local function nmSym(text)
-  local ok, a = pcall(getAddress, text)
-  if ok and type(a) == 'number' then return a end
-  local lhs, off = text:match('^(.-)%+([%x]+)$')
-  if lhs and off then
-    local ok2, b = pcall(getAddress, lhs)
-    if ok2 and type(b) == 'number' then return b + tonumber(off, 16) end
+  local function nmSym(text)
+    local ok, a = pcall(getAddress, text)
+    if ok and type(a) == 'number' then return a end
+    local lhs, off = text:match('^(.-)%+([%x]+)$')
+    if lhs and off then
+      local ok2, bb = pcall(getAddress, lhs)
+      if ok2 and type(bb) == 'number' then return bb + tonumber(off, 16) end
+    end
+    return nil
   end
-  return nil
-end
 
-local function nmResolve(text, R)
-  text = text:match('^%s*(.-)%s*$')
-  if text == '' then return nil, false end
-  if text:match('^%x+$') then return tonumber(text, 16), false end
-  local sawReg, expr = nmExpr(text, R)
-  if sawReg then
-    if expr == nil then return nil, true end
-    local f = loadstr('return ' .. expr)
-    if f == nil then return nil, true end
-    local ok, v = pcall(f)
-    if ok and type(v) == 'number' and floor(v) == v then return v, true end
-    return nil, true
+  local function nmResolve(text, R)
+    text = text:match('^%s*(.-)%s*$')
+    if text == '' then return nil, false end
+    if text:match('^%x+$') then return tonumber(text, 16), false end
+    local sawReg, expr = nmExpr(text, R)
+    if sawReg then
+      if expr == nil then return nil, true end
+      local f = loadstr('return ' .. expr)
+      if f == nil then return nil, true end
+      local ok, v = pcall(f)
+      if ok and type(v) == 'number' and floor(v) == v then return v, true end
+      return nil, true
+    end
+    return nmSym(text), false
   end
-  return nmSym(text), false
-end
 
--- Resolve an instruction's operands and return the matching descs, or nil.
--- Takes TEXT, never disassembles: the no-decode rule is preserved.
--- Pass a NUMERIC address as addr, so nmCache keys stay consistent.
+  _G.__glResolve = nmResolve
+end
+local nmResolve = _G.__glResolve
+_G.__glResolve = nil
+
+
 local function _annotate(addr, inst)
   if nmCount == 0 or type(inst) ~= 'string' or inst == '' then return nil end
   local hit = nmCache[addr]
@@ -1957,8 +1753,6 @@ local function _annotate(addr, inst)
   local mn = inst:match('^%s*(%a+)')
   mn = mn and mn:lower() or ''
   local isCtl = (mn == 'call' or mn == 'jmp')
-  -- Absent an explicit "dword ptr", assume a pointer-width slot. On a 32-bit
-  -- target write "dword ptr" in the operand, or the indirect read is wrong.
   local useQword = not inst:lower():find('dword ptr', 1, true)
 
   local nbr = 0
@@ -1968,7 +1762,6 @@ local function _annotate(addr, inst)
     usedRegs = usedRegs or ur
     if a then
       add(a)
-      -- call/jmp [X]: X is a SLOT, [X] is the function. Name both.
       if isCtl then
         local ok, t
         if useQword then ok, t = pcall(readQword, a) else ok, t = pcall(readInteger, a) end
@@ -1978,9 +1771,6 @@ local function _annotate(addr, inst)
   end
 
   if nbr == 0 then
-    -- CORRECTED: (.*)$ not (.)$. The old pattern captured ONE character, so
-    -- "call 140001000" yielded the single character "0" and nothing resolved.
-    -- For an operand string of length L it returned 1 instead of L.
     local ops = inst:match('^%s*%S+%s*(.*)$') or ''
     for tok in ops:gmatch('[^,]+') do
       tok = tok:match('^%s*(.-)%s*$')
@@ -1999,9 +1789,6 @@ end
 
 
 ------------------------------------------------------------------ sections
--- Re-parses the header, so it does NOT require a completed probe(). Reach for
--- this first when a scan looks wrong: it tells you whether the section table
--- lies, and therefore whether the OS-page-protection fallback is about to kick in.
 local function _sections(module)
   module = module or process
   local base = normAddr(getAddress(module))
@@ -2014,196 +1801,157 @@ local function _sections(module)
     print(string.format('%-9s %X-%X vsz=%X chr=%08X %s%s%s',
       (s.name == nil or s.name == '') and '(unnamed)' or s.name,
       s.va, s.va + secSize(s) - 1, s.vsz or 0, c,
-      hasBit(c, SCN.CODE)     and 'CODE '  or '',
-      hasBit(c, SCN.MEM_EXEC) and 'EXEC '  or '',
+      hasBit(c, SCN.CODE)      and 'CODE '  or '',
+      hasBit(c, SCN.MEM_EXEC)  and 'EXEC '  or '',
       hasBit(c, SCN.MEM_WRITE) and 'WRITE' or ''))
   end
 end
 
 
------------------------------------------------------------------- JSON
--- CORRECTED: every escape is DOUBLED, so Lua emits the two-character sequence
--- JSON requires. The previous version wrote '\ "' (an invalid Lua escape, so the
--- whole file failed to compile), '\u003c' (invalid: Lua wants \u{003c}), and
--- '\b'/'\t'/'\n'/'\f'/'\r' which produce RAW CONTROL BYTES that JSON.parse
--- rejects inside a string.
--- '<' and '>' are escaped so a class name containing "</script>" cannot break out
--- of the embedded <script type="application/json"> element.
-local function jsonStr(s)
-  s = tostring(s or '')
-  local out = {}
-  for i = 1, #s do
-    local c = s:byte(i)
-    if     c == 34 then out[#out+1] = '\\"'
-    elseif c == 92 then out[#out+1] = '\\\\'
-    elseif c == 8  then out[#out+1] = '\\b'
-    elseif c == 9  then out[#out+1] = '\\t'
-    elseif c == 10 then out[#out+1] = '\\n'
-    elseif c == 12 then out[#out+1] = '\\f'
-    elseif c == 13 then out[#out+1] = '\\r'
-    elseif c == 60 then out[#out+1] = '\\u003c'
-    elseif c == 62 then out[#out+1] = '\\u003e'
-    elseif c < 32 or c == 127 then
-      out[#out+1] = string.format('\\u%04x', c)
-    else
-      out[#out+1] = char(c)
+------------------------------------------------------------------ JSON + HTML
+local _html
+do
+  local function jsonStr(s)
+    s = tostring(s or '')
+    local out = {}
+    for i = 1, #s do
+      local c = s:byte(i)
+      if     c == 34 then out[#out+1] = '\\"'
+      elseif c == 92 then out[#out+1] = '\\\\'
+      elseif c == 8  then out[#out+1] = '\\b'
+      elseif c == 9  then out[#out+1] = '\\t'
+      elseif c == 10 then out[#out+1] = '\\n'
+      elseif c == 12 then out[#out+1] = '\\f'
+      elseif c == 13 then out[#out+1] = '\\r'
+      elseif c == 60 then out[#out+1] = '\\u003c'
+      elseif c == 62 then out[#out+1] = '\\u003e'
+      elseif c < 32 or c == 127 then
+        out[#out+1] = string.format('\\u%04x', c)
+      else
+        out[#out+1] = char(c)
+      end
     end
+    return '"' .. table.concat(out) .. '"'
   end
-  return '"' .. table.concat(out) .. '"'
-end
 
+  function _html(path)
+    local fh = io.open(path, 'w')
+    if fh == nil then print('cannot open ' .. tostring(path)); return end
 
------------------------------------------------------------------- HTML
--- ghidraLike.html(path) writes a self-contained page of RTTI class hierarchies.
---   * <details>/<summary> gives native collapsible panes with no framework.
---   * Data is embedded as JSON, so the file works offline from file://.
---   * Unknown base classes become placeholder nodes, hideable without losing the
---     derived classes attached to them.
---   * Multiple inheritance is a graph, not necessarily a tree. The default view
---     is "top-level panes with flat descendant lists", which avoids exponential
---     duplication in diamond hierarchies. A nested tree mode is also provided.
---   * FILTER SEMANTICS: the search box selects PANES, not rows. A pane is shown
---     if ANY row it would display contains the substring; once shown, it displays
---     all of its rows. Matching rows are highlighted.
---   * The searchable text is exactly the three rendered places: c.name,
---     c.mangled, and the base names as joined. c.kind is deliberately excluded.
---   * render() reads visiblePanes(), so the export cannot drift from the page.
---
--- CORRECTED: attribute values no longer carry stray spaces. id= "tree " made
--- getElementById('tree') return null and killed the page silently.
-local function _html(path)
-  local fh = io.open(path, 'w')
-  if fh == nil then print('cannot open ' .. tostring(path)); return end
-
-  -- hierarch alone can miss root classes with no bases, so also use vtblMap and
-  -- funcToClass.
-  local names = {}
-  local function addClassName(n)
-    if type(n) == 'string' and n ~= '' and names[n] == nil then names[n] = true end
-  end
-  for m in pairs(hierarch) do
-    addClassName(m)
-    local h = hierarch[m]
-    if h and h.bases then
-      for i = 1, #h.bases do addClassName(h.bases[i]) end
+    local names = {}
+    local function addClassName(n)
+      if type(n) == 'string' and n ~= '' and names[n] == nil then names[n] = true end
     end
-  end
-  for _, v in pairs(vtblMap) do addClassName(v.className) end
-  for _, m in pairs(funcToClass) do addClassName(m) end
-
-  -- Group vftables by class, then take the PRIMARY one as the lowest address.
-  -- Secondary vftables are laid out immediately after the primary, so the minimum
-  -- is the primary, and its COL is the class's own locator, not a subobject's.
-  local byName = {}
-  for vslot, v in pairs(vtblMap) do
-    local l = byName[v.className]
-    if l == nil then l = {}; byName[v.className] = l end
-    l[#l + 1] = { vft = vslot, col = v.colAddr }
-  end
-  local classAddrs = {}
-  for m, l in pairs(byName) do
-    table.sort(l, function(a, b) return a.vft < b.vft end)
-    local r = { col = l[1].col, vftables = {}, methods = {} }
-    for i = 1, #l do r.vftables[i] = l[i].vft end
-    classAddrs[m] = r
-  end
-  for fa, m in pairs(funcToClass) do
-    local r = classAddrs[m]
-    if r == nil then r = { vftables = {}, methods = {} }; classAddrs[m] = r end
-    r.methods[#r.methods + 1] = fa
-  end
-
-  -- CORRECTED: build FRESH relative-address arrays per class instead of mutating
-  -- classAddrs in place. The old in-place conversion could run twice on a record
-  -- reached through the demangled-name fallback, and could call addressOffset(nil)
-  -- on a record that had no COL.
-  local function relList(t)
-    local s = {}
-    for i = 1, #t do s[i] = t[i] end
-    table.sort(s)
-    local o = {}
-    for i = 1, #s do o[i] = addressOffset(s[i]) or '' end
-    return o
-  end
-
-  local classes = {}
-  for m in pairs(names) do
-    local kind, name = demangle(m)
-    local mdr = classAddrs[m] or classAddrs[name]
-    local h = hierarch[m]
-    local bases = {}
-    if h and h.bases then
-      for i = 1, #h.bases do bases[#bases + 1] = h.bases[i] end
+    for m in pairs(hierarch) do
+      addClassName(m)
+      local h = hierarch[m]
+      if h and h.bases then
+        for i = 1, #h.bases do addClassName(h.bases[i]) end
+      end
     end
-    local rec = {
-      mangled = m,
-      name = name or m,
-      kind = kind or 'type',
-      bases = bases,
-      attrs = h and h.attrs or nil
-    }
-    if mdr ~= nil then
-      rec.addrs_col      = mdr.col and addressOffset(mdr.col) or nil
-      rec.addrs_vftables = relList(mdr.vftables)
-      rec.addrs_methods  = relList(mdr.methods)
-    end
-    classes[#classes + 1] = rec
-  end
-  table.sort(classes, function(a, b) return a.mangled < b.mangled end)
+    for _, v in pairs(vtblMap) do addClassName(v.className) end
+    for _, m in pairs(funcToClass) do addClassName(m) end
 
-  -- Build JSON manually, so no Lua JSON library is required.
-  local parts = {}
-  parts[#parts + 1] = '{"generated":'
-  parts[#parts + 1] = jsonStr(os.date('!%Y-%m-%dT%H:%M:%SZ') or '')
-  parts[#parts + 1] = ',"module":'
-  parts[#parts + 1] = jsonStr(moduleName or '')
-  parts[#parts + 1] = ',"classes":['
-  for i, c in ipairs(classes) do
-    if i > 1 then parts[#parts + 1] = ',' end
-    parts[#parts + 1] = '{"mangled":'
-    parts[#parts + 1] = jsonStr(c.mangled)
-    parts[#parts + 1] = ',"name":'
-    parts[#parts + 1] = jsonStr(c.name)
-    parts[#parts + 1] = ',"kind":'
-    parts[#parts + 1] = jsonStr(c.kind)
-    parts[#parts + 1] = ',"bases":['
-    for j, b in ipairs(c.bases) do
-      if j > 1 then parts[#parts + 1] = ',' end
-      parts[#parts + 1] = jsonStr(b)
+    local byName = {}
+    for vslot, v in pairs(vtblMap) do
+      local l = byName[v.className]
+      if l == nil then l = {}; byName[v.className] = l end
+      l[#l + 1] = { vft = vslot, col = v.colAddr }
     end
-    parts[#parts + 1] = ']'
-    if c.addrs_vftables ~= nil then
-      parts[#parts + 1] = ',"vftables":['
-      for j, b in ipairs(c.addrs_vftables) do
+    local classAddrs = {}
+    for m, l in pairs(byName) do
+      table.sort(l, function(a, b) return a.vft < b.vft end)
+      local r = { col = l[1].col, vftables = {}, methods = {} }
+      for i = 1, #l do r.vftables[i] = l[i].vft end
+      classAddrs[m] = r
+    end
+    for fa, m in pairs(funcToClass) do
+      local r = classAddrs[m]
+      if r == nil then r = { vftables = {}, methods = {} }; classAddrs[m] = r end
+      r.methods[#r.methods + 1] = fa
+    end
+
+    local function relList(t)
+      local s = {}
+      for i = 1, #t do s[i] = t[i] end
+      table.sort(s)
+      local o = {}
+      for i = 1, #s do o[i] = addressOffset(s[i]) or '' end
+      return o
+    end
+
+    local classes = {}
+    for m in pairs(names) do
+      local kind, name = demangle(m)
+      local mdr = classAddrs[m] or classAddrs[name]
+      local h = hierarch[m]
+      local bases = {}
+      if h and h.bases then
+        for i = 1, #h.bases do bases[#bases + 1] = h.bases[i] end
+      end
+      local rec = {
+        mangled = m, name = name or m, kind = kind or 'type',
+        bases = bases, attrs = h and h.attrs or nil
+      }
+      if mdr ~= nil then
+        rec.addrs_col      = mdr.col and addressOffset(mdr.col) or nil
+        rec.addrs_vftables = relList(mdr.vftables)
+        rec.addrs_methods  = relList(mdr.methods)
+      end
+      classes[#classes + 1] = rec
+    end
+    table.sort(classes, function(a, b) return a.mangled < b.mangled end)
+
+    local parts = {}
+    parts[#parts + 1] = '{"generated":'
+    parts[#parts + 1] = jsonStr(os.date('!%Y-%m-%dT%H:%M:%SZ') or '')
+    parts[#parts + 1] = ',"module":'
+    parts[#parts + 1] = jsonStr(moduleName or '')
+    parts[#parts + 1] = ',"classes":['
+    for i, c in ipairs(classes) do
+      if i > 1 then parts[#parts + 1] = ',' end
+      parts[#parts + 1] = '{"mangled":'
+      parts[#parts + 1] = jsonStr(c.mangled)
+      parts[#parts + 1] = ',"name":'
+      parts[#parts + 1] = jsonStr(c.name)
+      parts[#parts + 1] = ',"kind":'
+      parts[#parts + 1] = jsonStr(c.kind)
+      parts[#parts + 1] = ',"bases":['
+      for j, b in ipairs(c.bases) do
         if j > 1 then parts[#parts + 1] = ',' end
         parts[#parts + 1] = jsonStr(b)
       end
       parts[#parts + 1] = ']'
-    end
-    if c.addrs_methods ~= nil then
-      parts[#parts + 1] = ',"methods":['
-      for j, b in ipairs(c.addrs_methods) do
-        if j > 1 then parts[#parts + 1] = ',' end
-        parts[#parts + 1] = jsonStr(b)
+      if c.addrs_vftables ~= nil then
+        parts[#parts + 1] = ',"vftables":['
+        for j, b in ipairs(c.addrs_vftables) do
+          if j > 1 then parts[#parts + 1] = ',' end
+          parts[#parts + 1] = jsonStr(b)
+        end
+        parts[#parts + 1] = ']'
       end
-      parts[#parts + 1] = ']'
+      if c.addrs_methods ~= nil then
+        parts[#parts + 1] = ',"methods":['
+        for j, b in ipairs(c.addrs_methods) do
+          if j > 1 then parts[#parts + 1] = ',' end
+          parts[#parts + 1] = jsonStr(b)
+        end
+        parts[#parts + 1] = ']'
+      end
+      if c.addrs_col ~= nil then
+        parts[#parts + 1] = ',"col":'
+        parts[#parts + 1] = jsonStr(c.addrs_col)
+      end
+      if c.attrs ~= nil then
+        parts[#parts + 1] = ',"attrs":'
+        parts[#parts + 1] = tostring(c.attrs)
+      end
+      parts[#parts + 1] = '}'
     end
-    if c.addrs_col ~= nil then
-      parts[#parts + 1] = ',"col":'
-      parts[#parts + 1] = jsonStr(c.addrs_col)
-    end
-    if c.attrs ~= nil then
-      parts[#parts + 1] = ',"attrs":'
-      parts[#parts + 1] = tostring(c.attrs)
-    end
-    parts[#parts + 1] = '}'
-  end
-  parts[#parts + 1] = ']}'
-  local json = table.concat(parts)
+    parts[#parts + 1] = ']}'
+    local json = table.concat(parts)
 
-  -- HTML part 1: head, styles, toolbar, opening JSON script tag.
-  -- Every attribute value below has NO space between the quotes and the value.
-  fh:write([==[
+    fh:write([==[
 <!doctype html>
 <html lang="en-GB">
 <head>
@@ -2213,146 +1961,49 @@ local function _html(path)
 <style>
 :root {
   color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #111111;
-  --muted: #666666;
-  --line: #dddddd;
-  --pane: #f7f7f7;
-  --accent: #0b5fbf;
+  --bg: #ffffff; --fg: #111111; --muted: #666666;
+  --line: #dddddd; --pane: #f7f7f7; --accent: #0b5fbf;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111111;
-    --fg: #eeeeee;
-    --muted: #aaaaaa;
-    --line: #333333;
-    --pane: #1b1b1b;
-    --accent: #7cc4ff;
+    --bg: #111111; --fg: #eeeeee; --muted: #aaaaaa;
+    --line: #333333; --pane: #1b1b1b; --accent: #7cc4ff;
   }
 }
-body {
-  margin: 0;
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--fg);
-}
-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  padding: 10px 14px;
-}
-h1 { font-size: 18px; margin: 0 0 8px 0; }
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.toolbar input[type="search"] {
-  min-width: 260px;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--pane);
-  color: var(--fg);
-}
-.toolbar label,
-.toolbar button {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 6px 8px;
-  background: var(--pane);
-  color: var(--fg);
-  cursor: pointer;
-  user-select: none;
-}
-.toolbar button:hover { border-color: var(--accent); }
-#stats {
-  color: var(--muted);
-  margin-left: auto;
-  white-space: nowrap;
-}
-main { padding: 12px 14px 40px 14px; }
-details.rootPane {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  margin: 8px 0;
-  background: var(--pane);
-  overflow: hidden;
-}
-details.rootPane > summary {
-  cursor: pointer;
-  padding: 9px 10px;
-  font-weight: 600;
-  list-style: none;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-details.rootPane > summary::-webkit-details-marker { display: none; }
-details.rootPane[open] > summary { border-bottom: 1px solid var(--line); }
-.classLabel {
-  display: inline-flex;
-  gap: 6px;
-  align-items: baseline;
-  flex-wrap: wrap;
-}
-.classLabel .kind {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  padding: 1px 6px;
-}
-.classLabel code {
-  font-weight: 400;
-  color: var(--muted);
-  font-size: 12px;
-}
-.count {
-  color: var(--muted);
-  font-weight: 400;
-  font-size: 12px;
-}
-pre.bases {
-  white-space: pre-wrap;
-  margin: 4px 0;
-  font: inherit;
-}
-ul.descList {
-  margin: 0;
-  padding: 8px 10px 10px 10px;
-  list-style: none;
-}
-ul.descList li {
-  padding: 3px 0 3px calc(var(--depth) * 18px);
-  border-left: 1px dashed var(--line);
-  margin-left: 4px;
-}
-ul.descList li .bases {
-  color: var(--muted);
-  font-size: 12px;
-  margin-left: 6px;
-}
-ul.descList li.match { background: rgba(11, 95, 191, .12); }
-.nested { padding: 8px 10px 10px 22px; }
-.nested details {
-  margin: 4px 0;
-  border-left: 1px dashed var(--line);
-  padding-left: 8px;
-}
-.nested summary { cursor: pointer; }
-.cycle, .empty {
-  color: var(--muted);
-  font-style: italic;
-  padding: 4px 0;
-}
+body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+       background:var(--bg); color:var(--fg); }
+header { position:sticky; top:0; z-index:2; background:var(--bg);
+         border-bottom:1px solid var(--line); padding:10px 14px; }
+h1 { font-size:18px; margin:0 0 8px 0; }
+.toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.toolbar input[type="search"] { min-width:260px; padding:6px 8px;
+  border:1px solid var(--line); border-radius:6px; background:var(--pane); color:var(--fg); }
+.toolbar label, .toolbar button { border:1px solid var(--line); border-radius:6px;
+  padding:6px 8px; background:var(--pane); color:var(--fg); cursor:pointer; user-select:none; }
+.toolbar button:hover { border-color:var(--accent); }
+#stats { color:var(--muted); margin-left:auto; white-space:nowrap; }
+main { padding:12px 14px 40px 14px; }
+details.rootPane { border:1px solid var(--line); border-radius:8px; margin:8px 0;
+  background:var(--pane); overflow:hidden; }
+details.rootPane > summary { cursor:pointer; padding:9px 10px; font-weight:600;
+  list-style:none; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+details.rootPane > summary::-webkit-details-marker { display:none; }
+details.rootPane[open] > summary { border-bottom:1px solid var(--line); }
+.classLabel { display:inline-flex; gap:6px; align-items:baseline; flex-wrap:wrap; }
+.classLabel .kind { font-size:11px; text-transform:uppercase; letter-spacing:0.04em;
+  color:var(--accent); border:1px solid currentColor; border-radius:999px; padding:1px 6px; }
+.classLabel code { font-weight:400; color:var(--muted); font-size:12px; }
+.count { color:var(--muted); font-weight:400; font-size:12px; }
+pre.bases { white-space:pre-wrap; margin:4px 0; font:inherit; }
+ul.descList { margin:0; padding:8px 10px 10px 10px; list-style:none; }
+ul.descList li { padding:3px 0 3px calc(var(--depth) * 18px);
+  border-left:1px dashed var(--line); margin-left:4px; }
+ul.descList li .bases { color:var(--muted); font-size:12px; margin-left:6px; }
+ul.descList li.match { background:rgba(11,95,191,.12); }
+.nested { padding:8px 10px 10px 22px; }
+.nested details { margin:4px 0; border-left:1px dashed var(--line); padding-left:8px; }
+.nested summary { cursor:pointer; }
+.cycle, .empty { color:var(--muted); font-style:italic; padding:4px 0; }
 </style>
 </head>
 <body>
@@ -2370,91 +2021,59 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
 <main id="tree"></main>
 <script id="class-data" type="application/json">]==])
 
-  fh:write(json)
+    fh:write(json)
 
-  -- HTML part 2: renderer.
-  fh:write([==[
+    fh:write([==[
 </script>
 <script>
 (() => {
   const data = JSON.parse(document.getElementById('class-data').textContent || '{}');
   const map = new Map();
 
-  // CORRECTED: the methods branch used to test c.vftables.length, which is
-  // undefined for a class with methods but no vftable, and threw.
   function addressText(c) {
     let t = '';
     const vf = Array.isArray(c.vftables) ? c.vftables : [];
     const me = Array.isArray(c.methods) ? c.methods : [];
     if (vf.length > 0) {
-      t += vf.length === 1
-        ? `vftables: "${vf[0]}", `
-        : `vftables: ["${vf.join('", "')}"], `;
+      t += vf.length === 1 ? `vftables: "${vf[0]}", `
+                           : `vftables: ["${vf.join('", "')}"], `;
     }
-    if (typeof c.col !== 'undefined' && c.col !== '') {
-      t += `COL: "${c.col}", `;
-    }
+    if (typeof c.col !== 'undefined' && c.col !== '') { t += `COL: "${c.col}", `; }
     if (me.length > 0) {
-      t += me.length === 1
-        ? `Methods: "${me[0]}", `
-        : `Methods: ["${me.join('", "')}"], `;
+      t += me.length === 1 ? `Methods: "${me[0]}", `
+                           : `Methods: ["${me.join('", "')}"], `;
     }
     return t.endsWith(', ') ? t.slice(0, -2) : t;
   }
 
   for (const c of data.classes || []) {
     map.set(c.mangled, {
-      mangled: c.mangled,
-      name: c.name || c.mangled,
-      kind: c.kind || 'type',
+      mangled: c.mangled, name: c.name || c.mangled, kind: c.kind || 'type',
       bases: Array.isArray(c.bases) ? c.bases.slice() : [],
-      attrs: c.attrs,
-      unknown: false,
-      vftables: c.vftables || [],
-      methods: c.methods || [],
-      col: c.col || '',
+      attrs: c.attrs, unknown: false,
+      vftables: c.vftables || [], methods: c.methods || [], col: c.col || '',
       displayAddresses: addressText(c)
     });
   }
 
-  // CORRECTED: placeholder nodes now carry displayAddresses: ''. Without it the
-  // field was undefined, so the "=== ''" tests below failed and the page printed
-  // ": (undefined)" after every base of an unknown class.
   function ensure(m) {
     if (!map.has(m)) {
-      map.set(m, {
-        mangled: m,
-        name: m,
-        kind: 'unknown',
-        bases: [],
-        unknown: true,
-        vftables: [],
-        methods: [],
-        col: '',
-        displayAddresses: ''
-      });
+      map.set(m, { mangled:m, name:m, kind:'unknown', bases:[], unknown:true,
+                   vftables:[], methods:[], col:'', displayAddresses:'' });
     }
     return map.get(m);
   }
 
-  // Make sure every base exists as a node. Done ONCE, before children is built.
-  // The old version ran this loop twice, so children was built from the first
-  // pass and the self-base guard in the second pass had no effect on it.
   for (const c of Array.from(map.values())) {
-    const seen = new Set();
-    const bs = [];
+    const seen = new Set(); const bs = [];
     for (const b of c.bases) {
-      if (b === c.mangled) continue;        // a class is never its own base
+      if (b === c.mangled) continue;
       const node = ensure(b);
-      if (!seen.has(node.mangled)) {
-        seen.add(node.mangled);
-        bs.push(node.mangled);
-      }
+      if (!seen.has(node.mangled)) { seen.add(node.mangled); bs.push(node.mangled); }
     }
     c.bases = bs;
   }
 
-  // children[base] = direct derived classes.
   const children = new Map();
   for (const c of map.values()) {
     for (const b of c.bases) {
@@ -2474,31 +2093,20 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
     arr.sort((x, y) => cmpNode(map.get(x), map.get(y)));
   }
 
-  const roots = Array.from(map.values())
-    .filter(c => c.bases.length === 0)
-    .sort(cmpNode);
-
+  const roots = Array.from(map.values()).filter(c => c.bases.length === 0).sort(cmpNode);
   const $ = id => document.getElementById(id);
-  const tree = $('tree');
-  const stats = $('stats');
+  const tree = $('tree'); const stats = $('stats');
   if (!tree) { return; }
 
-  function nodeName(m) {
-    const c = map.get(m);
-    return c ? c.name : m;
-  }
+  function nodeName(m) { const c = map.get(m); return c ? c.name : m; }
 
-  // FILTER HAYSTACK: exactly the three rendered places. Joined with \n, not a
-  // space, so a term cannot match across two of them. c.kind is excluded.
-  // Memoised: map is never mutated after load.
   const hayCache = new Map();
   function rowHaystack(c) {
     if (!c) return '';
     const cached = hayCache.get(c.mangled);
     if (cached !== undefined) return cached;
     const bases = (c.bases || []).map(nodeName).filter(Boolean).join(',\n');
-    const hay = (String(c.name || '') + '\n' + String(c.mangled || '') + '\n' + bases)
-      .toLowerCase();
+    const hay = (String(c.name||'') + '\n' + String(c.mangled||'') + '\n' + bases).toLowerCase();
     hayCache.set(c.mangled, hay);
     return hay;
   }
@@ -2507,19 +2115,15 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
     return rowHaystack(c).indexOf(term) !== -1;
   }
 
-  // Transitive descendants of one root, unique per root, breadth-first.
   function descendants(rootM) {
-    const out = [];
-    const seen = new Set([rootM]);
-    const q = [];
+    const out = []; const seen = new Set([rootM]); const q = [];
     for (const m of children.get(rootM) || []) {
       if (!seen.has(m)) q.push({ m: m, depth: 1 });
     }
     for (let i = 0; i < q.length; i++) {
       const item = q[i];
       if (seen.has(item.m)) continue;
-      seen.add(item.m);
-      out.push(item);
+      seen.add(item.m); out.push(item);
       for (const kid of children.get(item.m) || []) {
         if (!seen.has(kid)) q.push({ m: kid, depth: item.depth + 1 });
       }
@@ -2531,12 +2135,7 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
     return out;
   }
 
-  // THE SINGLE SOURCE OF TRUTH.
-  // paneCache: root -> the rows that pane WOULD show, honouring the checkbox.
-  // visiblePanes(): those panes, further filtered by the CURRENT search term.
-  let paneCache = null;
-  let paneCacheKey = null;
-
+  let paneCache = null, paneCacheKey = null;
   function buildPaneCache(showUnknown) {
     const m = new Map();
     for (const root of roots) {
@@ -2557,8 +2156,7 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
     const showUnknown = $('showUnknown').checked;
     const term = $('search').value.trim().toLowerCase();
     if (paneCacheKey !== showUnknown) {
-      paneCache = buildPaneCache(showUnknown);
-      paneCacheKey = showUnknown;
+      paneCache = buildPaneCache(showUnknown); paneCacheKey = showUnknown;
     }
     const out = [];
     for (const root of roots) {
@@ -2566,9 +2164,7 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
       if (rows === undefined) continue;
       if (term) {
         let hit = false;
-        for (const r of rows) {
-          if (rowMatches(r.c, term)) { hit = true; break; }
-        }
+        for (const r of rows) { if (rowMatches(r.c, term)) { hit = true; break; } }
         if (!hit) continue;
       }
       out.push({ root: root, rows: rows });
@@ -2577,26 +2173,20 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
   }
 
   function classLabel(c) {
-    const span = document.createElement('span');
-    span.className = 'classLabel';
-    const kind = document.createElement('span');
-    kind.className = 'kind';
+    const span = document.createElement('span'); span.className = 'classLabel';
+    const kind = document.createElement('span'); kind.className = 'kind';
     kind.textContent = c.kind || 'type';
-    const name = document.createElement('strong');
-    name.textContent = c.name || c.mangled;
+    const name = document.createElement('strong'); name.textContent = c.name || c.mangled;
     const code = document.createElement('code');
     const da = c.displayAddresses || '';
     code.textContent = c.mangled + (da === '' ? '' : ` (${da})`);
     code.title = 'Mangled name';
-    span.appendChild(kind);
-    span.appendChild(name);
+    span.appendChild(kind); span.appendChild(name);
     name.insertAdjacentHTML('afterend', '<br>');
     span.appendChild(code);
     return span;
   }
 
-  // Nested mode renders the FULL subtree of a visible pane. The search term is
-  // deliberately NOT applied per child: the spec selects panes.
   function renderNested(m, path) {
     const frag = document.createDocumentFragment();
     const kids = (children.get(m) || []).slice();
@@ -2607,17 +2197,13 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
       if (!showUnknown && c.unknown) continue;
       if (path.has(kid)) {
         const div = document.createElement('div');
-        div.className = 'cycle';
-        div.textContent = 'cycle: ' + c.name;
-        frag.appendChild(div);
-        continue;
+        div.className = 'cycle'; div.textContent = 'cycle: ' + c.name;
+        frag.appendChild(div); continue;
       }
       const det = document.createElement('details');
       const sum = document.createElement('summary');
-      sum.appendChild(classLabel(c));
-      det.appendChild(sum);
-      const p2 = new Set(path);
-      p2.add(kid);
+      sum.appendChild(classLabel(c)); det.appendChild(sum);
+      const p2 = new Set(path); p2.add(kid);
       det.appendChild(renderNested(kid, p2));
       frag.appendChild(det);
     }
@@ -2632,33 +2218,26 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
     tree.textContent = '';
 
     for (const pane of panes) {
-      const root = pane.root;
-      const rows = pane.rows;
-      const det = document.createElement('details');
-      det.className = 'rootPane';
+      const root = pane.root; const rows = pane.rows;
+      const det = document.createElement('details'); det.className = 'rootPane';
       const sum = document.createElement('summary');
       sum.appendChild(classLabel(root));
-      const cnt = document.createElement('span');
-      cnt.className = 'count';
+      const cnt = document.createElement('span'); cnt.className = 'count';
       if (flat) {
         const n = rows.length - 1;
         cnt.textContent = n + ' descendant' + (n === 1 ? '' : 's');
       } else {
         const direct = (children.get(root.mangled) || [])
-          .filter(m => { const c = map.get(m); return c && (showUnknown || !c.unknown); })
-          .length;
+          .filter(m => { const c = map.get(m); return c && (showUnknown || !c.unknown); }).length;
         cnt.textContent = direct + ' direct child' + (direct === 1 ? '' : 'ren');
       }
-      sum.appendChild(cnt);
-      det.appendChild(sum);
+      sum.appendChild(cnt); det.appendChild(sum);
 
       if (flat) {
-        const ul = document.createElement('ul');
-        ul.className = 'descList';
+        const ul = document.createElement('ul'); ul.className = 'descList';
         if (rows.length === 1) {
           const li = document.createElement('li');
-          li.className = 'empty';
-          li.textContent = 'No descendants.';
+          li.className = 'empty'; li.textContent = 'No descendants.';
           ul.appendChild(li);
         } else {
           for (let i = 1; i < rows.length; i++) {
@@ -2667,15 +2246,11 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
             li.style.setProperty('--depth', String(r.depth));
             li.appendChild(classLabel(r.c));
             const da = r.c.displayAddresses || '';
-            const baseNames = (r.c.bases || [])
-              .map(nodeName)
-              .filter(Boolean)
-              .map(p => (da === '') ? p : p + ': (' + da + ')')
-              .join('\n');
+            const baseNames = (r.c.bases || []).map(nodeName).filter(Boolean)
+              .map(p => (da === '') ? p : p + ': (' + da + ')').join('\n');
             if (baseNames) {
               const bs = document.createElement('pre');
-              bs.className = 'bases';
-              bs.textContent = baseNames;
+              bs.className = 'bases'; bs.textContent = baseNames;
               bs.insertAdjacentHTML('beforebegin',
                 '<br><span class="bases">Directly inherits from:</span><br>');
               li.appendChild(bs);
@@ -2686,22 +2261,18 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
         }
         det.appendChild(ul);
       } else {
-        const holder = document.createElement('div');
-        holder.className = 'nested';
+        const holder = document.createElement('div'); holder.className = 'nested';
         const frag = renderNested(root.mangled, new Set([root.mangled]));
         if (!frag.hasChildNodes()) {
           const e = document.createElement('div');
-          e.className = 'empty';
-          e.textContent = 'No descendants.';
+          e.className = 'empty'; e.textContent = 'No descendants.';
           holder.appendChild(e);
         }
-        holder.appendChild(frag);
-        det.appendChild(holder);
+        holder.appendChild(frag); det.appendChild(holder);
       }
       tree.appendChild(det);
     }
 
-    // Counted from the DOM, so the figure is truthful in BOTH modes.
     stats.textContent = panes.length + ' top-level pane(s), ' +
       tree.querySelectorAll('.classLabel').length + ' rendered class(es)';
   }
@@ -2722,22 +2293,25 @@ ul.descList li.match { background: rgba(11, 95, 191, .12); }
 </html>
 ]==])
 
-  fh:close()
-  print('wrote ' .. tostring(path) .. ' (' .. #classes .. ' class(es))')
+    fh:close()
+    print('wrote ' .. tostring(path) .. ' (' .. #classes .. ' class(es))')
+  end
 end
+
 
 ------------------------------------------------------------------ NAME COMMENTING
 local ncMap, ncCount = {}, 0
 local ncLo, ncHi     = 0, -1
 local ncBase, ncMod  = 0, ''
 local ncRows         = {}
+local ncRefs         = {}
 local ncPrev = nil
 local ncPid = getOpenedProcessID()
 
--- Do NOT redeclare ncTouched here. Reuse the one above.
-
 local ncState = _G.ghidraLikeHookState
 if type(ncState) ~= 'table' then ncState = {}; _G.ghidraLikeHookState = ncState end
+
+local ncBuildIndex, ncAttachNameMenu, ncLoad, ncCloseNameList, hlFlush
 
 local function ncSanitise(s)
   s = tostring(s or '')
@@ -2750,128 +2324,6 @@ local function ncSanitise(s)
   t = t:match('^%s*(.-)%s*$') or ''
   if #t > 96 then t = t:sub(1, 95) .. '+' end
   return t
-end
-
-local function ncSanitisePrefix(s)
-  if type(s) ~= 'string' then return '' end
-  local out, i, n = {}, 1, #s
-  while i <= n do
-    local c = s:byte(i)
-    local k = 1
-    if     c >= 0xF0 then k = 4
-    elseif c >= 0xE0 then k = 3
-    elseif c >= 0xC0 then k = 2 end
-    if i + k - 1 > n then break end
-    local bad = false
-    for j = i, i + k - 1 do
-      local b = s:byte(j)
-      if b == 0xE2 or b == 0x8C or b == 0xA9 then bad = true break end
-    end
-    if not bad then out[#out+1] = s:sub(i, i + k - 1) end
-    i = i + k
-  end
-  return table.concat(out)
-end
-
-local function ncSplit(c)
-  if type(c) ~= 'string' then return '', nil, '' end
-  local a = find(c, EO, 1, true)
-  if a == nil then return c, nil, '' end
-  local p = c:sub(1, a - 1)
-  local b = find(c, ECL, a + #EO, true)
-  if b == nil then return p, c:sub(a + #EO), '' end
-  return p, c:sub(a + #EO, b - 1), c:sub(b + #ECL)
-end
-
-local function ncBuild(cur, name)
-  local p, e, t = ncSplit(cur)
-  local U = ncStripName(p)
-  U = U:match('^%s*(.-)%s*$') or ''
-  U = ncSanitisePrefix(U)
-  local body = ncStripName(e or '')
-  local N = ''
-  if name and name ~= '' then
-    N = (U ~= '' and ' ' or '') .. NO .. name .. NCL .. ' '
-  end
-  return U .. N .. EO .. body .. ECL .. (t or '')
-end
-
-local function ncSplitCsv(line)
-  local out, i, n = {}, 1, #line
-  while i <= n do
-    if line:sub(i, i) == '"' then
-      local buf = {}; i = i + 1
-      while i <= n do
-        local d = line:sub(i, i)
-        if d == '"' then
-          if line:sub(i + 1, i + 1) == '"' then buf[#buf+1] = '"'; i = i + 2
-          else i = i + 1; break end
-        else buf[#buf+1] = d; i = i + 1 end
-      end
-      out[#out+1] = table.concat(buf)
-      if line:sub(i, i) == ',' then i = i + 1 end
-    else
-      local j = find(line, ',', i, true)
-      if j == nil then out[#out+1] = line:sub(i); i = n + 1
-      else out[#out+1] = line:sub(i, j - 1); i = j + 1 end
-    end
-  end
-  return out
-end
-
-local function ncOffset(s)
-  s = tostring(s or ''):match('^%s*(.-)%s*$')
-  local plus = find(s, '+', 1, true)
-  if plus then s = s:sub(plus + 1):match('^%s*(.-)%s*$') end
-  s = s:gsub('^0[xX]', '')
-  if s == '' or not s:match('^%x+$') then return nil end
-  return tonumber(s, 16)
-end
-
-local function ncCachedName(a, inst, compute)
-  local e = NC_name[a]
-  if e ~= nil and e.v == NC_version and (e.regs == false or e.inst == inst) then
-    return e.name
-  end
-  local name, regsUsed = compute()
-  if e == nil then NC_nName = NC_nName + 1 end
-  NC_name[a] = { v = NC_version, inst = inst,
-                 regs = regsUsed and true or false, name = name }
-  return name
-end
-
-local function ncCheckProcess()
-  local pid = getOpenedProcessID()
-  if pid == ncPid then return false end
-  ncPid = pid
-  ncState.pid = pid
-  local removed = ncPurge()
-  ncFlush()
-  ncMap, ncCount, ncLo, ncHi = {}, 0, 0, -1
-  ncBase, ncMod, ncRows = 0, '', {}
-  print(string.format(
-    'ghidraLike: process changed - %d comment(s) cleaned, names unloaded', removed))
-  return true
-end
-
-local function ncInstall(rows, b, mn)
-  ncMap, ncCount, ncRows, ncBase, ncMod = {}, 0, rows, b, mn
-  local lo, hi
-  for i = 1, #rows do
-    local a = b + rows[i][1]
-    if ncMap[a] == nil then
-      ncMap[a] = rows[i][2]; ncCount = ncCount + 1
-      if lo == nil or a < lo then lo = a end
-      if hi == nil or a > hi then hi = a end
-    end
-  end
-  ncLo, ncHi = lo or 0, hi or -1
-  ncPid = getOpenedProcessID()
-  ncState.pid = ncPid
-  ncFlush()
-  nmMap, nmCount, nmLo, nmHi = ncMap, ncCount, ncLo, ncHi
-  nmCache, nmRegSig, nmRegTab = {}, nil, nil
-  return ncCount
 end
 
 local function ncSelf(a)
@@ -2895,13 +2347,208 @@ local function ncMarkup(s)
   return (s:gsub('{%a+}', ''))
 end
 
-local function ncPutName(line, nm)
-  if type(line) ~= 'string' or nm == '' then return line end
-  local sep = find(line, ' - ', 1, true)
-  if sep == nil then return line .. ' ' .. nm end
-  return line:sub(1, sep - 1) .. ' ' .. nm .. line:sub(sep)
+local function ncOffset(s)
+  s = tostring(s or ''):match('^%s*(.-)%s*$')
+  local plus = find(s, '+', 1, true)
+  if plus then s = s:sub(plus + 1):match('^%s*(.-)%s*$') end
+  s = s:gsub('^0[xX]', '')
+  if s == '' or not s:match('^%x+$') then return nil end
+  return tonumber(s, 16)
 end
 
+local function ncCachedName(a, inst, compute)
+  local e = NC.name[a]
+  if e ~= nil and e.v == NC.version and (e.regs == false or e.inst == inst) then
+    return e.name
+  end
+  local name, regsUsed = compute()
+  if e == nil then NC.nName = NC.nName + 1 end
+  NC.name[a] = { v = NC.version, inst = inst,
+                 regs = regsUsed and true or false, name = name }
+  return name
+end
+
+local function ncInstall(rows, b, mn)
+  ncMap, ncCount, ncRows, ncBase, ncMod = {}, 0, rows, b, mn
+  local lo, hi
+  for i = 1, #rows do
+    local a = b + rows[i][1]
+    if ncMap[a] == nil then
+      ncMap[a] = rows[i][2]; ncCount = ncCount + 1
+      if lo == nil or a < lo then lo = a end
+      if hi == nil or a > hi then hi = a end
+    end
+  end
+  ncLo, ncHi = lo or 0, hi or -1
+  ncPid = getOpenedProcessID()
+  ncState.pid = ncPid
+  ncFlush()
+  ncRefs = {}
+  nmMap, nmCount, nmLo, nmHi = ncMap, ncCount, ncLo, ncHi
+  nmCache, nmRegSig, nmRegTab = {}, nil, nil
+  ncPurge()
+  return ncCount
+end
+
+local function ncCheckProcess()
+  local pid = getOpenedProcessID()
+  if pid == ncPid then return false end
+  ncPid = pid
+  ncState.pid = pid
+  local removed = ncPurge()
+  ncFlush()
+  if hlFlush then hlFlush() end          -- guarded: assigned later in the file
+  ncRefs = {}
+  ncMap, ncCount, ncLo, ncHi = {}, 0, 0, -1
+  ncBase, ncMod, ncRows = 0, '', {}
+  unloadNames()
+  if ncCloseNameList then ncCloseNameList() end
+  if ncBuildIndex then ncBuildIndex() end
+  --print(string.format('ghidraLike: process changed - %d comment(s) cleaned, names unloaded', removed))
+  return true
+end
+
+
+------------------------------------------------------------------ highlight
+local hlAttach, hlLabelFor, ncPutName
+do
+  local HL_COLOR     = 0x34FF3B  -- THE one colour, 0xBBGGRR (Lazarus TColor)
+  local HL_BG        = 0x222222
+  local HL_LABELS    = true       -- false = solid one-colour bar, no text
+  local HL_MAX       = 256
+  local HL_MAXW      = 900
+  local HL_LINE_NAME = false
+
+  local hlState = _G.ghidraLikeHighlight
+  if type(hlState) ~= 'table' then hlState = {}; _G.ghidraLikeHighlight = hlState end
+  if type(hlState.cache) ~= 'table' then hlState.cache = {} end
+
+  local hlCache = hlState.cache
+  local hlCount = 0
+  local hlLabel = {}
+  local hlView  = nil
+
+  function hlFlush()
+    for k, b in pairs(hlCache) do
+      pcall(function() b.destroy() end)
+      hlCache[k] = nil
+    end
+    hlCount = 0
+    for k in pairs(hlLabel) do hlLabel[k] = nil end
+  end
+
+  hlFlush()
+
+  local function hlBitmap(label)
+    local key = HL_LABELS and label or '*'
+    local b = hlCache[key]
+    if b ~= nil then return b end
+
+    if HL_MAX > 0 and hlCount >= HL_MAX then
+      for k, old in pairs(hlCache) do
+        pcall(function() old.destroy() end)
+        hlCache[k] = nil
+      end
+      hlCount = 0
+    end
+
+    local ok, bmp = pcall(createBitmap)
+    if not ok or bmp == nil then return nil end
+
+    local w, h
+    if HL_LABELS then
+      w = 20 + #label * 7
+      if w > HL_MAXW then w = HL_MAXW end
+      h = 16
+    else
+      w, h = 350, 3
+    end
+
+    local okInit = pcall(function()
+      bmp.PixelFormat = 'pf24bit'
+      bmp.Width, bmp.Height = w, h
+      local c = bmp.Canvas
+      c.Brush.Style = 'bsSolid'
+      if HL_LABELS then
+        c.Brush.Color = HL_BG
+        c.FillRect(0, 0, w, h)
+        c.Brush.Color = HL_COLOR
+        c.FillRect(0, 0, 6, h)
+        c.Brush.Style = 'bsClear'
+        c.Font.Name   = 'Consolas'
+        c.Font.Height = -12
+        c.Font.Style  = '[fsBold]'
+        c.Font.Color  = HL_COLOR
+        c.TextOut(12, 1, label)
+      else
+        c.Brush.Color = HL_COLOR
+        c.FillRect(0, 0, w, h)
+      end
+    end)
+
+    if not okInit then
+      pcall(function() bmp.destroy() end)
+      return nil
+    end
+
+    hlCache[key] = bmp
+    hlCount = hlCount + 1
+    return bmp
+  end
+
+  function hlLabelFor(a)
+    local s = hlLabel[a]
+    if s ~= nil then return s ~= '' and s or nil end
+    local self = ncSelf(a)
+    local refs = ncRefs[a]
+    local t
+    if self and refs then t = self .. ' -> ' .. refs
+    else t = self or refs end
+    t = t and ncSanitise(t) or ''
+    hlLabel[a] = t
+    return t ~= '' and t or nil
+  end
+
+  local function ncRender(sender, Address, AboveInstruction, Selected)
+    if not AboveInstruction then return nil end
+    if ncCount == 0 then return nil end
+    local a = normAddr(Address)
+    if a == nil then return nil end
+    local label = hlLabelFor(a)
+    if label == nil then return nil end
+    local bmp = hlBitmap(label)
+    if bmp == nil then return nil end
+    return bmp, 0, 0
+  end
+
+  function hlAttach()
+    local ok, dv = pcall(function() return getMemoryViewForm().DisassemblerView end)
+    if not ok or dv == nil then
+      print('ghidraLike: open Memory View first, then call loadNames again')
+      return false
+    end
+    hlView = dv
+    local okSet = pcall(function() dv.OnExtraLineRender = ncRender end)
+    pcall(function() dv.update() end)
+    return okSet
+  end
+
+  function ncPutName(line, nm)
+    if type(line) ~= 'string' or nm == '' then return line end
+    local sep = find(line, ' - ', 1, true)
+    if sep == nil then return line .. ' ' .. nm end
+    return line:sub(1, sep - 1) .. ' ' .. nm .. line:sub(sep)
+  end
+
+  _G.__glHlLineName = function() return HL_LINE_NAME end
+  _G.__glHlView     = function() return hlView end
+  _G.__glHlClear    = function(a) hlLabel[a] = nil end
+end
+local hlLineName, hlViewOf, hlClear = _G.__glHlLineName, _G.__glHlView, _G.__glHlClear
+_G.__glHlLineName, _G.__glHlView, _G.__glHlClear = nil, nil, nil
+
+
+------------------------------------------------------------------ refs-only hook
 local function ncHook(sender, address, LDD, result, description)
   ncCheckProcess()
   local r, d = result, description
@@ -2914,12 +2561,6 @@ local function ncHook(sender, address, LDD, result, description)
             and LDD.address or ncAddr(address)
   if a == nil then return r, d end
 
-  local ce = NC_cmt[a]
-  if ce ~= nil and ce.v == NC_version and ce.line == r then
-    if ce.name then r = ncPutName(r, ce.name) end
-    return r, d
-  end
-
   local inst = ''
   if type(LDD) == 'table' and type(LDD.opcode) == 'string' then
     inst = LDD.opcode
@@ -2927,14 +2568,11 @@ local function ncHook(sender, address, LDD, result, description)
     inst = ncMarkup(inst)
   end
 
-  local nm = ncCachedName(a, inst, function()
-    local s = ncSelf(a)
-    local regsUsed = false
+  local refs = ncCachedName(a, inst, function()
+    local s, regsUsed = nil, false
     if inst ~= '' then
-      local ok, refs = pcall(_annotate, a, inst)
-      if ok and type(refs) == 'string' and refs ~= '' then
-        s = s and (s .. ' -> ' .. refs) or refs
-      end
+      local ok, got = pcall(_annotate, a, inst)
+      if ok and type(got) == 'string' and got ~= '' then s = got end
       local okB, brk = pcall(debug_isBroken)
       regsUsed = (okB and brk == true)
     end
@@ -2943,29 +2581,15 @@ local function ncHook(sender, address, LDD, result, description)
     return s, regsUsed
   end)
 
-  local okG, cur = pcall(getComment, a)
-  cur = (okG and type(cur) == 'string') and cur or ''
-
-  local want
-  if nm == nil and not ncHasName(cur) then
-    want = cur
-  elseif nm == nil then
-    local p, e, t = ncSplit(cur)
-    local U = ncSanitisePrefix((ncStripName(p):match('^%s*(.-)%s*$') or ''))
-    if e == nil then want = U
-    else want = U .. EO .. ncStripName(e) .. ECL .. (t or '') end
-  else
-    want = ncBuild(cur, nm)
+  if ncRefs[a] ~= refs then
+    ncRefs[a] = refs
+    hlClear(a)
   end
 
-  if cur ~= want then
-    if pcall(setComment, a, want) then ncTouched[a] = true end
+  if hlLineName() then
+    local label = hlLabelFor(a)
+    if label then r = ncPutName(r, label) end
   end
-
-  if ce == nil then NC_nCmt = NC_nCmt + 1 end
-  NC_cmt[a] = { v = NC_version, line = r, name = nm }
-
-  if nm then r = ncPutName(r, nm) end
   return r, d
 end
 
@@ -2976,7 +2600,7 @@ local function ncAttach()
     return false
   end
   local ok0, cur = pcall(function() return v.OnPostDisassemble end)
-  if ok0 and cur == ncHook then return true end
+  if ok0 and cur == ncHook then hlAttach(); return true end
 
   if ok0 and ncState.mine ~= nil and cur == ncState.mine then
     ncPrev = ncState.orig
@@ -2987,328 +2611,537 @@ local function ncAttach()
   ncState.mine = ncHook
 
   local ok = pcall(function() v.OnPostDisassemble = ncHook end)
+  hlAttach()
   for _, m in ipairs({ 'repaint', 'Repaint', 'invalidate', 'Invalidate' }) do
     pcall(function() v[m]() end)
   end
   return ok
 end
 
+------------------------------------------------------------------ names browser
+do
+  local ncListForm = nil
+  local ncSorted = nil
+  local ncHaystack = nil        -- lowercased: offset + description
+  local ncHaystackRaw = nil     -- verbatim:   offset + description
+  local ncIndexedRowsRef = nil
+  local ncMenuItem = nil
+  local ncMenuOwner = nil       -- the form the item was attached to
+  local ncLastDir = nil
 
------------------------------------------------------------------- names browser (0ms Instant Open)
--- ORDER MATTERS. Each function is defined before anything that calls it:
---   0. state and helper
---   1. ncBuildIndex       (no dependencies)
---   2. ncJumpTo           (no dependencies)
---   3. ncShowNameList     (uses 1 and 2)
---   4. ncAttachNameMenu   (uses 3)
--- ncLoad comes after this block and uses 1 and 4.
-
-local ncListForm = nil
-local ncSorted = nil
-local ncHaystack = nil
-local ncIndexedRowsRef = nil
-local ncMenuItem = nil
-
--- Cheat Engine builds differ in method casing (show/Show, invalidate/Invalidate).
--- Try each spelling and stop at the first that works. Never raises an error.
-local function ncCall(obj, ...)
-  if obj == nil then return false end
-  for _, name in ipairs({ ... }) do
-    local ok = pcall(function() obj[name](obj) end)
-    if ok then return true end
-  end
-  return false
-end
-
--- Sets a property, trying each spelling. Never raises an error.
-local function ncSetProp(obj, value, ...)
-  if obj == nil then return false end
-  for _, name in ipairs({ ... }) do
-    local ok = pcall(function() obj[name] = value end)
-    if ok then return true end
-  end
-  return false
-end
-
--- 1. Builds the sorted index and search haystack once per loaded name table.
-local function ncBuildIndex()
-  if type(ncRows) ~= 'table' or #ncRows == 0 then
-    ncSorted, ncHaystack, ncIndexedRowsRef = nil, nil, nil
-    return
-  end
-  if ncIndexedRowsRef == ncRows and ncSorted ~= nil then
-    return -- already indexed for this table
+  local function ncCall(obj, ...)
+    if obj == nil then return false end
+    for _, name in ipairs({ ... }) do
+      local ok = pcall(function() obj[name](obj) end)
+      if ok then return true end
+    end
+    return false
   end
 
-  local total = #ncRows
-  local sorted = {}
-  for i = 1, total do sorted[i] = i end
-  table.sort(sorted, function(a, b)
-    return (ncRows[a][1] or 0) < (ncRows[b][1] or 0)
-  end)
-
-  local haystack = {}
-  local fmt = string.format
-  local strLower = string.lower
-  for i = 1, total do
-    local row = ncRows[sorted[i]]
-    haystack[i] = strLower(fmt('%x %s', row[1] or 0, tostring(row[2] or '')))
+  local function ncSetProp(obj, value, ...)
+    if obj == nil then return false end
+    for _, name in ipairs({ ... }) do
+      local ok = pcall(function() obj[name] = value end)
+      if ok then return true end
+    end
+    return false
   end
 
-  ncSorted = sorted
-  ncHaystack = haystack
-  ncIndexedRowsRef = ncRows
-end
-
--- 2. Moves Memory View to an address. focusMv decides whether focus moves too.
-local function ncJumpTo(addr, useHex, focusMv)
-  addr = normAddr(addr)
-  if addr == nil then return end
-  local mv = getMemoryViewForm()
-  if mv == nil then return end
-  if not mv.Visible then ncCall(mv, 'Show', 'show') end
-
-  if useHex == true then
-    local hv = mv.HexadecimalView
-    ncSetProp(hv, addr, 'address', 'Address')
-    if focusMv then ncCall(hv, 'SetFocus', 'setFocus') end
-  else
-    local dv = mv.DisassemblerView
-    ncSetProp(dv, addr, 'selectedAddress', 'SelectedAddress')
-    if focusMv then ncCall(dv, 'SetFocus', 'setFocus') end
-  end
-
-  if focusMv then ncCall(mv, 'BringToFront', 'bringToFront') end
-end
-
--- 3. Opens the names browser window (or brings the existing one forward).
-local function ncShowNameList()
-  if type(ncRows) ~= 'table' or #ncRows == 0 then
-    print('ghidraLike: no names loaded - run loadNames(path) first')
-    return
-  end
-  local base = ncBase
-  if type(base) ~= 'number' or base == 0 then
-    print('ghidraLike: no module base - run loadNames(path) first')
-    return
-  end
-
-  if ncListForm ~= nil then
-    local still = false
-    pcall(function()
-      if ncListForm.Visible then
-        ncCall(ncListForm, 'BringToFront', 'bringToFront')
-        still = true
+  local function ncCreateCheck(parent, caption)
+    local chk
+    for _, fn in ipairs({ 'createCheckBox', 'createCheckbox' }) do
+      local ctor = _G[fn]
+      if type(ctor) == 'function' then
+        local ok, c = pcall(ctor, parent)
+        if ok and c ~= nil then chk = c break end
       end
-    end)
-    if still then return end
-    pcall(function() ncListForm.destroy() end)
-    ncListForm = nil
+    end
+    if chk == nil then return nil end
+    pcall(function() chk.Caption = caption end)
+    pcall(function() chk.Checked = false end)
+    pcall(function() chk.AutoSize = true end)
+    return chk
   end
 
-  ncBuildIndex()
-
-  local totalRows = #ncRows
-  local sorted = ncSorted
-  local searchHaystack = ncHaystack
-
-  -- nil means "unfiltered (1..totalRows)"
-  local filtered = nil
-  local lastFilter = ''
-
-  local f = createForm(false)
-  f.Caption = string.format('ghidraLike names (%s) - %d', tostring(ncMod or ''), totalRows)
-  f.Width, f.Height = 640, 520
-  f.Position = 'poScreenCenter'
-  f.BorderStyle = 'bsSizeable'
-
-   -- The only gap value. The bottom gap is applied from it after layout.
-  local TOP_GAP = 6
-
-  local top = createPanel(f)
-  top.Align = 'alTop'
-  top.BevelOuter = 'bvNone'
-
-  local edt = createEdit(top)
-  edt.Left = 56
-  edt.Top = TOP_GAP
-  edt.Anchors = '[akLeft,akRight,akTop]'
-
-  local lbl = createLabel(top)
-  lbl.Caption = 'Filter:'
-  lbl.Left = 8
-  lbl.AutoSize = true
-
-  local lv = createListView(f)
-  lv.Align = 'alClient'
-  lv.ViewStyle = 'vsReport'
-  lv.ReadOnly = true
-  lv.RowSelect = true
-  lv.HideSelection = false
-  pcall(function() lv.FullRowSelect = true end)
-  lv.OwnerData = true
-
-  local c1 = lv.Columns.add()
-  c1.Caption = 'Offset'
-  c1.Width = 120
-  local c2 = lv.Columns.add()
-  c2.Caption = 'Description'
-  c2.Width = 480
-
-  lv.OnData = function(sender, item)
-    local zeroIdx = item.Index
-    local idx = filtered and filtered[zeroIdx + 1] or (zeroIdx + 1)
-    local ri = sorted[idx]
-    if ri == nil then return end
-    local row = ncRows[ri]
-    if row == nil then return end
-    item.Caption = string.format('%X', row[1] or 0)
-    item.SubItems.add(tostring(row[2] or ''))
+  local function ncHint(obj, text)
+    if obj == nil then return end
+    pcall(function() obj.Hint = text end)
+    pcall(function() obj.ShowHint = true end)
   end
 
-  local function applyFilter(filter)
-    filter = (filter or ''):lower()
-    if filter == lastFilter then return end
-
-    if filter == '' then
-      filtered = nil
-      lv.Items.Count = totalRows
-      f.Caption = string.format('ghidraLike names (%s) - %d',
-        tostring(ncMod or ''), totalRows)
-    else
-      local source = filtered
-      local sourceLen = source and #source or totalRows
-      if lastFilter == '' or filter:sub(1, #lastFilter) ~= lastFilter then
-        source = nil
-        sourceLen = totalRows
-      end
-
-      local nextFiltered = {}
-      local n = 0
-      local strFind = string.find
+  local function ncScan(hay, needle, usePattern, source, sourceLen)
+    local out, n = {}, 0
+    local strFind = string.find
+    if usePattern then
       for i = 1, sourceLen do
         local idx = source and source[i] or i
-        if strFind(searchHaystack[idx], filter, 1, true) then
-          n = n + 1
-          nextFiltered[n] = idx
+        if strFind(hay[idx], needle) ~= nil then n = n + 1; out[n] = idx end
+      end
+    else
+      for i = 1, sourceLen do
+        local idx = source and source[i] or i
+        if strFind(hay[idx], needle, 1, true) ~= nil then n = n + 1; out[n] = idx end
+      end
+    end
+    return out, n
+  end
+
+  function ncBuildIndex()
+    if type(ncRows) ~= 'table' or #ncRows == 0 then
+      ncSorted, ncHaystack, ncHaystackRaw, ncIndexedRowsRef = nil, nil, nil, nil
+      return
+    end
+    if ncIndexedRowsRef == ncRows and ncSorted ~= nil then return end
+
+    local total = #ncRows
+    local sorted = {}
+    for i = 1, total do sorted[i] = i end
+    table.sort(sorted, function(a, b)
+      return (ncRows[a][1] or 0) < (ncRows[b][1] or 0)
+    end)
+
+    local lo, raw = {}, {}
+    local fmt, strLower = string.format, string.lower
+    for i = 1, total do
+      local row = ncRows[sorted[i]]
+      local s = fmt('%X %s', row[1] or 0, tostring(row[2] or ''))
+      raw[i] = s
+      lo[i]  = strLower(s)
+    end
+
+    ncSorted = sorted
+    ncHaystack = lo
+    ncHaystackRaw = raw
+    ncIndexedRowsRef = ncRows
+  end
+
+  local function ncJumpTo(addr, useHex, focusMv)
+    addr = normAddr(addr)
+    if addr == nil then return end
+    local mv = getMemoryViewForm()
+    if mv == nil then return end
+    if not mv.Visible then ncCall(mv, 'Show', 'show') end
+
+    if useHex == true then
+      local hv = mv.HexadecimalView
+      ncSetProp(hv, addr, 'address', 'Address')
+      if focusMv then ncCall(hv, 'SetFocus', 'setFocus') end
+    else
+      local dv = mv.DisassemblerView
+      ncSetProp(dv, addr, 'selectedAddress', 'SelectedAddress')
+      if focusMv then ncCall(dv, 'SetFocus', 'setFocus') end
+    end
+
+    if focusMv then ncCall(mv, 'BringToFront', 'bringToFront') end
+  end
+
+  function ncCloseNameList()
+    if ncListForm ~= nil then
+      pcall(function() ncListForm.destroy() end)
+      ncListForm = nil
+    end
+  end
+
+  local function ncShowNameList()
+    if type(ncRows) ~= 'table' or #ncRows == 0 then
+      print('ghidraLike: no names loaded - run loadNames(path) first')
+      return
+    end
+    local base = ncBase
+    if type(base) ~= 'number' or base == 0 then
+      print('ghidraLike: no module base - run loadNames(path) first')
+      return
+    end
+
+    if ncListForm ~= nil then
+      local still = false
+      pcall(function()
+        if ncListForm.Visible then
+          ncCall(ncListForm, 'BringToFront', 'bringToFront')
+          still = true
+        end
+      end)
+      if still then return end
+      pcall(function() ncListForm.destroy() end)
+      ncListForm = nil
+    end
+
+    ncBuildIndex()
+
+    local totalRows = #ncRows
+    local sorted = ncSorted
+    local hayLo  = ncHaystack
+    local hayRaw = ncHaystackRaw
+
+    local filtered = nil
+    local lastKey, lastNeedle = nil, ''
+    local lastPattern, lastCase = false, false
+
+    local f = createForm(false)
+    f.Width, f.Height = 720, 520
+    f.Position = 'poScreenCenter'
+    f.BorderStyle = 'bsSizeable'
+
+    local TOP_GAP = 6
+    local CTRL_GAP = 8
+
+    local top = createPanel(f)
+    top.Align = 'alTop'
+    top.BevelOuter = 'bvNone'
+
+    local lbl = createLabel(top)
+    lbl.Caption = 'Filter:'
+    lbl.Left = 8
+    lbl.AutoSize = true
+
+    local edt = createEdit(top)
+    edt.Left = 56
+    edt.Top = TOP_GAP
+    edt.Anchors = '[akLeft,akRight,akTop]'
+
+    local chkPattern = ncCreateCheck(top, 'pattern')
+    local chkCase    = ncCreateCheck(top, 'case-sensitive')
+
+    ncHint(chkPattern,
+      'Search by Lua pattern.\n' ..
+      'Examples:  ^Action   Selector$   %d+   Action.-Selector\n' ..
+      'Unchecked = plain text (no magic characters).')
+    ncHint(chkCase,
+      'Match upper and lower case exactly.\n' ..
+      'The offset is matched as displayed, in uppercase hex.')
+    ncHint(edt, 'Type to filter. Toggle pattern for Lua patterns.')
+
+    if chkPattern == nil or chkCase == nil then
+      print('ghidraLike: checkboxes unavailable in this CE build - '
+        .. 'filter stays plain, case-insensitive')
+    end
+
+    local function patternOn() return chkPattern ~= nil and chkPattern.Checked == true end
+    local function caseOn()    return chkCase    ~= nil and chkCase.Checked    == true end
+
+    local function modeTag(bad)
+      if bad then return '  [invalid pattern]' end
+      local t = {}
+      if patternOn() then t[#t+1] = 'pattern' end
+      if caseOn()    then t[#t+1] = 'case' end
+      if #t == 0 then return '' end
+      return '  [' .. table.concat(t, ', ') .. ']'
+    end
+
+    local function setCaption(shown, bad)
+      local head = string.format('ghidraLike names (%s)', tostring(ncMod or ''))
+      if shown == totalRows then
+        f.Caption = string.format('%s - %d%s', head, totalRows, modeTag(bad))
+      else
+        f.Caption = string.format('%s - %d / %d%s', head, shown, totalRows, modeTag(bad))
+      end
+    end
+
+    local lv = createListView(f)
+    lv.Align = 'alClient'
+    lv.ViewStyle = 'vsReport'
+    lv.ReadOnly = true
+    lv.RowSelect = true
+    lv.HideSelection = false
+    pcall(function() lv.FullRowSelect = true end)
+    lv.OwnerData = true
+
+    local c1 = lv.Columns.add()
+    c1.Caption = 'Offset'
+    c1.Width = 120
+    local c2 = lv.Columns.add()
+    c2.Caption = 'Description'
+    c2.Width = 520
+
+    lv.OnData = function(sender, item)
+      local zeroIdx = item.Index
+      local idx = filtered and filtered[zeroIdx + 1] or (zeroIdx + 1)
+      local ri = sorted[idx]
+      if ri == nil then return end
+      local row = ncRows[ri]
+      if row == nil then return end
+      item.Caption = string.format('%X', row[1] or 0)
+      item.SubItems.add(tostring(row[2] or ''))
+    end
+
+    local function applyFilter()
+      local usePattern, useCase = patternOn(), caseOn()
+      local text = edt.Text or ''
+      local needle = useCase and text or text:lower()
+      local hay = useCase and hayRaw or hayLo
+
+      local key = (usePattern and 'p' or 'l') .. (useCase and 'c' or 'i')
+                .. '\0' .. needle
+      if key == lastKey then return end
+
+      if needle == '' then
+        filtered = nil
+        lv.Items.Count = totalRows
+        setCaption(totalRows, false)
+      else
+        if usePattern and not pcall(string.find, '', needle) then
+          filtered = {}
+          lv.Items.Count = 0
+          setCaption(0, true)
+          lastKey, lastNeedle = key, needle
+          lastPattern, lastCase = usePattern, useCase
+          ncCall(lv, 'Invalidate', 'invalidate')
+          return
+        end
+
+        -- Narrowing is only sound for PLAIN search with an EXTENDING needle.
+        -- A pattern can broaden as it grows ('a' -> 'a-', 'x' -> 'x?').
+        local source, sourceLen = nil, totalRows
+        if (not usePattern)
+           and lastPattern == usePattern and lastCase == useCase
+           and lastNeedle ~= '' and needle:sub(1, #lastNeedle) == lastNeedle then
+          source = filtered
+          sourceLen = source and #source or totalRows
+        end
+
+        local ok, res, n = pcall(ncScan, hay, needle, usePattern, source, sourceLen)
+        if not ok then
+          filtered = {}
+          lv.Items.Count = 0
+          setCaption(0, true)
+        else
+          filtered = res
+          lv.Items.Count = n
+          setCaption(n, false)
         end
       end
-      filtered = nextFiltered
-      lv.Items.Count = n
-      f.Caption = string.format('ghidraLike names (%s) - %d / %d',
-        tostring(ncMod or ''), n, totalRows)
+
+      lastKey, lastNeedle = key, needle
+      lastPattern, lastCase = usePattern, useCase
+      ncCall(lv, 'Invalidate', 'invalidate')
     end
 
-    lastFilter = filter
-    ncCall(lv, 'Invalidate', 'invalidate')
-  end
-
-  local function jumpSelected(focusMv)
-    local selIdx = lv.ItemIndex
-    if selIdx == nil or selIdx < 0 then return end
-    local idx = filtered and filtered[selIdx + 1] or (selIdx + 1)
-    local ri = sorted[idx]
-    if ri == nil then return end
-    local row = ncRows[ri]
-    if row == nil then return end
-    local addr = base + (row[1] or 0)
-    local useHex = (row[3] == true)
-    ncJumpTo(addr, useHex, focusMv)
-  end
-
-  lv.OnDblClick = function() jumpSelected(true) end
-  lv.OnKeyDown = function(sender, key)
-    if key == 13 then jumpSelected(true) end
-  end
-
-  pcall(function()
-    lv.OnSelectItem = function(sender, item, selected)
-      if selected then jumpSelected(false) end
+    local function jumpSelected(focusMv)
+      local selIdx = lv.ItemIndex
+      if selIdx == nil or selIdx < 0 then return end
+      local idx = filtered and filtered[selIdx + 1] or (selIdx + 1)
+      local ri = sorted[idx]
+      if ri == nil then return end
+      local row = ncRows[ri]
+      if row == nil then return end
+      ncJumpTo(base + (row[1] or 0), row[3] == true, focusMv)
     end
-  end)
 
-  local filterTimer = createTimer(f, false)
-  filterTimer.Interval = 150
-  filterTimer.OnTimer = function(t)
-    t.Enabled = false
-    applyFilter(edt.Text or '')
+    lv.OnDblClick = function() jumpSelected(true) end
+    lv.OnKeyDown = function(sender, key)
+      if key == 13 then jumpSelected(true) end
+    end
+
+    pcall(function()
+      lv.OnSelectItem = function(sender, item, selected)
+        if selected then jumpSelected(false) end
+      end
+    end)
+
+    local filterTimer = createTimer(f, false)
+    filterTimer.Interval = 150
+    filterTimer.OnTimer = function(t)
+      t.Enabled = false
+      applyFilter()
+    end
+
+    edt.OnChange = function()
+      filterTimer.Enabled = false
+      filterTimer.Enabled = true
+    end
+
+    if chkPattern then pcall(function() chkPattern.OnChange = function() applyFilter() end end) end
+    if chkCase    then pcall(function() chkCase.OnChange    = function() applyFilter() end end) end
+
+    f.OnClose = function()
+      filterTimer.Enabled = false
+      ncListForm = nil
+      return caFree
+    end
+
+    lv.Items.Count = totalRows
+    setCaption(totalRows, false)
+    ncListForm = f
+    ncCall(f, 'Show', 'show')
+    ncCall(f, 'Update', 'update')
+
+    local function ctrlWidth(c, caption)
+      local w = 0
+      pcall(function() w = tonumber(c.Width) or 0 end)
+      if w <= 1 then w = #caption * 8 + 24 end
+      return w
+    end
+
+    local rowH = edt.Height
+    if chkCase then
+      local w = ctrlWidth(chkCase, 'case-sensitive')
+      pcall(function() chkCase.Width = w end)
+      chkCase.Anchors = '[akRight,akTop]'
+      chkCase.Left = top.Width - TOP_GAP - w
+      chkCase.Top  = TOP_GAP + floor((edt.Height - chkCase.Height) / 2)
+      if chkCase.Height > rowH then rowH = chkCase.Height end
+    end
+    if chkPattern then
+      local w = ctrlWidth(chkPattern, 'pattern')
+      pcall(function() chkPattern.Width = w end)
+      chkPattern.Anchors = '[akRight,akTop]'
+      local rightEdge = chkCase and chkCase.Left or (top.Width - TOP_GAP)
+      chkPattern.Left = rightEdge - CTRL_GAP - w
+      chkPattern.Top  = TOP_GAP + floor((edt.Height - chkPattern.Height) / 2)
+      if chkPattern.Height > rowH then rowH = chkPattern.Height end
+    end
+
+    top.Height = TOP_GAP + rowH + TOP_GAP
+    lbl.Top = TOP_GAP + floor((edt.Height - lbl.Height) / 2)
+
+    local editRight = chkPattern and chkPattern.Left or (top.Width - TOP_GAP)
+    edt.Width = math.max(60, editRight - CTRL_GAP - edt.Left)
+
+    ncCall(edt, 'SetFocus', 'setFocus')
   end
 
-  edt.OnChange = function()
-    filterTimer.Enabled = false
-    filterTimer.Enabled = true
+  ---------------------------------------------------------------- file picker
+  -- Opens at getMainForm().SaveDialog1.InitialDir, as asked. That directory is
+  -- READ, never written, so CE's own save dialog is left alone. If it is
+  -- unavailable, fall back to the directory of the last file opened here.
+  local function ncInitialDir()
+    local ok, d = pcall(function() return getMainForm().SaveDialog1.InitialDir end)
+    if ok and type(d) == 'string' and d ~= '' then return d end
+    return ncLastDir
   end
 
-  f.OnClose = function()
-    filterTimer.Enabled = false
-    ncListForm = nil
-    return caFree
+  -- Execute returns a BOOLEAN, so ncCall (which only reports success) will not
+  -- do. A cancel is a successful call returning false, not a failure to try.
+  -- Distinguishes "no such method" from "method raised" from "user cancelled".
+  -- A cancel is a successful call returning false, and stays silent.
+  local function ncExecDialog(d)
+    for _, name in ipairs({ 'Execute', 'execute' }) do
+      local okM, m = pcall(function() return d[name] end)
+      if okM and type(m) == 'function' then
+        local ok, res = pcall(m, d)
+        if ok then return res == true end
+        print('ghidraLike: dialog ' .. name .. ' raised: ' .. tostring(res))
+        return false
+      end
+    end
+    print('ghidraLike: dialog exposes no Execute method')
+    return false
   end
 
-  lv.Items.Count = totalRows
-  ncListForm = f
-  ncCall(f, 'Show', 'show')
-  ncCall(f, 'Update', 'update')
+  local function ncPickNamesFile()
+    local okM, mf = pcall(getMainForm)
+    if not okM then mf = nil end
 
-    -- Sizes exist only after layout, so size the bar now.
-  top.Height = TOP_GAP + edt.Height + TOP_GAP
-  lbl.Top = TOP_GAP + floor((edt.Height - lbl.Height) / 2)
+    local dlg, mine = nil, false
+    local ok, d = pcall(createOpenDialog, mf)
+    if ok and d ~= nil then dlg, mine = d, true end
+    if dlg == nil then
+      local ok2, d2 = pcall(function() return mf.OpenDialog1 end)
+      if ok2 and d2 ~= nil then dlg = d2 end   -- CE's own: must NOT be destroyed
+    end
+    if dlg == nil then
+      print('ghidraLike: no open-file dialog available in this CE build')
+      return nil
+    end
 
-  -- Right gap is TOP_GAP, measured from the panel's right edge.
-  edt.Width = top.Width - edt.Left - TOP_GAP
+    pcall(function() dlg.Title = 'Select a ghidraLike names CSV' end)
+    pcall(function() dlg.Filter = 'names CSV (*.csv)|*.csv|All files (*.*)|*.*' end)
+    pcall(function() dlg.Options = '[ofFileMustExist,ofHideReadOnly,ofEnableSizing]' end)
+    pcall(function() dlg.FileName = '' end)
+    local dir = ncInitialDir()
+    if dir then pcall(function() dlg.InitialDir = dir end) end
 
-  ncCall(edt, 'SetFocus', 'setFocus')
+    local path = nil
+    if ncExecDialog(dlg) then
+      local okF, f = pcall(function() return dlg.FileName end)
+      if okF and type(f) == 'string' and f ~= '' then path = f end
+    end
+    if mine then pcall(function() dlg.destroy() end) end
+
+    if path then
+      local dirOf = path:match('^(.*)[/\\][^/\\]*$')
+      if dirOf then ncLastDir = dirOf end
+    end
+    return path
+  end
+
+  -- Names loaded -> the browser. No names -> the picker, then the browser.
+  -- ncCheckProcess() first, so a process change reverts this to the picker even
+  -- if the disassembler has not repainted since.
+  local function ncMenuClick()
+    -- The process check must never be able to stop the picker opening.
+    local okChk, err = pcall(ncCheckProcess)
+    if not okChk then
+      print('ghidraLike: process check failed: ' .. tostring(err))
+    end
+
+    if ncCount > 0 and type(ncRows) == 'table' and #ncRows > 0 then
+      ncShowNameList()
+      return
+    end
+
+    local path = ncPickNamesFile()
+    if path == nil then return end
+    local ok, n = pcall(ncLoad, path)
+    if not ok then
+      print('ghidraLike: loadNames failed: ' .. tostring(n))
+      return
+    end
+    if type(n) == 'number' and n > 0 then ncShowNameList() end
+  end
+
+  -- quiet=true for the startup poll, so a closed Memory View stays silent.
+  -- Identity comparison only: never read a property of a possibly-freed item.
+  function ncAttachNameMenu(quiet)
+    local okM, mv = pcall(getMemoryViewForm)
+    if not okM or mv == nil then
+      if not quiet then
+        print('ghidraLike: open Memory View first, then run loadNames again')
+      end
+      return false
+    end
+    if ncMenuItem ~= nil and ncMenuOwner == mv then return true end
+    ncMenuItem, ncMenuOwner = nil, mv
+
+    local okC, mi = pcall(createMenuItem, mv)
+    if not okC or mi == nil then
+      if not quiet then print('ghidraLike: could not create menu item') end
+      return false
+    end
+    pcall(function() mi.Caption = 'ghidraLike names' end)
+    pcall(function() mi.OnClick = function() ncMenuClick() end end)
+
+    local anchor, parent, idx = nil, nil, 0
+    pcall(function() anchor = mv.EnumeratedllsandSymbols1 end)
+    if anchor ~= nil then
+      pcall(function() parent = anchor.Parent end)
+      pcall(function() idx = anchor.MenuIndex + 1 end)
+    end
+    if parent == nil then
+      pcall(function() parent = mv.Menu.Items end)   -- top-level fallback
+      idx = 0
+    end
+    if parent == nil then
+      if not quiet then print('ghidraLike: no menu to attach to') end
+      pcall(function() mi.destroy() end)
+      return false
+    end
+
+    local okI = pcall(function() parent.insert(idx, mi) end)
+    if not okI then okI = pcall(function() parent.add(mi) end) end
+    if not okI then
+      if not quiet then print('ghidraLike: could not insert menu item') end
+      pcall(function() mi.destroy() end)
+      return false
+    end
+
+    ncMenuItem = mi
+    return true
+  end
 end
 
--- 4. Adds "ghidraLike names" to the Memory View menu, after EnumeratedllsandSymbols1.
-local function ncAttachNameMenu()
-  if ncMenuItem ~= nil then return true end
-
-  local mv = getMemoryViewForm()
-  if mv == nil then
-    print('ghidraLike: open Memory View first, then run loadNames again')
-    return false
-  end
-
-  local anchor = nil
-  pcall(function() anchor = mv.EnumeratedllsandSymbols1 end)
-  if anchor == nil then
-    print('ghidraLike: anchor EnumeratedllsandSymbols1 not found')
-    return false
-  end
-
-  local parent = nil
-  pcall(function() parent = anchor.Parent end)
-  if parent == nil then
-    print('ghidraLike: anchor has no parent menu')
-    return false
-  end
-
-  local okC, mi = pcall(createMenuItem, mv)
-  if not okC or mi == nil then
-    print('ghidraLike: could not create menu item')
-    return false
-  end
-  mi.Caption = 'ghidraLike names'
-  mi.OnClick = function() ncShowNameList() end
-
-  local idx = 0
-  pcall(function() idx = anchor.MenuIndex + 1 end)
-
-  local okI = pcall(function() parent.insert(idx, mi) end)
-  if not okI then
-    okI = pcall(function() parent.add(mi) end)
-  end
-  if not okI then
-    print('ghidraLike: could not insert menu item into parent menu')
-    return false
-  end
-
-  ncMenuItem = mi
-  return true
-end
-
-local function ncLoad(path, module)
+------------------------------------------------------------------ loader
+function ncLoad(path, module)
   local fh, err = io.open(path, 'rb')
   if fh == nil then
     print('loadNames: cannot open ' .. tostring(path) .. '  ' .. tostring(err))
@@ -3324,12 +3157,13 @@ local function ncLoad(path, module)
   local strFind = string.find
   local strSub = string.sub
   local strMatch = string.match
-  local byte = string.byte
+  local strByte = string.byte
   local char1 = string.char(1)
+  local splitCsv = _G.__glSplitCsv
 
   for line in content:gmatch('[^\r\n]+') do
-    local firstByte = byte(line, 1)
-    if firstByte == 35 then -- '#'
+    local firstByte = strByte(line, 1)
+    if firstByte == 35 then
       if mn == nil then
         local mc = strMatch(line, '^#module=(.+)$')
         if mc then mn = strMatch(mc, '^%s*(.-)%s*$') end
@@ -3338,7 +3172,6 @@ local function ncLoad(path, module)
       local c1 = strFind(line, ',', 1, true)
       if c1 ~= nil then
         local f1, f2, f3
-        -- Fast path: no quotes on the line (99.9% of symbol rows)
         if strFind(line, '"', 1, true) == nil then
           local c2 = strFind(line, ',', c1 + 1, true)
           f1 = strSub(line, 1, c1 - 1)
@@ -3349,15 +3182,14 @@ local function ncLoad(path, module)
             f2 = strSub(line, c1 + 1)
           end
         else
-          local f = ncSplitCsv(line)
+          local f = splitCsv(line)
           f1, f2, f3 = f[1], f[2], f[3]
         end
 
         if f1 ~= 'offset' and f2 ~= 'desc' then
           local off = ncOffset(f1)
           if off ~= nil and f2 ~= nil and f2 ~= '' then
-            -- Only trim if leading/trailing whitespace exists
-            local bFirst, bLast = byte(f2, 1), byte(f2, -1)
+            local bFirst, bLast = strByte(f2, 1), strByte(f2, -1)
             local desc = (bFirst == 32 or bFirst == 9 or bLast == 32 or bLast == 9)
               and strMatch(f2, '^%s*(.-)%s*$') or f2
 
@@ -3377,7 +3209,7 @@ local function ncLoad(path, module)
       end
     end
   end
-  content = nil -- Free raw file buffer immediately before indexing
+  content = nil
 
   if mn == nil or mn == '' then mn = ncMod end
   if mn == nil or mn == '' then mn = moduleName end
@@ -3392,17 +3224,42 @@ local function ncLoad(path, module)
     print('loadNames: cannot resolve module ' .. tostring(mn)); return 0
   end
   ncInstall(rows, b, mn)
+  hlFlush()
   ncBuildIndex()
   ncAttach()
   ncAttachNameMenu()
+  local hv = hlViewOf()
+  if hv ~= nil then pcall(function() hv.update() end) end
   print(string.format('loadNames: %d names, %s base %X, range %X-%X',
     ncCount, tostring(mn), b, ncLo, ncHi))
   return ncCount
 end
 
+------------------------------------------------------------------ startup button
+-- The button exists before any loadNames call. Memory View may not be open at
+-- dofile time, so a 1 s tick keeps trying, silently. Each tick compares FORM
+-- IDENTITY only, so it never touches a dangling menu-item handle, and it also
+-- re-attaches if Memory View is later replaced by a different form object.
+-- The timer is held in a global so a reload destroys the previous one.
+ncAttachNameMenu(true)
+do
+  local okM, mf = pcall(getMainForm)
+  if okM and mf ~= nil then
+    local prev = _G.ghidraLikeMenuTimer
+    if prev ~= nil then pcall(function() prev.destroy() end) end
+    local okT, t = pcall(createTimer, mf)
+    if okT and t ~= nil then
+      t.Interval = 1000
+      t.OnTimer = function() ncAttachNameMenu(true) end
+      _G.ghidraLikeMenuTimer = t
+    end
+  end
+end
+
 if ncState.pid ~= nil and ncState.pid ~= ncPid then
   ncPurge()
   ncFlush()
+  hlFlush()
 end
 ncState.pid = ncPid
 
