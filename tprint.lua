@@ -298,6 +298,10 @@ local function do_full_internal(rootObj, onRow, opts)
                 -- 3b. Published properties. Every member access is guarded:
                 --     getPropertyList may be absent, and its result may lack
                 --     .Count, integer indexing or .destroy().
+				                -- 3b. Published properties. Every member access is guarded:
+                --     getPropertyList may be absent, and its result may lack
+                --     .Count, integer indexing or .destroy().
+                local seenPropOwner, seenPropParent = false, false
                 local okPL, propertyList = pcall(getPropertyList, v)
                 if okPL and propertyList ~= nil then
                     local okC, propCount = pcall(function() return propertyList.Count end)
@@ -309,10 +313,13 @@ local function do_full_internal(rootObj, onRow, opts)
                                 local okV, val = pcall(function() return v[pli] end)
                                 if not okV then val = nil end
                                 local nm2 = (w > 0) and pli or (vna .. '.' .. pli)
+								if pli == 'Owner' then seenPropOwner = true end
+                                if pli == 'Parent' then seenPropParent = true end
                                 local isObj = (type(val) == 'userdata' or type(val) == 'table')
-                                noteChild(val)
+                                local shouldRecurse = (pli ~= 'Parent' and pli ~= 'Owner')
+                                if shouldRecurse then noteChild(val) end
                                 push(p2, nm2, val, isObj and 'Object' or 'Property',
-                                     childDepth, true)
+                                     childDepth, shouldRecurse)
                             end
                         end
                     end
@@ -320,6 +327,25 @@ local function do_full_internal(rootObj, onRow, opts)
                     pcall(function() propertyList.destroy() end)
                 end
 
+                -- Fallback for Owner / Parent when CE exposes them via C getters
+                -- rather than getPropertyList() (e.g. TComponent / TControl).
+                if allowed(childDepth) then
+                    if not seenPropOwner then
+                        local okOw, ow = pcall(function() return v.Owner end)
+                        if okOw and ow ~= nil then
+                            local nm2 = (w > 0) and 'Owner' or (vna .. '.Owner')
+                            push(p2, nm2, ow, 'Object', childDepth, false)
+                        end
+                    end
+                    if not seenPropParent then
+                        local okPa, pa = pcall(function() return v.Parent end)
+                        if okPa and pa ~= nil then
+                            local nm2 = (w > 0) and 'Parent' or (vna .. '.Parent')
+                            push(p2, nm2, pa, 'Object', childDepth, false)
+                        end
+                    end
+                end
+				
                 -- 3c. Indexed collections. Skips anything 3a/3b already emitted,
                 --     which is where the duplicate rows came from.
                 local okVc, vc = pcall(function() return v.Count or v.count end)
