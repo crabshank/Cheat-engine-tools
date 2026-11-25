@@ -2412,26 +2412,67 @@ end
 ------------------------------------------------------------------ highlight
 local hlAttach, hlLabelFor, ncPutName
 do
-  local HL_COLOR     = 0x34FF3B  -- THE one colour, 0xBBGGRR (Lazarus TColor)
+  local HL_COLOR     = 0x34FF3B
   local HL_BG        = 0x222222
-  local HL_LABELS    = true       -- false = solid one-colour bar, no text
+  local HL_LABELS    = true
   local HL_MAX       = 256
   local HL_MAXW      = 900
   local HL_LINE_NAME = false
 
   local hlState = _G.ghidraLikeHighlight
   if type(hlState) ~= 'table' then hlState = {}; _G.ghidraLikeHighlight = hlState end
-  if type(hlState.cache) ~= 'table' then hlState.cache = {} end
+  if type(hlState.cache)   ~= 'table' then hlState.cache   = {} end
+  if type(hlState.pending) ~= 'table' then hlState.pending = {} end
 
-  local hlCache = hlState.cache
+  local hlCache   = hlState.cache
+  local hlPending = hlState.pending   -- shared across reloads, cleared IN PLACE
   local hlCount = 0
   local hlLabel = {}
   local hlView  = nil
+  local inRender = false
+
+  -- A bitmap handed to OnExtraLineRender belongs to CE until the paint that
+  -- asked for it has finished. Destroying it inside the render callback frees
+  -- memory CE is still drawing from: a native use-after-free, which pcall
+  -- cannot catch. Retired bitmaps therefore go on a queue and are freed by a
+  -- timer, which by construction runs outside any paint.
+  local hlTimer = _G.ghidraLikeHlTimer
+  if hlTimer == nil then
+    local okM, mf = pcall(getMainForm)
+    if okM and mf ~= nil then
+      local okT, t = pcall(createTimer, mf)
+      if okT and t ~= nil then hlTimer = t; _G.ghidraLikeHlTimer = t end
+    end
+  end
+  if hlTimer ~= nil then
+    pcall(function()
+      hlTimer.Interval = 250
+      hlTimer.Enabled  = false
+      hlTimer.OnTimer = function(tt)
+        tt.Enabled = false
+        for i = #hlPending, 1, -1 do
+          local b = hlPending[i]
+          hlPending[i] = nil
+          pcall(function() b.destroy() end)
+        end
+      end
+    end)
+  end
+
+  local function hlRetire(b)
+    if b == nil then return end
+    if hlTimer ~= nil then
+      hlPending[#hlPending + 1] = b
+      pcall(function() hlTimer.Enabled = true end)
+    else
+      pcall(function() b.destroy() end)   -- no timer available: last resort
+    end
+  end
 
   function hlFlush()
     for k, b in pairs(hlCache) do
-      pcall(function() b.destroy() end)
       hlCache[k] = nil
+      hlRetire(b)
     end
     hlCount = 0
     for k in pairs(hlLabel) do hlLabel[k] = nil end
@@ -2446,8 +2487,8 @@ do
 
     if HL_MAX > 0 and hlCount >= HL_MAX then
       for k, old in pairs(hlCache) do
-        pcall(function() old.destroy() end)
         hlCache[k] = nil
+        hlRetire(old)                     -- NOT destroy: CE may still hold it
       end
       hlCount = 0
     end
@@ -2487,7 +2528,7 @@ do
     end)
 
     if not okInit then
-      pcall(function() bmp.destroy() end)
+      hlRetire(bmp)
       return nil
     end
 
@@ -2511,13 +2552,15 @@ do
 
   local function ncRender(sender, Address, AboveInstruction, Selected)
     if not AboveInstruction then return nil end
-    if ncCount == 0 then return nil end
+    if ncCount == 0 or inRender then return nil end
     local a = normAddr(Address)
     if a == nil then return nil end
     local label = hlLabelFor(a)
     if label == nil then return nil end
-    local bmp = hlBitmap(label)
-    if bmp == nil then return nil end
+    inRender = true
+    local ok, bmp = pcall(hlBitmap, label)
+    inRender = false
+    if not ok or bmp == nil then return nil end
     return bmp, 0, 0
   end
 
@@ -2546,7 +2589,6 @@ do
 end
 local hlLineName, hlViewOf, hlClear = _G.__glHlLineName, _G.__glHlView, _G.__glHlClear
 _G.__glHlLineName, _G.__glHlView, _G.__glHlClear = nil, nil, nil
-
 
 ------------------------------------------------------------------ refs-only hook
 local function ncHook(sender, address, LDD, result, description)
@@ -2629,11 +2671,16 @@ do
   local ncMenuOwner = nil       -- the form the item was attached to
   local ncLastDir = nil
 
+    -- CE exposes zero-argument methods; your own working code calls them with
+  -- '.' and no self. Try that convention first, then the self form.
   local function ncCall(obj, ...)
     if obj == nil then return false end
     for _, name in ipairs({ ... }) do
-      local ok = pcall(function() obj[name](obj) end)
-      if ok then return true end
+      local okM, m = pcall(function() return obj[name] end)
+      if okM and type(m) == 'function' then
+        if pcall(m) then return true end
+        if pcall(m, obj) then return true end
+      end
     end
     return false
   end
@@ -2858,7 +2905,11 @@ do
       local row = ncRows[ri]
       if row == nil then return end
       item.Caption = string.format('%X', row[1] or 0)
-      item.SubItems.add(tostring(row[2] or ''))
+      -- OwnerData fires OnData on EVERY repaint, and SubItems.add APPENDS.
+      -- Without clearing, each row gains one subitem per repaint, unbounded.
+      local sl = item.SubItems
+      ncCall(sl, 'Clear', 'clear')
+      pcall(function() sl.add(tostring(row[2] or '')) end)
     end
 
     local function applyFilter()
@@ -2913,7 +2964,21 @@ do
       ncCall(lv, 'Invalidate', 'invalidate')
     end
 
-    local function jumpSelected(focusMv)
+    -- Setting SelectedAddress scrolls and repaints the memory view
+    -- SYNCHRONOUSLY, re-entering our disassemble/render hooks from inside the
+    -- list view's mouse message. Do the jump on a timer tick instead, so it
+    -- happens outside that message entirely.
+    local pendAddr, pendHex, pendFocus = nil, false, false
+    local jumpTimer = createTimer(f, false)
+    jumpTimer.Interval = 1
+    jumpTimer.OnTimer = function(tt)
+      tt.Enabled = false
+      local a, h, fo = pendAddr, pendHex, pendFocus
+      pendAddr = nil
+      if a ~= nil then ncJumpTo(a, h, fo) end
+    end
+
+    local function jumpSoon(focusMv)
       local selIdx = lv.ItemIndex
       if selIdx == nil or selIdx < 0 then return end
       local idx = filtered and filtered[selIdx + 1] or (selIdx + 1)
@@ -2921,17 +2986,21 @@ do
       if ri == nil then return end
       local row = ncRows[ri]
       if row == nil then return end
-      ncJumpTo(base + (row[1] or 0), row[3] == true, focusMv)
+      pendAddr  = base + (row[1] or 0)
+      pendHex   = (row[3] == true)
+      pendFocus = focusMv and true or false
+      jumpTimer.Enabled = false
+      jumpTimer.Enabled = true
     end
 
-    lv.OnDblClick = function() jumpSelected(true) end
+    lv.OnDblClick = function() jumpSoon(true) end
     lv.OnKeyDown = function(sender, key)
-      if key == 13 then jumpSelected(true) end
+      if key == 13 then jumpSoon(true) end
     end
 
     pcall(function()
       lv.OnSelectItem = function(sender, item, selected)
-        if selected then jumpSelected(false) end
+        if selected then jumpSoon(false) end
       end
     end)
 
@@ -2952,6 +3021,7 @@ do
 
     f.OnClose = function()
       filterTimer.Enabled = false
+      jumpTimer.Enabled = false
       ncListForm = nil
       return caFree
     end
