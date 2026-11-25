@@ -2799,17 +2799,14 @@ do
     edt.Top = TOP_GAP
     edt.Anchors = '[akLeft,akRight,akTop]'
 
-    local chkPattern = ncCreateCheck(top, 'pattern')
-    local chkCase    = ncCreateCheck(top, 'case-sensitive')
+    local chkPattern = ncCreateCheck(top, 'Pattern')
+    local chkCase    = ncCreateCheck(top, 'Case-sensitive')
 
     ncHint(chkPattern,
-      'Search by Lua pattern.\n' ..
-      'Examples:  ^Action   Selector$   %d+   Action.-Selector\n' ..
-      'Unchecked = plain text (no magic characters).')
+      'If checked, search by Lua pattern.')
     ncHint(chkCase,
-      'Match upper and lower case exactly.\n' ..
-      'The offset is matched as displayed, in uppercase hex.')
-    ncHint(edt, 'Type to filter. Toggle pattern for Lua patterns.')
+      'Match upper and lower case exactly. The offset is matched in uppercase hex.')
+    ncHint(edt, 'Type to filter')
 
     if chkPattern == nil or chkCase == nil then
       print('ghidraLike: checkboxes unavailable in this CE build - '
@@ -2822,8 +2819,8 @@ do
     local function modeTag(bad)
       if bad then return '  [invalid pattern]' end
       local t = {}
-      if patternOn() then t[#t+1] = 'pattern' end
-      if caseOn()    then t[#t+1] = 'case' end
+      if patternOn() then t[#t+1] = 'Pattern' end
+      if caseOn()    then t[#t+1] = 'Case-sensitive' end
       if #t == 0 then return '' end
       return '  [' .. table.concat(t, ', ') .. ']'
     end
@@ -2974,7 +2971,7 @@ do
 
     local rowH = edt.Height
     if chkCase then
-      local w = ctrlWidth(chkCase, 'case-sensitive')
+      local w = ctrlWidth(chkCase, 'Case-sensitive')
       pcall(function() chkCase.Width = w end)
       chkCase.Anchors = '[akRight,akTop]'
       chkCase.Left = top.Width - TOP_GAP - w
@@ -2982,7 +2979,7 @@ do
       if chkCase.Height > rowH then rowH = chkCase.Height end
     end
     if chkPattern then
-      local w = ctrlWidth(chkPattern, 'pattern')
+      local w = ctrlWidth(chkPattern, 'Pattern')
       pcall(function() chkPattern.Width = w end)
       chkPattern.Anchors = '[akRight,akTop]'
       local rightEdge = chkCase and chkCase.Left or (top.Width - TOP_GAP)
