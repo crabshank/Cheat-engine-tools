@@ -276,7 +276,7 @@ local function do_full_internal(rootObj, onRow, opts)
             if ty == 'userdata' then
                 -- 3a. Child components.
                 local okCount, plc = pcall(function() return v.getComponentCount() end)
-                if okCount and type(plc) == 'number' and plc > 0 and plc < 100000 then
+                if okCount and type(plc) == 'number' and plc > 0 then
                     for i = 0, plc - 1 do
                         local okComp, pli = pcall(function() return v.getComponent(i) end)
                         if okComp and pli ~= nil then
@@ -302,11 +302,10 @@ local function do_full_internal(rootObj, onRow, opts)
                 if okPL and propertyList ~= nil then
                     local okC, propCount = pcall(function() return propertyList.Count end)
                     if okC and type(propCount) == 'number'
-                       and propCount > 0 and propCount < 100000 then
+                       and propCount > 0 then
                         for i = 0, propCount - 1 do
                             local okI, pli = pcall(function() return propertyList[i] end)
-                            if okI and type(pli) == 'string'
-                               and pli ~= 'Parent' and pli ~= 'Owner' then
+                            if okI and type(pli) == 'string' then
                                 local okV, val = pcall(function() return v[pli] end)
                                 if not okV then val = nil end
                                 local nm2 = (w > 0) and pli or (vna .. '.' .. pli)
@@ -324,7 +323,7 @@ local function do_full_internal(rootObj, onRow, opts)
                 -- 3c. Indexed collections. Skips anything 3a/3b already emitted,
                 --     which is where the duplicate rows came from.
                 local okVc, vc = pcall(function() return v.Count or v.count end)
-                if okVc and type(vc) == 'number' and vc > 0 and vc < 10000 then
+                if okVc and type(vc) == 'number' and vc > 0 then
                     for i = 0, vc - 1 do
                         local okItem, itemVal = pcall(function() return v[i] end)
                         if okItem and itemVal ~= nil and not seenChild[itemVal] then
