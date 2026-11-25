@@ -115,298 +115,414 @@ end
 
 local function do_full_internal(rootObj, onRow, opts)
     opts = opts or {}
-    local streaming   = type(onRow) == 'function'
+    local streaming = type(onRow) == "function"
     local methodsOnce = opts.methodsOnce == true
     local resolveMeta = opts.resolveMeta ~= false
-    local loadstr     = loadstring or load
+    local loadstr = loadstring or load
 
     local md, maxDepth = tonumber(opts.maxDepth), 0
     if md and md == md and md > 0 and md ~= math.huge then
         maxDepth = math.floor(md)
     end
 
-    local plt, pltFinal = {}, {}
-    local visited  = {}
-    local metaDone = {}          -- methodsOnce: metatables already listed
-    local emitted  = 0
+    local queue = {}
+    local pltFinal = {}
+    local visited = {}
+    local metaDone = {}
+    local emitted = 0
 
-    local function copyPath(t)
-        local o = {}
-        for i = 1, #t do o[i] = t[i] end
-        return o
-    end
-
-    -- Identity by OBJECT. CE userdata frequently override __tostring to return
-    -- a class name or caption, so tostring() keys collide and prune the graph.
     local function markVisited(obj)
         local ty = type(obj)
-        if ty ~= 'userdata' and ty ~= 'table' then return false end
-        if visited[obj] then return true end
+        if ty ~= "userdata" and ty ~= "table" then
+            return false
+        end
+        if visited[obj] then
+            return true
+        end
         visited[obj] = true
         return false
     end
 
-    -- tostring() on a CE object can fault. pcall is mitigation, NOT a guarantee:
-    -- a native access violation is not reliably catchable.
     local function safeVal(v)
         local tv = type(v)
-        if tv ~= 'userdata' and tv ~= 'table' then return v end
+        if tv ~= "userdata" and tv ~= "table" then
+            return v
+        end
         local ok, s = pcall(tostring, v)
-        if ok and type(s) == 'string' then return s end
-        return '<' .. tv .. '>'
+        if ok and type(s) == "string" then
+            return s
+        end
+        return "<" .. tv .. ">"
     end
 
     local function allowed(depth)
         return maxDepth <= 0 or depth <= maxDepth
     end
 
-    -- Root name. Guarded, identifier-only, and it must resolve back to rootObj:
-    -- the pattern also stops `load` executing arbitrary text from a Name.
-    local vn, vna = '…', '(…)'
-    local okN, nm = pcall(function() return rootObj.Name end)
-    if okN and type(nm) == 'string' and nm:match('^[%a_][%w_]*$') then
-        local f = loadstr('return ' .. nm)
+    local vn, vna = "…", "(…)"
+    local okN, nm =
+        pcall(
+        function()
+            return rootObj.Name
+        end
+    )
+    if okN and type(nm) == "string" and nm:match("^[%a_][%w_]*$") then
+        local f = loadstr("return " .. nm)
         if f then
             local okR, r = pcall(f)
-            if okR and r == rootObj then vn, vna = nm, nm end
+            if okR and r == rootObj then
+                vn, vna = nm, nm
+            end
+        end
+    end
+
+    local function formatSegment(seg)
+        if seg:match("^%[%d+%]$") then
+            return seg
+        elseif seg:match("^[%a_][%w_]*%b()%[%d+%]$") then
+            return "." .. seg
+        elseif seg:match("^[%a_][%w_]*%b()$") then
+            return "." .. seg
+        elseif seg:match("^[%a_][%w_]*$") then
+            return "." .. seg
+        else
+            return "[" .. luaStr(seg) .. "]"
         end
     end
 
     local function proc(k, p)
         local ks = tostring(k)
-        local ok, v = pcall(function() return p[k] end)
-        if not ok or v == nil then return '(…):' .. ks .. '(…)' end
-        return vna .. '.' .. ks .. '(…)'
+        local ok, v =
+            pcall(
+            function()
+                return p[k]
+            end
+        )
+        if not ok or v == nil then
+            return "(…):" .. ks .. "(…)"
+        end
+        return vna .. "." .. ks .. "(…)"
     end
 
     markVisited(rootObj)
 
-    -- ONE enqueue path, so the depth gate and the visited test cannot drift
-    -- between the four call sites. isRaw keeps a metatable value untouched.
-    local function push(p2, name, val, kind, depth, recurse, isRaw)
-        if not allowed(depth) then return end
-        local np2 = copyPath(p2)
-        np2[#np2 + 1] = name
-        local nextData = nil
-        if recurse then
+    local function emitOrEnqueue(basePath, seg, val, kind, depth, recurse, isRaw, isRootChild)
+        if not allowed(depth) then
+            return
+        end
+
+        local fullPath = isRootChild and seg or (basePath .. formatSegment(seg))
+        local shownVal = isRaw and val or safeVal(val)
+
+        if streaming then
+            onRow(kind, fullPath, shownVal, depth)
+            emitted = emitted + 1
+        else
+            local ptj = {type = kind, path = fullPath, depth = depth}
+            if shownVal ~= nil then
+                ptj.value = shownVal
+            end
+            pltFinal[#pltFinal + 1] = ptj
+        end
+
+        if recurse and allowed(depth + 1) then
             local ty = type(val)
-            if (ty == 'userdata' or ty == 'table') and not markVisited(val) then
-                nextData = val
+            if (ty == "userdata" or ty == "table") and not markVisited(val) then
+                queue[#queue + 1] = {
+                    data = val,
+                    path = fullPath,
+                    depth = depth
+                }
             end
         end
-        plt[#plt + 1] = {
-            path2 = np2,
-            data  = nextData,
-            val   = isRaw and val or safeVal(val),
-            type  = kind,
-            depth = depth,
-        }
     end
 
-    local v, p2, currentDepth, w = rootObj, {}, 0, 0
+    local v, currentPath, currentDepth, w = rootObj, "", 0, 0
 
     while true do
-        if w > 0 then
-            local cr = plt[w]
-            if cr == nil then break end
+        local isRoot = (w == 0)
+        if not isRoot then
+            local cr = queue[w]
+            if cr == nil then
+                break
+            end
+            queue[w] = nil
             v = cr.data
-            p2 = cr.path2               -- shared, never mutated; push copies
+            currentPath = cr.path
             currentDepth = cr.depth
         end
 
         local ty = type(v)
-        if ty == 'userdata' or ty == 'table' then
+        if ty == "userdata" or ty == "table" then
             local childDepth = currentDepth + 1
             local seenChild = {}
             local function noteChild(o)
                 local t = type(o)
-                if t == 'userdata' or t == 'table' then seenChild[o] = true end
+                if t == "userdata" or t == "table" then
+                    seenChild[o] = true
+                end
             end
 
-            -- 1. Metatable methods and fields. CE/LCL usually put the methods
-            --    in __index, so walk both, deduplicated by key.
+            -- 1. Metatable methods and fields
             if allowed(childDepth) then
                 local cb, mt = pcall(getmetatable, v)
-                if cb and type(mt) == 'table'
-                   and not (methodsOnce and metaDone[mt]) then
-                    if methodsOnce then metaDone[mt] = true end
-                    local sources = { mt }
-                    local okIx, ix = pcall(function() return mt.__index end)
-                    if okIx and type(ix) == 'table' then sources[2] = ix end
+                if cb and type(mt) == "table" then
+                    local isRepeatMeta = methodsOnce and metaDone[mt]
+                    if methodsOnce then
+                        metaDone[mt] = true
+                    end
+
+                    local sources = {mt}
+                    local okIx, ix =
+                        pcall(
+                        function()
+                            return mt.__index
+                        end
+                    )
+                    if okIx and type(ix) == "table" then
+                        sources[2] = ix
+                    end
                     local seenKey = {}
                     for si = 1, #sources do
                         for k0, v0 in pairs(sources[si]) do
-                            if type(k0) == 'string' and k0:sub(1, 2) ~= '__'
-                               and not seenKey[k0] then
+                            if type(k0) == "string" and k0:sub(1, 2) ~= "__" and not seenKey[k0] then
                                 seenKey[k0] = true
-                                local shown, kind = v0, 'Method'
-                                if resolveMeta then
-                                    local tv0 = type(v0)
-                                    if tv0 == 'table' or tv0 == 'userdata'
-                                       or tv0 == 'function' then
-                                        local okp, got = pcall(function() return v[k0] end)
-                                        if okp and got ~= nil then
-                                            shown = got
-                                            kind = (type(got) == 'function')
-                                                   and 'Method' or 'Property'
+                                if not (isRepeatMeta and type(v0) == "function") then
+                                    local shown, kind = v0, "Method"
+                                    if resolveMeta then
+                                        local tv0 = type(v0)
+                                        if tv0 == "table" or tv0 == "userdata" or tv0 == "function" then
+                                            local okp, got =
+                                                pcall(
+                                                function()
+                                                    return v[k0]
+                                                end
+                                            )
+                                            if okp and got ~= nil then
+                                                shown = got
+                                                kind = (type(got) == "function") and "Method" or "Property"
+                                            end
                                         end
                                     end
+                                    if not (isRepeatMeta and kind == "Method") then
+                                        local n = isRoot and proc(k0, v) or k0
+                                        emitOrEnqueue(currentPath, n, shown, kind, childDepth, false, true, isRoot)
+                                    end
                                 end
-                                local n = (w > 0) and k0 or proc(k0, v)
-                                push(p2, n, shown, kind, childDepth, false, true)
                             end
                         end
                     end
                 end
             end
 
-            -- 2. Lua table keys.
-            if ty == 'table' then
+            -- 2. Lua table keys
+            if ty == "table" then
                 for k, val in pairs(v) do
                     local keyStr = tostring(k)
-                    local nm2 = (w > 0) and keyStr or (vna .. '.' .. keyStr)
-                    local isObj = (type(val) == 'userdata' or type(val) == 'table')
+                    local nm2 = isRoot and (vna .. "." .. keyStr) or keyStr
+                    local isObj = (type(val) == "userdata" or type(val) == "table")
                     noteChild(val)
-                    push(p2, nm2, val, isObj and 'Object' or 'Property',
-                         childDepth, true)
+                    emitOrEnqueue(
+                        currentPath,
+                        nm2,
+                        val,
+                        isObj and "Object" or "Property",
+                        childDepth,
+                        true,
+                        false,
+                        isRoot
+                    )
                 end
             end
 
-            -- 3. Userdata inspection.
-            if ty == 'userdata' then
-                -- 3a. Child components.
-                local okCount, plc = pcall(function() return v.getComponentCount() end)
-                if okCount and type(plc) == 'number' and plc > 0 then
+            -- 3. Userdata inspection
+            if ty == "userdata" then
+                -- 3a. Child components
+                local okCount, plc =
+                    pcall(
+                    function()
+                        return v.getComponentCount()
+                    end
+                )
+                if okCount and type(plc) == "number" and plc > 0 and plc < 100000 then
                     for i = 0, plc - 1 do
-                        local okComp, pli = pcall(function() return v.getComponent(i) end)
+                        local okComp, pli =
+                            pcall(
+                            function()
+                                return v.getComponent(i)
+                            end
+                        )
                         if okComp and pli ~= nil then
-                            local src = string.format('getComponent(%d)', i)
-                            local nm2 = (w > 0) and src or (vna .. '.' .. src)
+                            local src = string.format("getComponent(%d)", i)
+                            local nm2 = isRoot and (vna .. "." .. src) or src
                             noteChild(pli)
-                            push(p2, nm2, pli, 'Component', childDepth, true)
+                            emitOrEnqueue(currentPath, nm2, pli, "Component", childDepth, true, false, isRoot)
                         end
                     end
                 end
 
+                -- 3a-bis. Child controls
+                local okCtrlCnt, ctrlCount =
+                    pcall(
+                    function()
+                        return v.ControlCount
+                    end
+                )
+                if not okCtrlCnt or type(ctrlCount) ~= "number" then
+                    okCtrlCnt, ctrlCount =
+                        pcall(
+                        function()
+                            return v.getControlCount()
+                        end
+                    )
+                end
+                if okCtrlCnt and type(ctrlCount) == "number" and ctrlCount > 0 and ctrlCount < 100000 then
+                    for i = 0, ctrlCount - 1 do
+                        local okCtrl, ctrl =
+                            pcall(
+                            function()
+                                return v.getControl(i)
+                            end
+                        )
+                        if okCtrl and ctrl ~= nil and not seenChild[ctrl] then
+                            local src = string.format("getControl(%d)", i)
+                            local nm2 = isRoot and (vna .. "." .. src) or src
+                            noteChild(ctrl)
+                            emitOrEnqueue(currentPath, nm2, ctrl, "Control", childDepth, true, false, isRoot)
+                        end
+                    end
+                end
 
-                -- 3b. Published properties. Every member access is guarded:
-                --     getPropertyList may be absent, and its result may lack
-                --     .Count, integer indexing or .destroy().
-				                -- 3b. Published properties. Every member access is guarded:
-                --     getPropertyList may be absent, and its result may lack
-                --     .Count, integer indexing or .destroy().
+                -- 3b. Published properties
                 local seenPropOwner, seenPropParent = false, false
                 local okPL, propertyList = pcall(getPropertyList, v)
                 if okPL and propertyList ~= nil then
-                    local okC, propCount = pcall(function() return propertyList.Count end)
-                    if okC and type(propCount) == 'number'
-                       and propCount > 0 then
+                    local okC, propCount =
+                        pcall(
+                        function()
+                            return propertyList.Count
+                        end
+                    )
+                    if okC and type(propCount) == "number" and propCount > 0 and propCount < 100000 then
                         for i = 0, propCount - 1 do
-                            local okI, pli = pcall(function() return propertyList[i] end)
-                            if okI and type(pli) == 'string' then
-                                local okV, val = pcall(function() return v[pli] end)
-                                if not okV then val = nil end
-                                local nm2 = (w > 0) and pli or (vna .. '.' .. pli)
-								if pli == 'Owner' then seenPropOwner = true end
-                                if pli == 'Parent' then seenPropParent = true end
-                                local isObj = (type(val) == 'userdata' or type(val) == 'table')
-                                local shouldRecurse = (pli ~= 'Parent' and pli ~= 'Owner')
-                                if shouldRecurse then noteChild(val) end
-                                push(p2, nm2, val, isObj and 'Object' or 'Property',
-                                     childDepth, shouldRecurse)
+                            local okI, pli =
+                                pcall(
+                                function()
+                                    return propertyList[i]
+                                end
+                            )
+                            if okI and type(pli) == "string" then
+                                if pli == "Owner" then
+                                    seenPropOwner = true
+                                end
+                                if pli == "Parent" then
+                                    seenPropParent = true
+                                end
+
+                                local okV, val =
+                                    pcall(
+                                    function()
+                                        return v[pli]
+                                    end
+                                )
+                                if not okV then
+                                    val = nil
+                                end
+                                local nm2 = isRoot and (vna .. "." .. pli) or pli
+                                local isObj = (type(val) == "userdata" or type(val) == "table")
+                                local shouldRecurse = (pli ~= "Parent" and pli ~= "Owner")
+                                if shouldRecurse then
+                                    noteChild(val)
+                                end
+                                emitOrEnqueue(
+                                    currentPath,
+                                    nm2,
+                                    val,
+                                    isObj and "Object" or "Property",
+                                    childDepth,
+                                    shouldRecurse,
+                                    false,
+                                    isRoot
+                                )
                             end
                         end
                     end
-                    -- Reached even when the loop above raised or was skipped.
-                    pcall(function() propertyList.destroy() end)
+                    pcall(
+                        function()
+                            propertyList.destroy()
+                        end
+                    )
                 end
-
-                -- Fallback for Owner / Parent when CE exposes them via C getters
-                -- rather than getPropertyList() (e.g. TComponent / TControl).
+                -- Fallback for Owner / Parent via C getters
                 if allowed(childDepth) then
                     if not seenPropOwner then
-                        local okOw, ow = pcall(function() return v.Owner end)
+                        local okOw, ow =
+                            pcall(
+                            function()
+                                return v.Owner
+                            end
+                        )
                         if okOw and ow ~= nil then
-                            local nm2 = (w > 0) and 'Owner' or (vna .. '.Owner')
-                            push(p2, nm2, ow, 'Object', childDepth, false)
+                            local nm2 = isRoot and (vna .. ".Owner") or "Owner"
+                            emitOrEnqueue(currentPath, nm2, ow, "Object", childDepth, false, false, isRoot)
                         end
                     end
                     if not seenPropParent then
-                        local okPa, pa = pcall(function() return v.Parent end)
+                        local okPa, pa =
+                            pcall(
+                            function()
+                                return v.Parent
+                            end
+                        )
                         if okPa and pa ~= nil then
-                            local nm2 = (w > 0) and 'Parent' or (vna .. '.Parent')
-                            push(p2, nm2, pa, 'Object', childDepth, false)
+                            local nm2 = isRoot and (vna .. ".Parent") or "Parent"
+                            emitOrEnqueue(currentPath, nm2, pa, "Object", childDepth, false, false, isRoot)
                         end
                     end
                 end
-				
-                -- 3c. Indexed collections. Skips anything 3a/3b already emitted,
-                --     which is where the duplicate rows came from.
-                local okVc, vc = pcall(function() return v.Count or v.count end)
-                if okVc and type(vc) == 'number' and vc > 0 then
+                -- 3c. Indexed collections
+                local okVc, vc =
+                    pcall(
+                    function()
+                        return v.Count or v.count
+                    end
+                )
+                if okVc and type(vc) == "number" and vc > 0 and vc < 10000 then
                     for i = 0, vc - 1 do
-                        local okItem, itemVal = pcall(function() return v[i] end)
+                        local okItem, itemVal =
+                            pcall(
+                            function()
+                                return v[i]
+                            end
+                        )
                         if okItem and itemVal ~= nil and not seenChild[itemVal] then
                             noteChild(itemVal)
-                            local idx = string.format('[%d]', i)
-                            -- At root level the object prefix must be kept,
-                            -- otherwise the whole path is just "[0]".
-                            local nm2 = (w > 0) and idx or (vna .. idx)
-                            local isObj = (type(itemVal) == 'userdata' or type(itemVal) == 'table')
-                            push(p2, nm2, itemVal, isObj and 'Object' or 'Value',
-                                 childDepth, true)
+                            local idx = string.format("[%d]", i)
+                            local nm2 = isRoot and (vna .. idx) or idx
+                            local isObj = (type(itemVal) == "userdata" or type(itemVal) == "table")
+                            emitOrEnqueue(
+                                currentPath,
+                                nm2,
+                                itemVal,
+                                isObj and "Object" or "Value",
+                                childDepth,
+                                true,
+                                false,
+                                isRoot
+                            )
                         end
                     end
                 end
             end
         end
-
         w = w + 1
     end
-
-    -- Path rendering. A positive identifier test, plus call-expression branches
-    -- so getComponent(0) is not quoted as a string key.
-    local function luaStr(s)
-        s = s:gsub('\\', '\\\\'):gsub('"', '\\"')
-             :gsub('\n', '\\n'):gsub('\r', '\\r'):gsub('\t', '\\t')
-        return '"' .. s .. '"'
+    if streaming then
+        return emitted
     end
-
-    -- #plt is captured BEFORE any entry is released, so nil-ing is safe.
-    local n = #plt
-    for i = 1, n do
-        local pi = plt[i]
-        local pathArr = pi.path2
-        for y = 2, #pathArr do
-            local py = pathArr[y]
-            if py:match('^%[%d+%]$') then
-                pathArr[y] = py
-            elseif py:match('^[%a_][%w_]*%b()%[%d+%]$') then
-                pathArr[y] = '.' .. py
-            elseif py:match('^[%a_][%w_]*%b()$') then
-                pathArr[y] = '.' .. py
-            elseif py:match('^[%a_][%w_]*$') then
-                pathArr[y] = '.' .. py
-            else
-                pathArr[y] = '[' .. luaStr(py) .. ']'
-            end
-        end
-        local path = table.concat(pathArr, '')
-
-        if streaming then
-            onRow(pi.type, path, pi.val, pi.depth)
-            emitted = emitted + 1
-            plt[i] = nil                 -- release the queue as we drain it
-        else
-            local ptj = { type = pi.type, path = path, depth = pi.depth }
-            if pi.val ~= nil then ptj.value = pi.val end
-            pltFinal[#pltFinal + 1] = ptj
-        end
-    end
-
-    if streaming then return emitted end
     return pltFinal
 end
+
 
 -- One gsub with a lookup table: the result is built in a C buffer, not as a Lua
 -- table holding one string per input byte.
@@ -968,7 +1084,7 @@ function tprint(tbl, max_depth, pth)
             line(l)
         end
 
-        local opts = { methodsOnce = false, maxDepth = depthLimit }
+        local opts = { methodsOnce = true, maxDepth = depthLimit }
         local okf, res = pcall(do_full_internal, obj, emitRow, opts)
         if not okf then
             line('tprint: do_full_internal raised: ' .. tostring(res))
