@@ -280,20 +280,14 @@ local function do_full_internal(rootObj, onRow, opts)
                     for i = 0, plc - 1 do
                         local okComp, pli = pcall(function() return v.getComponent(i) end)
                         if okComp and pli ~= nil then
-                            local okName, pli_nm = pcall(function() return pli.Name end)
-                            local src
-                            if okName and type(pli_nm) == 'string'
-                               and trim_str(pli_nm) ~= '' then
-                                src = trim_str(pli_nm)
-                            else
-                                src = string.format('getComponent(%d)', i)
-                            end
+                            local src = string.format('getComponent(%d)', i)
                             local nm2 = (w > 0) and src or (vna .. '.' .. src)
                             noteChild(pli)
                             push(p2, nm2, pli, 'Component', childDepth, true)
                         end
                     end
                 end
+
 
                 -- 3b. Published properties. Every member access is guarded:
                 --     getPropertyList may be absent, and its result may lack
