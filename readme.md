@@ -209,7 +209,7 @@ Suggested usage:
 --ghidraLike.rtticsv('C:\\Users\\User\\Documents\\rtti.csv')
 --ghidraLike.csv('C:\\Users\\User\\Documents\\funcs.csv')
 --ghidraLike.namecsv('C:\\Users\\User\\Documents\\funcs.csv')
---ghidraLike.loadNames('C:\\Users\\User\\Documents\\funcs.csv')
+--ghidraLike.loadNames('C:\\Users\\User\\Documents\\names.csv')
 ```
 
 ### Methods on (ghidraLike.…):
