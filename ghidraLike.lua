@@ -7,6 +7,56 @@
 -- need. Identifiers and behaviour are unchanged.
 
 ------------------------------------------------------------------ constants
+------------------------------------------------------------------ single global
+-- ONE global: ghidraLike. Anything that must survive a dofile() lives in an
+-- underscore-prefixed field of that table, never in _G.
+local G = ghidraLike
+if type(G) ~= 'table' then G = {}; ghidraLike = G end
+if type(G._touched) ~= 'table' then G._touched = {} end
+if type(G._hook)    ~= 'table' then G._hook    = {} end
+if type(G._hl)      ~= 'table' then G._hl      = {} end
+
+-- Adopt what an earlier revision left in _G, THEN remove the global. The
+-- touched set and the bitmap cache must be adopted, not dropped: they hold
+-- comments already written and native bitmaps still owed a destroy().
+do
+  local function adopt(dst, key)
+    local v = _G[key]
+    if type(v) == 'table' then
+      for k, x in pairs(v) do if dst[k] == nil then dst[k] = x end end
+    end
+    _G[key] = nil
+  end
+  adopt(G._touched, 'ghidraLikeTouched')
+  adopt(G._hook,    'ghidraLikeHookState')
+  adopt(G._hl,      'ghidraLikeHighlight')
+
+  -- REUSE the old highlight timer, do not destroy it: G._hl.pending may still
+  -- hold bitmaps it owes a destroy(). Its OnTimer is re-pointed in E8.
+  if G._hlTimer == nil and _G.ghidraLikeHlTimer ~= nil then
+    G._hlTimer = _G.ghidraLikeHlTimer
+  end
+  _G.ghidraLikeHlTimer = nil
+
+  -- The old permanent menu poll is superseded by a self-destroying one.
+  local oldMenu = _G.ghidraLikeMenuTimer
+  if oldMenu ~= nil then pcall(function() oldMenu.destroy() end) end
+  _G.ghidraLikeMenuTimer = nil
+  
+    -- A poll left pending by a previous load of THIS revision would keep the
+  -- old closure in charge, because ncArmMenuPoll returns early when it exists.
+  if G._menuTimer ~= nil then
+    pcall(function() G._menuTimer.destroy() end)
+    G._menuTimer = nil
+  end
+
+  for _, k in ipairs({ '__glSplitCsv', '__glSpansToRanges', '__glPtrRef',
+                       '__glSigned32', '__glCsv', '__glRttiCsv', '__glResolve',
+                       '__glHlLineName', '__glHlView', '__glHlClear' }) do
+    _G[k] = nil
+  end
+end
+
 local floor = math.floor
 local find, byte, char = string.find, string.byte, string.char
 local unpack = table.unpack or unpack
@@ -264,7 +314,7 @@ end
 
 
 ------------------------------------------------------------------ PE helpers
-local peInfo, secSize, execSections, secSpans, dataRanges
+local peInfo, secSize, execSections, secSpans, dataRanges, spansToRanges
 do
   local function ddAddr(pe, idx)
     local d = pe.dd[idx]
@@ -385,7 +435,7 @@ do
     return spans
   end
 
-  local function spansToRanges(sp)
+  function spansToRanges(sp)
     local r = {}
     for i = 1, #sp do r[#r+1] = { sp[i].lo, sp[i].hi } end
     return r
@@ -409,12 +459,7 @@ do
     return ranges
   end
 
-  -- exposed for the RTTI range builder below
-  _G.__glSpansToRanges = spansToRanges
 end
-local spansToRanges = _G.__glSpansToRanges
-_G.__glSpansToRanges = nil
-
 
 ------------------------------------------------------------------ small helpers
 local function readCString(addr, maxLen)
@@ -929,15 +974,15 @@ end
 
 ------------------------------------------------------------------ RTTI
 local cols, hierarch, vtblMap, funcToClass = {}, {}, {}, {}
-local bcdTypeName
+local bcdTypeName, ptrRef, asSigned32
 do
-  local function ptrRef(pe, v)
+  function ptrRef(pe, v)
     if v == nil then return nil end
     if pe.is64 then return pe.base + v end
     return v
   end
 
-  local function asSigned32(v)
+  function asSigned32(v)
     if v >= 0x80000000 then return v - 0x100000000 end
     return v
   end
@@ -958,11 +1003,7 @@ do
     return nil
   end
 
-  _G.__glPtrRef = ptrRef
-  _G.__glSigned32 = asSigned32
 end
-local ptrRef, asSigned32 = _G.__glPtrRef, _G.__glSigned32
-_G.__glPtrRef, _G.__glSigned32 = nil, nil
 
 
 local function scanCols(pe, ranges, strict)
@@ -1197,11 +1238,7 @@ local NC = { version = 0, name = {}, nName = 0, cmt = {}, nCmt = 0 }
 local NO, NCL = '«', '»'
 local EO, ECL = '〈', '〉'
 
-local ncTouched = _G.ghidraLikeTouched
-if type(ncTouched) ~= 'table' then
-  ncTouched = {}
-  _G.ghidraLikeTouched = ncTouched
-end
+local ncTouched = G._touched
 
 local function ncFlush()
   NC.name, NC.nName = {}, 0
@@ -1230,11 +1267,6 @@ end
 
 local function ncPurge()
   local touched = ncTouched
-  if type(touched) ~= 'table' then
-    ncTouched = {}
-    _G.ghidraLikeTouched = ncTouched
-    return 0
-  end
   local n = 0
   local addrs = {}
   for a in pairs(touched) do addrs[#addrs + 1] = a end
@@ -1250,8 +1282,6 @@ local function ncPurge()
     end
   end
   for a in pairs(touched) do touched[a] = nil end
-  _G.ghidraLikeTouched = touched
-  ncTouched = touched
   return n
 end
 
@@ -1433,7 +1463,7 @@ end
 
 
 ------------------------------------------------------------------ OUTPUT
-local csvEsc
+local csvEsc, _csv, _rtticsv
 do
   local function hasTag(mask, tag) return floor(mask / TAGBIT[tag]) % 2 == 1 end
 
@@ -1502,7 +1532,7 @@ do
     return ks
   end
 
-  _G.__glCsv = function(path)
+  _csv = function(path)
     local fh = io.open(path, 'w')
     if fh == nil then print('cannot open ' .. tostring(path)); return end
     fh:write('start,end,size,directCallSites,status,confidence,sources,kind,fromPdata,class\n')
@@ -1519,7 +1549,7 @@ do
     fh:close(); print('wrote ' .. path .. ' (' .. #fStart .. ' rows)')
   end
 
-  _G.__glRttiCsv = function(path)
+  _rtticsv = function(path)
     local fh = io.open(path, 'w')
     if fh == nil then print('cannot open ' .. tostring(path)); return end
     fh:write('vftable,col,kind,class,bases\n')
@@ -1544,9 +1574,6 @@ do
     fh:close(); print('wrote ' .. path .. ' (' .. #ks .. ' rows)')
   end
 end
-local _csv, _rtticsv = _G.__glCsv, _G.__glRttiCsv
-_G.__glCsv, _G.__glRttiCsv = nil, nil
-
 
 ------------------------------------------------------------------ NAMES
 local function _namecsv(path)
@@ -1583,9 +1610,10 @@ local nmLo, nmHi = 0, -1
 local nmCache = {}
 local nmRegSig, nmRegTab = nil, nil
 local nmRegs
+local nmSplitCsv
 
 do
-  local function nmSplitCsv(line)
+  function nmSplitCsv(line)
     local out, i, n = {}, 1, #line
     while i <= n do
       if line:sub(i,i) == '"' then
@@ -1607,7 +1635,6 @@ do
     end
     return out
   end
-  _G.__glSplitCsv = nmSplitCsv
 end
 
 local function unloadNames()
@@ -1617,6 +1644,7 @@ end
 
 
 ------------------------------------------------------------------ registers
+local nmResolve
 do
   local NRFAM = {'RAX','RBX','RCX','RDX','RSI','RDI','RBP','RSP','RIP',
                  'R8','R9','R10','R11','R12','R13','R14','R15'}
@@ -1710,7 +1738,7 @@ do
     return nil
   end
 
-  local function nmResolve(text, R)
+  function nmResolve(text, R)
     text = text:match('^%s*(.-)%s*$')
     if text == '' then return nil, false end
     if text:match('^%x+$') then return tonumber(text, 16), false end
@@ -1725,11 +1753,7 @@ do
     end
     return nmSym(text), false
   end
-
-  _G.__glResolve = nmResolve
-end
-local nmResolve = _G.__glResolve
-_G.__glResolve = nil
+  end
 
 
 local function _annotate(addr, inst)
@@ -2308,10 +2332,8 @@ local ncRefs         = {}
 local ncPrev = nil
 local ncPid = getOpenedProcessID()
 
-local ncState = _G.ghidraLikeHookState
-if type(ncState) ~= 'table' then ncState = {}; _G.ghidraLikeHookState = ncState end
-
-local ncBuildIndex, ncAttachNameMenu, ncLoad, ncCloseNameList, hlFlush
+local ncState = G._hook
+local ncBuildIndex, ncAttachNameMenu, ncLoad, ncCloseNameList, hlFlush, ncArmMenuPoll, ncShowNameList
 
 local function ncSanitise(s)
   s = tostring(s or '')
@@ -2410,7 +2432,7 @@ end
 
 
 ------------------------------------------------------------------ highlight
-local hlAttach, hlLabelFor, ncPutName
+local hlAttach, hlLabelFor, ncPutName, hlLineName, hlViewOf, hlClear
 do
   local HL_COLOR     = 0x34FF3B
   local HL_BG        = 0x222222
@@ -2419,31 +2441,29 @@ do
   local HL_MAXW      = 900
   local HL_LINE_NAME = false
 
-  local hlState = _G.ghidraLikeHighlight
-  if type(hlState) ~= 'table' then hlState = {}; _G.ghidraLikeHighlight = hlState end
+  local hlState = G._hl
   if type(hlState.cache)   ~= 'table' then hlState.cache   = {} end
   if type(hlState.pending) ~= 'table' then hlState.pending = {} end
 
   local hlCache   = hlState.cache
-  local hlPending = hlState.pending   -- shared across reloads, cleared IN PLACE
+  local hlPending = hlState.pending
   local hlCount = 0
   local hlLabel = {}
   local hlView  = nil
   local inRender = false
 
-  -- A bitmap handed to OnExtraLineRender belongs to CE until the paint that
-  -- asked for it has finished. Destroying it inside the render callback frees
-  -- memory CE is still drawing from: a native use-after-free, which pcall
-  -- cannot catch. Retired bitmaps therefore go on a queue and are freed by a
-  -- timer, which by construction runs outside any paint.
-  local hlTimer = _G.ghidraLikeHlTimer
+  local hlTimer = G._hlTimer
   if hlTimer == nil then
     local okM, mf = pcall(getMainForm)
     if okM and mf ~= nil then
       local okT, t = pcall(createTimer, mf)
-      if okT and t ~= nil then hlTimer = t; _G.ghidraLikeHlTimer = t end
+      if okT and t ~= nil then hlTimer = t; G._hlTimer = t end
     end
   end
+
+  -- Without this the queue is never drained: hlRetire would enqueue bitmaps
+  -- that nothing destroys, and the timer would tick for ever doing nothing.
+  -- Re-pointed on every load so an adopted timer serves THIS closure's queue.
   if hlTimer ~= nil then
     pcall(function()
       hlTimer.Interval = 250
@@ -2583,12 +2603,10 @@ do
     return line:sub(1, sep - 1) .. ' ' .. nm .. line:sub(sep)
   end
 
-  _G.__glHlLineName = function() return HL_LINE_NAME end
-  _G.__glHlView     = function() return hlView end
-  _G.__glHlClear    = function(a) hlLabel[a] = nil end
+  hlLineName = function() return HL_LINE_NAME end
+  hlViewOf   = function() return hlView end
+  hlClear    = function(a) hlLabel[a] = nil end
 end
-local hlLineName, hlViewOf, hlClear = _G.__glHlLineName, _G.__glHlView, _G.__glHlClear
-_G.__glHlLineName, _G.__glHlView, _G.__glHlClear = nil, nil, nil
 
 ------------------------------------------------------------------ refs-only hook
 local function ncHook(sender, address, LDD, result, description)
@@ -2657,6 +2675,7 @@ local function ncAttach()
   for _, m in ipairs({ 'repaint', 'Repaint', 'invalidate', 'Invalidate' }) do
     pcall(function() v[m]() end)
   end
+    if ncArmMenuPoll then ncArmMenuPoll() end
   return ok
 end
 
@@ -2667,10 +2686,10 @@ do
   local ncHaystack = nil        -- lowercased: offset + description
   local ncHaystackRaw = nil     -- verbatim:   offset + description
   local ncIndexedRowsRef = nil
-  local ncMenuItem = nil
-  local ncMenuOwner = nil       -- the form the item was attached to
-  local ncLastDir = nil
-
+  local ncLastDir = nil         -- restored: ncInitialDir/ncPickNamesFile use it
+  -- The menu item and its owner live in G._hook, NOT here, so a dofile re-uses
+  -- the existing entry instead of adding another. No local shadow.
+  
     -- CE exposes zero-argument methods; your own working code calls them with
   -- '.' and no self. Try that convention first, then the self form.
   local function ncCall(obj, ...)
@@ -2800,7 +2819,7 @@ do
     end
   end
 
-  local function ncShowNameList()
+  function ncShowNameList()
     if type(ncRows) ~= 'table' or #ncRows == 0 then
       print('ghidraLike: no names loaded - run loadNames(path) first')
       return
@@ -3167,9 +3186,40 @@ do
     end
     if type(n) == 'number' and n > 0 then ncShowNameList() end
   end
+  
+    -- From Set_window_content.lua: attach on the window's own EVENT rather than
+  -- polling for ever. OnShow is CHAINED, never replaced, and the original is
+  -- kept in G._hook so a reload unwraps instead of nesting.
+  local function ncChainShow(mv)
+    local okS, cur = pcall(function() return mv.OnShow end)
+    if okS and cur ~= nil and cur == G._hook.showMine then return end
+    local orig
+    if okS and cur ~= nil and G._hook.showMine ~= nil and cur == G._hook.showMine then
+      orig = G._hook.showOrig
+    else
+      orig = (okS and type(cur) == 'function') and cur or nil
+      G._hook.showOrig = orig
+    end
+    local mine = function(sender)
+      if orig then pcall(orig, sender) end
+      ncAttachNameMenu(true)
+    end
+    G._hook.showMine = mine
+    pcall(function() mv.OnShow = mine end)
+  end
 
-  -- quiet=true for the startup poll, so a closed Memory View stays silent.
-  -- Identity comparison only: never read a property of a possibly-freed item.
+   -- quiet=true for the startup poll and the OnShow chain, so a closed or
+  -- half-built Memory View stays silent.
+  --
+  -- THREE FIXES over the previous version:
+  --  1. The item and its owner live in G._hook, not in block-local variables.
+  --     A block-local is reset by every dofile, so each reload added ANOTHER
+  --     'ghidraLike names' entry while the old one stayed in the menu.
+  --  2. The anchor's parent is captured BEFORE ncChainShow runs. Installing
+  --     OnShow can make CE realise the form's handles, and that can rebuild
+  --     the menu — which would leave `anchor` pointing at a freed item.
+  --  3. A stale item from an earlier load is removed before the new one is
+  --     inserted, so a reload replaces rather than accumulates.
   function ncAttachNameMenu(quiet)
     local okM, mv = pcall(getMemoryViewForm)
     if not okM or mv == nil then
@@ -3178,17 +3228,13 @@ do
       end
       return false
     end
-    if ncMenuItem ~= nil and ncMenuOwner == mv then return true end
-    ncMenuItem, ncMenuOwner = nil, mv
 
-    local okC, mi = pcall(createMenuItem, mv)
-    if not okC or mi == nil then
-      if not quiet then print('ghidraLike: could not create menu item') end
-      return false
-    end
-    pcall(function() mi.Caption = 'ghidraLike names' end)
-    pcall(function() mi.OnClick = function() ncMenuClick() end end)
+    -- Identity comparison only. Never read a property of a possibly-freed
+    -- menu item to test whether it is still alive.
+    if G._hook.menuItem ~= nil and G._hook.menuOwner == mv then return true end
 
+    -- Resolve the insertion point FIRST, while nothing of ours has touched
+    -- the form. anchor/parent are used immediately below and never stored.
     local anchor, parent, idx = nil, nil, 0
     pcall(function() anchor = mv.EnumeratedllsandSymbols1 end)
     if anchor ~= nil then
@@ -3201,9 +3247,24 @@ do
     end
     if parent == nil then
       if not quiet then print('ghidraLike: no menu to attach to') end
-      pcall(function() mi.destroy() end)
       return false
     end
+
+    -- Drop our previous item. It belongs to a dead closure after a reload,
+    -- and leaving it in place is what produced duplicate buttons.
+    local old = G._hook.menuItem
+    if old ~= nil then
+      pcall(function() old.destroy() end)
+      G._hook.menuItem, G._hook.menuOwner = nil, nil
+    end
+
+    local okC, mi = pcall(createMenuItem, mv)
+    if not okC or mi == nil then
+      if not quiet then print('ghidraLike: could not create menu item') end
+      return false
+    end
+    pcall(function() mi.Caption = 'ghidraLike names' end)
+    pcall(function() mi.OnClick = function() ncMenuClick() end end)
 
     local okI = pcall(function() parent.insert(idx, mi) end)
     if not okI then okI = pcall(function() parent.add(mi) end) end
@@ -3213,10 +3274,14 @@ do
       return false
     end
 
-    ncMenuItem = mi
+    G._hook.menuItem, G._hook.menuOwner = mi, mv
+
+    -- Chained AFTER the insert, so a handle realisation triggered by setting
+    -- OnShow cannot invalidate the anchor we just used.
+    ncChainShow(mv)
     return true
   end
-end
+ end
 
 ------------------------------------------------------------------ loader
 function ncLoad(path, module)
@@ -3237,7 +3302,7 @@ function ncLoad(path, module)
   local strMatch = string.match
   local strByte = string.byte
   local char1 = string.char(1)
-  local splitCsv = _G.__glSplitCsv
+  local splitCsv = nmSplitCsv
 
   for line in content:gmatch('[^\r\n]+') do
     local firstByte = strByte(line, 1)
@@ -3310,29 +3375,33 @@ function ncLoad(path, module)
   if hv ~= nil then pcall(function() hv.update() end) end
   print(string.format('loadNames: %d names, %s base %X, range %X-%X',
     ncCount, tostring(mn), b, ncLo, ncHi))
+	if ncShowNameList then ncShowNameList() end
   return ncCount
 end
 
------------------------------------------------------------------- startup button
--- The button exists before any loadNames call. Memory View may not be open at
--- dofile time, so a 1 s tick keeps trying, silently. Each tick compares FORM
--- IDENTITY only, so it never touches a dangling menu-item handle, and it also
--- re-attaches if Memory View is later replaced by a different form object.
--- The timer is held in a global so a reload destroys the previous one.
-ncAttachNameMenu(true)
-do
+------------------------------------------------------------------ button poll
+-- Set_window_content.lua's pattern: a 1 ms timer that DESTROYS ITSELF once the
+-- target exists (sa_tmr2.destroy()), not a permanent tick. Re-armed by
+-- ncAttach() and by Memory View's chained OnShow, so a reopened window still
+-- gets the button with no background polling at all.
+function ncArmMenuPoll()
+  if G._menuTimer ~= nil then return end
+  if ncAttachNameMenu(true) then return end
   local okM, mf = pcall(getMainForm)
-  if okM and mf ~= nil then
-    local prev = _G.ghidraLikeMenuTimer
-    if prev ~= nil then pcall(function() prev.destroy() end) end
-    local okT, t = pcall(createTimer, mf)
-    if okT and t ~= nil then
-      t.Interval = 1000
-      t.OnTimer = function() ncAttachNameMenu(true) end
-      _G.ghidraLikeMenuTimer = t
+  if not okM or mf == nil then return end
+  local okT, t = pcall(createTimer, mf)
+  if not okT or t == nil then return end
+  G._menuTimer = t
+  t.Interval = 1
+  t.OnTimer = function(tt)
+    if ncAttachNameMenu(true) then
+      G._menuTimer = nil
+      pcall(function() tt.destroy() end)
     end
   end
 end
+
+ncArmMenuPoll()
 
 if ncState.pid ~= nil and ncState.pid ~= ncPid then
   ncPurge()
@@ -3345,14 +3414,14 @@ ncState.pid = ncPid
 -- ============================================================================
 -- PUBLIC API
 -- ============================================================================
-ghidraLike = {
-  probe     = _probe,
-  csv       = _csv,
-  rtticsv   = _rtticsv,
-  sections  = _sections,
-  html      = _html,
-  endWindow = _endWindow,
-  namecsv   = _namecsv,
-  nameAt    = function(a) local n = ncAddr(a); return n and ncSelf(n) or nil end,
-  loadNames = ncLoad
-}
+-- Assign INTO the existing table. Replacing it would discard G._touched,
+-- G._hook, G._hl and the timers, leaking bitmaps and orphaning comments.
+G.probe     = _probe
+G.csv       = _csv
+G.rtticsv   = _rtticsv
+G.sections  = _sections
+G.html      = _html
+G.endWindow = _endWindow
+G.namecsv   = _namecsv
+G.nameAt    = function(a) local n = ncAddr(a); return n and ncSelf(n) or nil end
+G.loadNames = ncLoad
