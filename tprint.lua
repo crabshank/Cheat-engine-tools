@@ -87,10 +87,25 @@ local function trim_str(s)
     return string.match(s,'^()%s*$') and '' or string.match(s,'^%s*(.*%S)')
 end
 
+-- Prefer the delimiter that does NOT occur in the content, so no quote
+-- escaping is needed in the common cases. Backslash FIRST, or the escapes
+-- added by the later rules get doubled again. Every escape written DOUBLED.
 local function luaStr(s)
-    s = s:gsub('\\', '\\\\'):gsub('"', '\\"')
-    :gsub('\n', '\\n'):gsub('\r', '\\r'):gsub('\t', '\\t')
-    return '"' .. s .. '"'
+    s = tostring(s)
+    local hasD = s:find('"', 1, true) ~= nil
+    local hasS = s:find("'", 1, true) ~= nil
+    local q = (hasD and not hasS) and "'" or '"'
+
+    s = s:gsub('\\', '\\\\')
+         :gsub('\n', '\\n')
+         :gsub('\r', '\\r')
+         :gsub('\t', '\\t')
+    if q == '"' then
+        s = s:gsub('"', '\\"')
+    else
+        s = s:gsub("'", "\\'")
+    end
+    return q .. s .. q
 end
 
 -- do_full_internal(rootObj [, onRow] [, opts])
@@ -113,6 +128,10 @@ end
 --
 -- Needs trim_str from the surrounding file.
 
+    local function kindOfValue(x)
+        return (type(x) == 'function') and 'Method (Function)' or 'Property'
+        end
+		
 local function do_full_internal(rootObj, onRow, opts)
     opts = opts or {}
     local streaming = type(onRow) == "function"
@@ -276,7 +295,7 @@ local function do_full_internal(rootObj, onRow, opts)
                         local okIx, ix =
                         pcall(
                         function()
-                            return mt.index
+                            return mt.__index
                         end
                         )
                         if okIx and type(ix) == "table" then
@@ -285,7 +304,7 @@ local function do_full_internal(rootObj, onRow, opts)
                         local seenKey = {}
                         for si = 1, #sources do
                             for k0, v0 in pairs(sources[si]) do
-                                if type(k0) == "string" and k0:sub(1, 2) ~= "" and not seenKey[k0] then
+                                if type(k0) == "string" and k0:sub(1, 2) ~= "__" and not seenKey[k0] then
                                     seenKey[k0] = true
                                     if not (isRepeatMeta and type(v0) == "function") then
                                         local shown, kind = v0, "Method"
@@ -315,24 +334,27 @@ local function do_full_internal(rootObj, onRow, opts)
                         end
                     end
                     -- 2. Lua table keys
-                    if ty == "table" then
-                        for k, val in pairs(v) do
-                            local keyStr = tostring(k)
-                            local nm2 = isRoot and (vna .. "." .. keyStr) or keyStr
-                            local isObj = (type(val) == "userdata" or type(val) == "table")
-                            noteChild(val)
-                            emitOrEnqueue(
-                            currentPath,
-                            nm2,
-                            val,
-                            isObj and "Object" or "Property",
-                            childDepth,
-                            true,
-                            false,
-                            isRoot
-                            )
+                          if ty == 'table' then
+                            for k, val in pairs(v) do
+                                -- A numeric key must stay NUMERIC in the path.
+                                -- tostring(2) yields "2", which formatSegment
+                                -- cannot tell from a real string key "2", so it
+                                -- quoted it: b["2"] instead of b[2].
+                                local seg
+                                if type(k) == 'number' and k == math.floor(k)
+                                   and k ~= math.huge and k ~= -math.huge then
+                                    seg = string.format('[%d]', k)
+                                else
+                                    seg = tostring(k)
+                                end
+                                -- isRoot prefixes the object name, never a dot
+                                -- before a bracket.
+                                local nm2 = isRoot and (vna .. seg) or seg
+                                noteChild(val)
+                                emitOrEnqueue(currentPath, nm2, val, kindOfValue(val),
+                                childDepth, true, isRoot)
+                            end
                         end
-                    end
                     -- 3. Userdata inspection
                     if ty == "userdata" then
                         -- 3a. Child components
@@ -557,12 +579,17 @@ local function do_full_internal(rootObj, onRow, opts)
             end
             return escString(s)
         end
-        -- NEVER tostring() userdata: __tostring on a CE object can fault.
-        local function scalar(v)
-            local tv = type(v)
-            if tv == 'string' then return renderString(v) end
-            if tv == 'number' or tv == 'boolean' or tv == 'nil' then return tostring(v) end
-            if tv == 'function' then return 'function (…) … end' end
+            -- raw=true means "this string is already a Lua expression", so it is
+            -- printed bare. Used ONLY for the path field: every other string is
+            -- data and must keep its quoting, or the dump misrepresents its bytes.
+            local function scalar(v, raw)
+                local tv = type(v)
+                if tv == 'string' then
+                    if raw then return v end
+                    return renderString(v)
+                end
+                if tv == 'number' or tv == 'boolean' or tv == 'nil' then return tostring(v) end
+                if tv == 'function' then return 'function (…) … end' end
                 return '<' .. tv .. '>'
             end
             ---------------------------------------------------------------- identity & raw metatables
@@ -773,6 +800,15 @@ local function doubleBytesLE(n)
             end
             return seg
         end
+		
+                -- '(…)' is a display placeholder, not an identifier. Swap it for a name
+        -- the caller can bind, so the path becomes a Lua expression.
+        local function pasteablePath(p)
+            if type(p) ~= 'string' then return nil end
+            local ph = '(…)'
+            if p:sub(1, #ph) == ph then return 'root' .. p:sub(#ph + 1) end
+            return p   -- already named (a CE object whose .Name resolved)
+        end
         ---------------------------------------------------------------- printer
         function tprint(tbl, max_depth, pth)
             -- Depth limit for the TABLE WALK. nil / non-number / <= 0 / NaN / inf all
@@ -942,12 +978,12 @@ local function doubleBytesLE(n)
                         -- the depth. seen only stops a table being descended into while it is
                         -- already an ancestor of itself; it is cleared on the way out, so a table
                         -- reached by two paths is shown in both places.
-                        local function dump(v, indent, label)
+                        local function dump(v, indent, label, raw)
                             local tv     = type(v)
                             local pad    = string.rep('\t', indent)
                             local prefix = label and (pad .. label .. ': ') or pad
                             if tv ~= 'table' then
-                                line(prefix .. scalar(v))
+                                line(prefix .. scalar(v, raw))
                                 return
                             end
                             -- Only tables reach here, so the marker is unambiguous. The node itself
@@ -959,11 +995,11 @@ local function doubleBytesLE(n)
                                 return
                             end
                             if seen[v] then
-                                line(prefix .. '')
+                                line(prefix .. '<already shown>')
                                 return
                             end
                             if expandOnce and printed[v] then
-                                line(prefix .. '')
+                                line(prefix .. '<cycle>')
                                 return
                             end
                             seen[v] = true
@@ -982,7 +1018,7 @@ local function doubleBytesLE(n)
                                     line(string.rep('\t', indent + 1)
                                     .. keyLabel(k) .. ': ')
                                 else
-                                    dump(val, indent + 1, keyLabel(k))
+                                 dump(val, indent + 1, keyLabel(k), k == 'path')
                                 end
                             end
                             seen[v] = nil
@@ -999,16 +1035,19 @@ local function doubleBytesLE(n)
                             local shown, hidden = 0, 0
                             -- ONE emitter, so the depth rule cannot drift between the streaming
                             -- path and the list fallback.
-                            local function emitRow(rtype, rpath, rvalue, rdepth)
+							local function emitRow(rtype, rpath, rvalue, rdepth)
                                 local d = rdepth
-                                if d == nil then d = pathDepth(rpath) end   -- older do_full_internal
+                                if d == nil then d = pathDepth(rpath) end
                                 if depthLimit > 0 and d > depthLimit then
                                     hidden = hidden + 1
                                     return
                                 end
                                 shown = shown + 1
+                                -- ONE line. The path is the label, so a second
+                                -- 'paste:' line would only repeat it.
+                                local p = tostring(rpath or '?')
                                 local l = string.format('%-9s %s',
-                                tostring(rtype or '?'), tostring(rpath or '?'))
+                                    tostring(rtype or '?'), p)
                                 if rvalue ~= nil then l = l .. ' = ' .. scalar(rvalue) end
                                 line(l)
                             end
@@ -1113,8 +1152,8 @@ local function doubleBytesLE(n)
                                 local b1,b2,b3,b4,b5,b6,b7,b8 = d:byte(1,8)
                                 local sign = math.floor(b8 / 128)
                                 local exp  = (b8 % 128) * 16 + math.floor(b7 / 16)
-                                local low48 = b1 + b2256 + b365536 + b416777216
-                                + b54294967296 + b6*1099511627776
+                                local low48 = b1 + b2*256 + b3*65536 + b4*16777216
+                                            + b5*4294967296 + b6*1099511627776
                                 local mant = (b7 % 16) * 281474976710656 + low48
                                 line(string.format(
                                 'IEEE754: sign=%d exponent=0x%03X (%d, unbiased %d) mantissa=0x%013X',
@@ -1188,7 +1227,7 @@ local function doubleBytesLE(n)
                     line('sequence: ' .. tostring(seq))
                     emitMetatable(t, 0)
                     emitLibrary(t)
-                    line('contents:')
+					line('contents:')
                     dump(t, 0, nil)
                 end
                 ---------------------------------------------------------- everything else

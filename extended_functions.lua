@@ -58,10 +58,25 @@ local function trim_str(s)
     return string.match(s, '^()%s*$') and '' or string.match(s, '^%s*(.*%S)')
 end
 
+-- Prefer the delimiter that does NOT occur in the content, so no quote
+-- escaping is needed in the common cases. Backslash FIRST, or the escapes
+-- added by the later rules get doubled again. Every escape written DOUBLED.
 local function luaStr(s)
-    s = s:gsub('\\', '\\\\'):gsub('"', '\\"')
-         :gsub('\n', '\\n'):gsub('\r', '\\r'):gsub('\t', '\\t')
-    return '"' .. s .. '"'
+    s = tostring(s)
+    local hasD = s:find('"', 1, true) ~= nil
+    local hasS = s:find("'", 1, true) ~= nil
+    local q = (hasD and not hasS) and "'" or '"'
+
+    s = s:gsub('\\', '\\\\')
+         :gsub('\n', '\\n')
+         :gsub('\r', '\\r')
+         :gsub('\t', '\\t')
+    if q == '"' then
+        s = s:gsub('"', '\\"')
+    else
+        s = s:gsub("'", "\\'")
+    end
+    return q .. s .. q
 end
 
 function full_internal(v, maxDepth)
@@ -224,15 +239,27 @@ function full_internal(v, maxDepth)
                             end
 
                             -- 2. Lua table keys
-                            if ty == 'table' then
-                                for k, val in pairs(v) do
-                                    local keyStr = tostring(k)
-                                    local nm2 = isRoot and (vna .. '.' .. keyStr) or keyStr
-                                    noteChild(val)
-                                    emitOrEnqueue(currentPath, nm2, val, kindOfValue(val),
-                                    childDepth, true, isRoot)
+                           if ty == 'table' then
+                            for k, val in pairs(v) do
+                                -- A numeric key must stay NUMERIC in the path.
+                                -- tostring(2) yields "2", which formatSegment
+                                -- cannot tell from a real string key "2", so it
+                                -- quoted it: b["2"] instead of b[2].
+                                local seg
+                                if type(k) == 'number' and k == math.floor(k)
+                                   and k ~= math.huge and k ~= -math.huge then
+                                    seg = string.format('[%d]', k)
+                                else
+                                    seg = tostring(k)
                                 end
+                                -- isRoot prefixes the object name, never a dot
+                                -- before a bracket.
+                                local nm2 = isRoot and (vna .. seg) or seg
+                                noteChild(val)
+                                emitOrEnqueue(currentPath, nm2, val, kindOfValue(val),
+                                childDepth, true, isRoot)
                             end
+                        end
 
                             -- 3. Userdata inspection
                             if ty == 'userdata' then
