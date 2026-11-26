@@ -2775,7 +2775,18 @@ do
       if focusMv then ncCall(hv, 'SetFocus', 'setFocus') end
     else
       local dv = mv.DisassemblerView
-      ncSetProp(dv, addr, 'selectedAddress', 'SelectedAddress')
+      if dv ~= nil then
+        local okR, savedRender = pcall(function() return dv.OnExtraLineRender end)
+        if okR and savedRender ~= nil then
+          pcall(function() dv.OnExtraLineRender = nil end)
+        end
+        ncSetProp(dv, addr, 'topAddress', 'TopAddress')
+        ncSetProp(dv, addr, 'selectedAddress', 'SelectedAddress')
+        if okR and savedRender ~= nil then
+          pcall(function() dv.OnExtraLineRender = savedRender end)
+        end
+        pcall(function() dv.update() end)
+      end
       if focusMv then ncCall(dv, 'SetFocus', 'setFocus') end
     end
 
