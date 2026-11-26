@@ -205,11 +205,11 @@ Suggested usage:
 ```
 --UNCOMMENT EACH LINE!
 --ghidraLike.probe()
---ghidraLike.html('C:\\Users\\User\\Documents\\classes_rtti.html')
---ghidraLike.rtticsv('C:\\Users\\User\\Documents\\rtti.csv')
---ghidraLike.csv('C:\\Users\\User\\Documents\\funcs.csv')
---ghidraLike.namecsv('C:\\Users\\User\\Documents\\funcs.csv')
---ghidraLike.loadNames('C:\\Users\\User\\Documents\\names.csv')
+--ghidraLike.html([[C:\Users\User\Documents\classes_rtti.html]])
+--ghidraLike.rtticsv([[C:\Users\User\Documents\rtti.csv]])
+--ghidraLike.csv([[C:\Users\User\Documents\funcs.csv]])
+--ghidraLike.namecsv([[C:\Users\User\Documents\funcs.csv]])
+--ghidraLike.loadNames([[C:\Users\User\Documents\names.csv]])
 ```
 
 ### Methods on (ghidraLike.…):
@@ -273,12 +273,12 @@ Suggested usage:
 	```lua
 	ghidraLike.probe()
 	-- wait for "Done!" in the LUA Engine, *then*:
-	ghidraLike.csv("C:\\temp\\funcs.csv")
+	ghidraLike.csv([[C:\temp\funcs.csv]])
 	```
 
 * **csv( path )**
   
-	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), where the html file will be.
+	* **path**: is a (full path to a) file name (use [[…]] quotes), where the html file will be.
 
 	Writes the whole result set as **one row per function**, RFC-4180 escaped
 	(fields containing `"`, `,`, CR or LF are quoted, embedded quotes doubled).
@@ -311,7 +311,7 @@ Suggested usage:
 
 * **rtticsv( path )**
   
-	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), where the html file will be.
+	* **path**: is a (full path to a) file name (use [[…]] quotes), where the html file will be.
 
 	Writes the class map as **one row per vftable**, *not* one row per class.
 	A class with virtual bases, or one reached through adjustor thunks, owns
@@ -348,13 +348,13 @@ Suggested usage:
 
 * **html(path)**
 	Writes a **self-contained** HTML file showing the RTTI class hierarchies. Requires a completed `probe()`.
-	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), where the html file will be.
+	* **path**: is a (full path to a) file name (use [[…]] quotes), where the html file will be.
 
 * **namecsv(path)**
-  * **path**: is a (full path to a) file name (use double backslashes instead on single ones), where a csv will be saved for an probed exe containing named addresses relative to the executable base.
+  * **path**: is a (full path to a) file name (use [[…]] quotes), where a csv will be saved for an probed exe containing named addresses relative to the executable base.
 
 * **loadNames(path)**
-	* **path**: is a (full path to a) file name (use double backslashes instead on single ones), that was saved by `.namecsv(…)`, that will be loaded and its data shown in the disassembler's comments.
+	* **path**: is a (full path to a) file name (use [[…]] quotes), that was saved by `.namecsv(…)`, that will be loaded and its data shown in the disassembler's comments.
    A button is below "Memory Viewer > View > Enumerate DLL's and Symbols", called "ghidraLike names" and clicking it a file selection window to load the names file, or a searchable and clickable list of the offsets. 
 
 * **nameAt(a)**
@@ -798,7 +798,7 @@ If **bin**==:
 
 Otherwise (default) -> Print all logged data as arrays of bytes.
 
-**f** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
+**f** is a (full path to a) file name (use [[…]] quotes), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
 
 Argument **k** is the index printed by *printAttached()* before the address (e.g. "2: 1406E8CFF"), the breakpoint of this log will be removed. If no argument specified, it will dump last stored registers for all breakpoints and remove the breakpoints for them all.
 
@@ -852,7 +852,7 @@ N.B. With methods "traceCount.attach/lite(…)", a window will popup telling you
 
 * **isMidTrace()** -> Returns true/false re. whether the module is currently in a trace (could be useful for writing scripts).
  
-* **litePrint( fileName --[[Optional]] )** -> **fileName** is a (full path to a) file name (use double backslashes instead on single ones), where the last trace captured by "traceCount.lite(…)" will be saved; if unspecified or nil, the trace will be printed to the console.
+* **litePrint( fileName --[[Optional]] )** -> **fileName** is a (full path to a) file name (use [[…]] quotes), where the last trace captured by "traceCount.lite(…)" will be saved; if unspecified or nil, the trace will be printed to the console.
 
 * **condBp( a, c, s --[[Optional]], bf --[[Optional]] )** -> **a** is an address or table of addresses in string or number form, like in "traceCount.attach(…)". **c** is a string AOB or a number, or a table of these. If **c** is a table, and an element of **c** is a table, then all strings inside that table will be instruction patterns which will be compared against the instruction. **s** is the same as in "traceCount.attach(…)". **bf** is a number, a positive number of bytes around accesed memory addresses to look for **c**.
 
@@ -868,7 +868,7 @@ To add extended registers (i.e. sub-registers) to Cheat Engine's in-built condit
 
 If **m**==1: Prints all executed instructions in the order they were executed "#…", and the number of times they have been executed, in parentheses; if **m**==0 or nil: Prints in ascending order of times executed. 
 
-**p** is a (full path to a) file name, where the trace will be saved; if unspecified or nil or `''`, the trace will be printed to the console (Use double backslashes instead on single ones) (".asm" extension is recommended).
+**p** is a (full path to a) file name, where the trace will be saved; if unspecified or nil or `''`, the trace will be printed to the console (use [[…]] quotes) (".asm" extension is recommended).
 
 If **n** is a specified, non-empty string, then it will print the saved trace saved with that name (see *.saved()* method); if an empty string it will print the current trace. 
 
@@ -945,7 +945,7 @@ Attach breakpoints to the current address list, **z** entries at-a-time, cycling
 
 * **stack(d, b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> This method scans the stack for viable return addresses. **d** is an address(in string or number form, use '0x…' for addresses in hexadecimal) of an instruction that when that instruction is executed, the breakpoint will hit, *or* a table with: {address, onWrite}; where if **onWrite**==true, the breakpoint will hit if **address** is written to, and otherwise the breakpoint will hit when the **address** is accessed. **b** how deep (RSP+**b**) to probe the stack, if unspecified the function will probe the full stack. **m** is a string containing a module name; only addresses in module **m** will be logged. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
-* **end_stack(p --[[Optional]])** -> **p** is a (full path to a) file name (use double backslashes instead on single ones), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
+* **end_stack(p --[[Optional]])** -> **p** is a (full path to a) file name (use [[…]] quotes), where all the logged data will be dumped; if unspecified or nil, the data will be printed to the console, otherwise it will be dumped to the specified file path.
 
 * **rsp(b --[[Optional]] , m --[[Optional]] , f --[[Optional]] )** -> Same as "batchRW.stack(…)", except it only works when the game is currently paused at a breakpoint. If **f**==true, force the method to not limit itself to scanning between RSP and RBP.
 
